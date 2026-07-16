@@ -362,6 +362,11 @@
 		// マークダウンレンダリング
 		previewer.innerHTML = marked(editor.value);
 		
+		// GitHub Alerts のレンダリング適用
+		if (typeof GithubAlerts !== 'undefined') {
+			GithubAlerts.render(previewer);
+		}
+		
 		// CSS修正
 		var previewerStyle = document.querySelector("#previewerStyle");
 		var cssEditor = document.querySelector("#cssEditor");

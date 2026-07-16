@@ -1,3 +1,6 @@
+// Node.js v24+ Polyfill for legacy plugins
+require('util').isRegExp = require('util').isRegExp || function(arg) { return arg instanceof RegExp; };
+
 module.exports = function(grunt) {
 	
 	grunt.loadNpmTasks('grunt-contrib-clean');
