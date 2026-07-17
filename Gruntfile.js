@@ -164,6 +164,7 @@ module.exports = function(grunt) {
 					{from: /"/g, to: "\\\""},
 					{from: /<!doctype[\s|\S]+?<html>\s/g, to: ""},
 					{from: /\s<\/html>/g, to: ""},
+					{from: /\r/g, to: ""},
 					{from: /\n/g, to: "\\n\" + \n\""},
 					{from: /^/g, to: "\""},
 					{from: /$/g, to: "\""},
