@@ -1,3 +1,35 @@
+# かんたんMarkdown (Fork by hiro-gj)
+
+## 🛠️ 最新のビルド手順（Windows / OneDrive環境対応）
+
+本リポジトリ（ローカル）でのビルド手順、ならびに今回導入された最新のビルド検証済みコマンドは以下の通りです。
+
+### 1. 依存パッケージのインストール
+Node.js依存プラグインのバージョン競合を回避するため、必ず `--legacy-peer-deps` を付加してパッケージをインストールしてください。
+```bash
+# ルートフォルダから直接インストールする場合
+npm --prefix "1_repocopy\KanTanMarkdown" install --legacy-peer-deps
+```
+
+### 2. ビルドコマンドの実行（ディレクトリ移動なし）
+カレントディレクトリを移動せずに、ルートフォルダから直接ビルドタスク（Grunt）を実行する場合は、以下のコマンドを実行します：
+```bash
+npx grunt --gruntfile "1_repocopy\KanTanMarkdown\Gruntfile.js" build
+```
+これにより、以下の成果物が `1_repocopy/KanTanMarkdown/dist/` 配下に正しくクリーンビルドされます：
+* `ktm-dev.html`
+* `ktm-lite.html`
+* `ktm-std.html`
+* `ktm-full.html`
+* `kantanUpdate.js`
+
+（※通常のディレクトリ移動後にビルドする場合：）
+```bash
+cd 1_repocopy/KanTanMarkdown
+npx grunt build
+```
+
+---
 
 (2026.7.16：以下本家リポジトリより）
 
@@ -47,7 +79,7 @@ grunt build
 
 * ktm-dev.html
 * ktm-lite.html
-* ktm-std.htm
+* ktm-std.html
 * ktm-full.html
 * kantanUpdate.js
 
