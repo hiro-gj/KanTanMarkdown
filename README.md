@@ -102,7 +102,7 @@ grunt build
 │  │  ktm-dev.html------------開発向けの非圧縮のかんたんMarkdownです
 │  │  ktm-full.html-----------リリース向けのfullエディションのかんたんMarkdownです
 │  │  ktm-lite.html-----------リリース向けのliteエディションのかんたんMarkdownです
-│  │  ktm-std.htm-------------リリース向けのstandardエディションのかんたんMarkdownです
+│  │  ktm-std.html------------リリース向けのstandardエディションのかんたんMarkdownです
 │  │  
 │  └─temp--------------------ビルド時の一時ファイルです
 │                  
