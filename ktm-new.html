@@ -2,1245 +2,548 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>かんたんMarkdown新規作成</title>
 <style>
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 :root {
-  --bg: #f6f8fa;
-  --bg-surface: #ffffff;
-  --bg-editor: #f7f8f9;
-  --bg-preview: #ffffff;
-  --bg-toolbar: #ffffff;
-  --border: #d1d9e0;
-  --text: #1f2328;
-  --text-muted: #59636e;
-  --accent: #0969da;
-  --accent-hover: #0550ae;
-  --danger: #cf222e;
-  --radius: 6px;
-  --toolbar-height: 40px;
-  --inline-code-bg: #818b981f;
-  --shadow-button: 0 1px 1px 0 #1f23280a, 0 1px 2px 0 #1f232808;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;
-  --font-mono: "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace;
+    --bg: #f6f8fa;
+    --bg-surface: #fff;
+    --bg-preview: #fff;
+    --border: #d1d9e0;
+    --text: #1f2328;
+    --text-muted: #59636e;
+    --accent: #0969da;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;
 }
-
-body.dark {
-  --bg: #0d1117;
-  --bg-surface: #161b22;
-  --bg-editor: #11161c;
-  --bg-preview: #1c2128;
-  --bg-toolbar: #161b22;
-  --border: #30363d;
-  --text: #c9d1d9;
-  --text-muted: #8b949e;
-  --accent: #58a6ff;
-  --accent-hover: #79c0ff;
-}
-
 body {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  color: var(--text);
-  background: var(--bg);
-  height: 100vh;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  display: flex;
-  flex-direction: column;
+    font-family: var(--font-sans);
+    color: var(--text);
+    background: var(--bg);
+    margin: 0; padding: 0;
 }
-
-body.view-mode {
-  overflow-y: auto;
-}
-
-body.drag-over {
-  outline: 3px dashed var(--accent);
-  outline-offset: -3px;
-}
-
-/* ---- Toolbar (fixed header) ---- */
-/* position: fixed にすることでスクロール中にツールバーが引っ込まないようにする。
-   sticky だと body の flex column + overflow の組み合わせで
-   一部環境で sticky が効かずスクロールすると引っ込む問題があったため。 */
-#toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  padding-right: 48px;
-  background: var(--bg-toolbar);
-  border-bottom: none;
-  gap: 8px;
-  flex-shrink: 0;
-  max-height: 0;
-  min-height: 0;
-  overflow: hidden;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  transition: max-height 0.25s ease;
-}
-
-#toolbar.visible {
-  max-height: 60px;
-  min-height: var(--toolbar-height);
-  padding: 4px 12px;
-  padding-right: 48px;
-  border-bottom: 1px solid var(--border);
-}
-
-/* ---- Toolbar toggle (hamburger) ---- */
-#toolbar-toggle {
-  position: fixed;
-  top: 4px;
-  right: 8px;
-  z-index: 200;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--text);
-  box-shadow: var(--shadow-button);
-  transition: background 0.2s;
-}
-
-#toolbar-toggle:hover {
-  background: var(--bg);
-}
-
-#toolbar-left,
-#toolbar-center,
-#toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-#toolbar button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 13px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-surface);
-  color: var(--text);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  white-space: nowrap;
-}
-
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-}
-
-body.dark .btn-icon {
-  color: var(--text);
-}
-
-#toolbar button:hover {
-  background: var(--bg);
-  border-color: var(--accent);
-}
-
-#message-area {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ---- Attach section (collapsible header) ---- */
-#attach-section {
-  padding: 8px 12px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-#attach-section #file-input {
-  margin-bottom: 6px;
-}
-
-#file-list {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 6px;
-}
-
-#file-list li {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  font-size: 12px;
-}
-
-#file-list .btn-file-remove,
-#file-list .btn-file-download,
-#file-list .btn-file-insert {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-#paste-area {
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 8px;
-  font-size: 12px;
-  color: var(--text-muted);
-  cursor: text;
-  background: var(--bg);
-}
-
-/* ---- Main wrapper (fills remaining height) ---- */
 #wrapper {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 32px 24px;
 }
-
-body.view-mode #wrapper {
-  overflow: visible;
-  flex: none;
-  min-height: auto;
-}
-
-/* ---- Editor panel ---- */
-#editor-tab-wrapper {
-  width: var(--editor-width, 50%);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-surface);
-  flex-shrink: 0;
-  min-height: 0;
-  min-width: 240px;
-}
-
-#editor,
-#css-editor {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  border: none;
-  outline: none;
-  padding: 16px;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.6;
-  tab-size: 4;
-  resize: none;
-  overflow-y: auto;
-  background: var(--bg-editor);
-  color: var(--text);
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.13);
-}
-
-body.dark #editor,
-body.dark #css-editor {
-  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.5);
-}
-
-#css-editor {
-  display: none;
-}
-
-/* Editor tabs (fixed footer inside editor panel) */
-#editor-tabs {
-  display: flex;
-  list-style: none;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-#editor-tabs li {
-  flex: 1;
-  text-align: center;
-  padding: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-muted);
-  border-right: 1px solid var(--border);
-  border-bottom: 2px solid transparent;
-}
-
-#editor-tabs li:last-child {
-  border-right: none;
-}
-
-#editor-tabs li.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-
-/* ---- Resize handle (between editor and previewer) ---- */
-#resize-handle {
-  width: 5px;
-  flex-shrink: 0;
-  cursor: col-resize;
-  background: var(--border);
-  transition: background 0.15s;
-  position: relative;
-  z-index: 10;
-}
-
-#resize-handle:hover,
-#resize-handle.active {
-  background: var(--accent);
-}
-
-/* ---- Previewer (scrollable content) ---- */
 #previewer {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px 40px;
-  background: var(--bg-preview);
-  min-width: 240px;
+    background: var(--bg-preview);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 980px;
+    border-radius: 4px;
+    padding: 32px 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-
-#previewer.full-width {
-  width: 100%;
-  max-width: 980px;
-  margin: 32px auto;
-  overflow-y: visible;
-  flex: none;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: var(--shadow-button);
-}
-
-body.dark #previewer.full-width {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* ---- TOC (table of contents, view mode only) - card style ---- */
 #toc {
-  position: sticky;
-  top: 32px;
-  width: 300px;
-  max-height: calc(100vh - 80px);
-  padding: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: var(--shadow-button);
-  font-size: 13px;
-  line-height: 1.5;
-  display: none;
-  flex-direction: column;
-  flex: 0 0 300px;
-  align-self: flex-start;
-}
-
-body.dark #toc {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-
-body.toc-visible.view-mode #toc {
-  display: flex;
-}
-
-/* 目次表示時: プレビューアと目次を隣接する1ユニットとして中央寄せ。
-   ヘッダーは全幅のまま（bodyのpaddingはいじらない）。
-   wrapperをflex rowで中央寄せ、16pxのgapで2カードを隣接させる。
-   align-items: flex-start で上端を揃え + 目次がstretchされないようにする(sticky動作のため) */
-body.toc-visible.view-mode #wrapper {
-  justify-content: center;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 32px 24px 32px 72px;
-}
-
-body.toc-visible.view-mode #previewer.full-width {
-  margin: 0;
-  width: auto;
-  flex: 1 1 980px;
-  max-width: 980px;
-  min-width: 0;
-}
-
-#toc .toc-header {
-  flex-shrink: 0;
-}
-
-#toc .toc-body {
-  flex: 1;
-  overflow-y: auto;
-}
-
-#toc .toc-title {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  padding: 0 6px 8px 6px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 8px;
-  display: block;
-}
-
-#toc .toc-empty {
-  color: var(--text-muted);
-  padding: 8px 6px;
-  font-size: 12px;
-}
-
-#toc .toc-link {
-  display: block;
-  position: relative;
-  padding: 4px 6px 4px 14px;
-  color: var(--text-muted);
-  text-decoration: none;
-  cursor: pointer;
-  border-radius: 4px;
-  transition:
-    color 0.15s,
-    background 0.15s;
-  word-break: break-word;
-}
-
-/* アクティブ表示用のアクセントバー（両端丸いカプセル型） */
-#toc .toc-link::before {
-  content: "";
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 75%;
-  border-radius: 999px;
-  background: transparent;
-  transition: background 0.15s;
-}
-
-#toc .toc-link:hover {
-  color: var(--text);
-  background: var(--bg);
-}
-
-/* 現在見ている見出し: グレー → 黒 */
-#toc .toc-link.active {
-  color: var(--text);
-  font-weight: 600;
-}
-
-#toc .toc-link.active::before {
-  background: var(--accent);
-}
-
-/* 現在位置がH3/H4のとき、所属するH2も強調 */
-#toc .toc-link.active-section {
-  color: var(--text);
-  font-weight: 600;
-}
-
-#toc .toc-h1,
-#toc .toc-h2 {
-  font-weight: 700;
-}
-
-/* アクティブ状態のトグルボタン */
-#toolbar button.active-toggle {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-#toolbar button.active-toggle .btn-icon {
-  color: #fff;
-}
-
-/* ---- Settings Panel ---- */
-#settings-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  padding: 20px;
-  z-index: 100;
-  min-width: 280px;
-}
-
-#settings-panel h3 {
-  font-size: 16px;
-  margin-bottom: 12px;
-}
-
-#settings-panel label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-#settings-panel button {
-  margin-top: 12px;
-  padding: 6px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-surface);
-  color: var(--text);
-  cursor: pointer;
-}
-
-/* ---- Responsive ---- */
-@media (max-width: 768px) {
-  #wrapper {
-    flex-direction: column;
-  }
-  #editor-tab-wrapper {
-    width: 100% !important;
-    height: 50%;
-    border-bottom: 1px solid var(--border);
-  }
-  #resize-handle {
-    display: none;
-  }
-  #previewer {
-    width: 100%;
-    height: 50%;
-    padding: 16px 20px;
-  }
-  #toolbar {
-    flex-wrap: wrap;
-    position: static;
-  }
-  #toolbar.visible {
-    max-height: 300px;
-    overflow-y: auto;
-  }
-  /* モバイルではツールバーボタンを折り返して全表示できるようにする */
-  #toolbar-right {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-  #toolbar button {
-    font-size: 12px;
-    padding: 3px 6px;
-  }
-  /* モバイルではツールバーは in-flow のため、:has() による margin-top を打ち消す */
-  body:has(#toolbar.visible) > #attach-section,
-  body:has(#toolbar.visible) > #wrapper {
-    margin-top: 0;
-  }
-  /* 閲覧モード：body を block に切り替えて自然にスクロールさせる */
-  body.view-mode {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    width: 300px;
+    border-radius: 4px;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    position: sticky;
+    top: 32px;
     display: block;
-    height: auto;
-    min-height: 100vh;
-    overflow-y: visible;
-  }
-  /* 閲覧モードではプレビューアの高さを auto にして白背景を末尾まで伸ばす */
-  body.view-mode #previewer {
-    height: auto;
-  }
-  /* モバイルの目次：非表示デフォルト、表示時はプレビューアの上に配置 */
-  #toc {
-    display: none;
-  }
-  body.toc-visible.view-mode #toc {
-    display: flex !important;
-    position: static;
-    order: -1;
-    top: auto;
-    width: 100%;
-    max-height: 40vh;
-    flex: 0 0 auto;
-    margin-bottom: 16px;
-  }
-  body.toc-visible.view-mode #wrapper {
-    justify-content: flex-start;
-    align-items: stretch;
-    gap: 0;
-    padding: 0;
-  }
-  body.toc-visible.view-mode #previewer.full-width {
-    margin: 16px auto;
-    flex: none;
-    width: 100%;
-  }
 }
-
-/* ツールバー固定表示中は本体を下へずらして重なりを防ぐ */
-body:has(#toolbar.visible) > #attach-section,
-body:has(#toolbar.visible) > #wrapper {
-  margin-top: var(--toolbar-height);
+#toc .toc-title {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    font-weight: 600;
 }
-
-/* ツールバー表示中は目次のsticky位置を下げてツールバーとの間に余白を確保 */
-body:has(#toolbar.visible) #toc {
-  top: calc(var(--toolbar-height) + 32px);
+#toc .toc-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    display: block;
+    padding: 4px 6px 4px 14px;
+    border-radius: 4px;
 }
-
-/* GitHub Flavored Markdown - Preview Styles */
-
-#previewer h1,
-#previewer h2,
-#previewer h3,
-#previewer h4,
-#previewer h5,
-#previewer h6 {
-  margin-top: 24px;
-  margin-bottom: 16px;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--text);
-  scroll-margin-top: 16px;
+#toc .toc-link:hover { background: var(--bg); color: var(--text); }
+#toc .toc-link.active { color: var(--accent); font-weight: 600; }
+#previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6 {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.3em;
 }
-
-#previewer h1 {
-  font-size: 2em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.3em;
+/*
+ * CSSの設定を間違えると、最悪の場合
+ * 内容を編集できなくなるので注意してください。
+ * 標準のCSSに戻したいときはCSSを引き継がずに強制アップデートしてください
+ * また、CSSの変更はプレビューしないと反映しません。
+ */
+ 
+#previewer {
+    word-wrap: break-word;
 }
-#previewer h2 {
-  font-size: 1.5em;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.3em;
-}
-#previewer h3 {
-  font-size: 1.25em;
-}
-#previewer h4 {
-  font-size: 1em;
-}
-#previewer h5 {
-  font-size: 0.875em;
-}
-#previewer h6 {
-  font-size: 0.85em;
-  color: var(--text-muted);
-}
-
-#previewer h1:first-child,
-#previewer h2:first-child,
-#previewer h3:first-child {
-  margin-top: 0;
+#previewer > *:first-child {
+    margin-top: 0 !important;
 }
 
 #previewer p {
-  margin-top: 0;
-  margin-bottom: 16px;
+    margin-top: 0;
+    margin-bottom: 16px;
 }
-
-#previewer a {
-  color: var(--accent);
-  text-decoration: none;
+a {
+    color: #4183C4;
 }
-#previewer a:hover {
-  text-decoration: underline;
+a.absent {
+    color: #cc0000;
 }
-
-#previewer strong {
-  font-weight: 600;
+a.anchor {
+    display: block;
+    padding-left: 30px;
+    margin-left: -30px;
+    cursor: pointer;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
 }
-#previewer em {
-  font-style: italic;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 20px 0 10px;
+    padding: 0;
+    font-weight: bold;
+    -webkit-font-smoothing: antialiased;
+    cursor: text;
+    position: relative;
 }
-
-#previewer del {
-  text-decoration: line-through;
-  color: var(--text-muted);
+h1:hover a.anchor,
+h2:hover a.anchor,
+h3:hover a.anchor,
+h4:hover a.anchor,
+h5:hover a.anchor,
+h6:hover a.anchor {
+    background: url("para.png") no-repeat 10px center;
+    text-decoration: none;
 }
-
-#previewer hr {
-  height: 0.25em;
-  padding: 0;
-  margin: 24px 0;
-  background-color: var(--border);
-  border: 0;
+h1 tt,
+h1 code {
+    font-size: inherit;
 }
-
-#previewer blockquote {
-  padding: 0 1em;
-  color: var(--text-muted);
-  border-left: 0.25em solid var(--border);
-  margin: 0 0 16px 0;
+h2 tt,
+h2 code {
+    font-size: inherit;
 }
-
-#previewer blockquote > :first-child {
-  margin-top: 0;
+h3 tt,
+h3 code {
+    font-size: inherit;
 }
-#previewer blockquote > :last-child {
-  margin-bottom: 0;
+h4 tt,
+h4 code {
+    font-size: inherit;
 }
-
-#previewer ul,
-#previewer ol {
-  margin-top: 0;
-  margin-bottom: 16px;
-  padding-left: 2em;
+h5 tt,
+h5 code {
+    font-size: inherit;
 }
-
-#previewer ul ul,
-#previewer ul ol,
-#previewer ol ul,
-#previewer ol ol {
-  margin-top: 0;
-  margin-bottom: 0;
+h6 tt,
+h6 code {
+    font-size: inherit;
 }
-
-#previewer li {
-  margin-bottom: 0.25em;
+h1 {
+    font-size: 28px;
+    color: black;
 }
-#previewer li > p {
-  margin-bottom: 0;
+h2 {
+    font-size: 24px;
+    border-bottom: 1px solid #cccccc;
+    color: black;
 }
-
-#previewer ul li::marker {
-  color: var(--text-muted);
+h3 {
+    font-size: 18px;
 }
-
-/* Task list */
-#previewer input[type="checkbox"] {
-  margin-right: 0.5em;
-  accent-color: var(--accent);
+h4 {
+    font-size: 16px;
 }
-
-#previewer img {
-  max-width: 100%;
-  box-sizing: border-box;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+h5 {
+    font-size: 14px;
 }
-
-/* Inline code */
-#previewer code:not(pre code) {
-  padding: 0.2em 0.4em;
-  margin: 0;
-  font-size: 85%;
-  background-color: var(--inline-code-bg);
-  border-radius: var(--radius);
-  font-family: var(--font-mono);
-  color: #cf222e;
+h6 {
+    color: #777777;
+    font-size: 14px;
 }
-
-/* Code block with filename */
-#previewer .code-block {
-  margin-bottom: 16px;
+p,
+blockquote,
+ul,
+ol,
+dl,
+li:first,
+table,
+pre {
+    margin: 15px 0;
 }
-
-#previewer .code-filename {
-  display: inline-block;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-family: var(--font-mono);
-  color: var(--text-muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+hr {
+    background-color: #e7e7e7;
+    border: 0 none;
+    height: 4px;
+    padding: 0;
 }
-
-/* Code blocks */
-#previewer pre {
-  padding: 16px;
-  overflow: auto;
-  font-size: 85%;
-  line-height: 1.45;
-  background-color: var(--bg);
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-  border: 1px solid var(--border);
+#previewer > h2:first-child {
+    margin-top: 0;
+    padding-top: 0;
 }
-
-#previewer .code-block pre {
-  margin-top: 0;
-  border-top-left-radius: 0;
+#previewer > h1:first-child {
+    margin-top: 0;
+    padding-top: 0;
 }
-
-#previewer pre code {
-  background: none;
-  padding: 0;
-  font-size: inherit;
+#previewer > h1:first-child + h2 {
+    margin-top: 0;
+    padding-top: 0;
 }
-
-/* Tables */
-#previewer table {
-  border-collapse: collapse;
-  width: 100%;
-  margin-bottom: 16px;
-  display: block;
-  overflow: auto;
+#previewer > h3:first-child,
+#previewer > h4:first-child,
+#previewer > h5:first-child,
+#previewer > h6:first-child {
+    margin-top: 0;
+    padding-top: 0;
 }
-
-#previewer table th,
-#previewer table td {
-  padding: 6px 13px;
-  border: 1px solid var(--border);
+a:first-child h1,
+a:first-child h2,
+a:first-child h3,
+a:first-child h4,
+a:first-child h5,
+a:first-child h6 {
+    margin-top: 0;
+    padding-top: 0;
 }
-
-#previewer table th {
-  font-weight: 600;
-  background: var(--bg);
+h1 p,
+h2 p,
+h3 p,
+h4 p,
+h5 p,
+h6 p {
+    margin-top: 0;
 }
-
-#previewer table tr:nth-child(2n) {
-  background: var(--bg);
+li p.first {
+    display: inline-block;
 }
-
-#previewer table tr {
-  background: var(--bg-surface);
+ul,
+ol {
+    padding-left: 30px;
 }
-
-/* Mermaid diagrams */
-#previewer .mermaid-block {
-  margin: 16px 0;
-  text-align: center;
-  overflow-x: auto;
-  font-size: 12px;
-  color: var(--text-muted);
+ul:first-child,
+ol:first-child {
+    margin-top: 0;
 }
-
-#previewer .mermaid-block.mermaid-rendered {
-  color: inherit;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 8px;
+ul:last-child,
+ol:last-child {
+    margin-bottom: 0;
 }
-
-#previewer .mermaid-block.mermaid-error {
-  color: var(--danger);
-  font-family: var(--font-mono);
-  background: var(--bg);
-  padding: 12px;
-  border-radius: var(--radius);
-  text-align: left;
-  white-space: pre-wrap;
+dl {
+    padding: 0;
 }
-
-/* Keyboard kbd tag */
-#previewer kbd {
-  display: inline-block;
-  padding: 3px 6px;
-  font-family: var(--font-mono);
-  font-size: 85%;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  box-shadow: inset 0 -1px 0 var(--border);
+dl dt {
+    font-size: 14px;
+    font-weight: bold;
+    font-style: italic;
+    padding: 0;
+    margin: 15px 0 5px;
 }
-
-/* KaTeX */
-#previewer .katex-error {
-  color: var(--danger);
-  font-family: var(--font-mono);
-  font-size: 12px;
+dl dt:first-child {
+    padding: 0;
 }
-
-#previewer .katex-display {
-  margin: 16px 0;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow-x: auto;
+dl dt >:first-child {
+    margin-top: 0;
 }
-
-/* Print */
+dl dt >:last-child {
+    margin-bottom: 0;
+}
+dl dd {
+    margin: 0 0 15px;
+    padding: 0 15px;
+}
+dl dd >:first-child {
+    margin-top: 0;
+}
+dl dd >:last-child {
+    margin-bottom: 0;
+}
+blockquote {
+    border-left: 4px solid #dddddd;
+    padding: 0 15px;
+    color: #777777;
+}
+blockquote >:first-child {
+    margin-top: 0;
+}
+blockquote >:last-child {
+    margin-bottom: 0;
+}
+table {
+    border-collapse: collapse;
+    padding: 0;
+}
+table tr {
+    border-top: 1px solid #cccccc;
+    background-color: white;
+    margin: 0;
+    padding: 0;
+}
+table tr:nth-child(2n) {
+    background-color: #f8f8f8;
+}
+table tr th {
+    font-weight: bold;
+    border: 1px solid #cccccc;
+    text-align: left;
+    margin: 0;
+    padding: 6px 13px;
+}
+table tr td {
+    border: 1px solid #cccccc;
+    text-align: left;
+    margin: 0;
+    padding: 6px 13px;
+}
+table tr th:first-child,
+table tr td:first-child {
+    margin-top: 0;
+}
+table tr th:last-child,
+table tr td:last-child {
+    margin-bottom: 0;
+}
+img {
+    max-width: 100%;
+}
+span.frame {
+    display: block;
+    overflow: hidden;
+}
+span.frame > span {
+    border: 1px solid #dddddd;
+    display: block;
+    float: left;
+    overflow: hidden;
+    margin: 13px 0 0;
+    padding: 7px;
+    width: auto;
+}
+span.frame span img {
+    display: block;
+    float: left;
+}
+span.frame span span {
+    clear: both;
+    color: #333333;
+    display: block;
+    padding: 5px 0 0;
+}
+span.align-center {
+    display: block;
+    overflow: hidden;
+    clear: both;
+}
+span.align-center > span {
+    display: block;
+    overflow: hidden;
+    margin: 13px auto 0;
+    text-align: center;
+}
+span.align-center span img {
+    margin: 0 auto;
+    text-align: center;
+}
+span.align-right {
+    display: block;
+    overflow: hidden;
+    clear: both;
+}
+span.align-right > span {
+    display: block;
+    overflow: hidden;
+    margin: 13px 0 0;
+    text-align: right;
+}
+span.align-right span img {
+    margin: 0;
+    text-align: right;
+}
+span.float-left {
+    display: block;
+    margin-right: 13px;
+    overflow: hidden;
+    float: left;
+}
+span.float-left span {
+    margin: 13px 0 0;
+}
+span.float-right {
+    display: block;
+    margin-left: 13px;
+    overflow: hidden;
+    float: right;
+}
+span.float-right > span {
+    display: block;
+    overflow: hidden;
+    margin: 13px auto 0;
+    text-align: right;
+}
+code,
+tt {
+    margin: 0 2px;
+    padding: 0 5px;
+    white-space: nowrap;
+    border: 1px solid #eaeaea;
+    background-color: #f8f8f8;
+    border-radius: 3px;
+}
+pre code {
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
+    border: none;
+    background: transparent;
+}
+.highlight pre {
+    background-color: #f8f8f8;
+    border: 1px solid #cccccc;
+    font-size: 13px;
+    line-height: 19px;
+    overflow: auto;
+    padding: 6px 10px;
+    border-radius: 3px;
+}
+pre {
+    background-color: #f8f8f8;
+    border: 1px solid #cccccc;
+    font-size: 13px;
+    line-height: 19px;
+    overflow: auto;
+    padding: 6px 10px;
+    border-radius: 3px;
+}
+pre code,
+pre tt {
+    background-color: transparent;
+    border: none;
+}
+.sequence,
+.flow {
+    overflow: auto;
+}
+.info {
+    color: #3a87ad;
+    background-color: #d9edf7;
+    border: 1px solid #bce8f1;
+    font-size: 13px;
+    line-height: 19px;
+    padding: 6px 10px;
+    border-radius: 0px;
+    margin: 1em 0px 1em;
+}
+.warn {
+    color: #c09853;
+    background-color: #fcf8e3;
+    border: 1px solid #fbeed5;
+    font-size: 13px;
+    line-height: 19px;
+    padding: 6px 10px;
+    border-radius: 0px;
+    margin: 1em 0px 1em;
+}
+.alert {
+    color: #b94a48;
+    background-color: #f2dede;
+    border: 1px solid #eed3d7;
+    font-size: 13px;
+    line-height: 19px;
+    padding: 6px 10px;
+    border-radius: 0px;
+    margin: 1em 0px 1em;
+}
 @media print {
-  #toolbar,
-  #editor-tab-wrapper,
-  #attach-section,
-  #settings-panel,
-  #toc {
-    display: none !important;
-  }
-  #previewer {
-    width: 100% !important;
-    padding: 0 !important;
-  }
+    nav {
+        display: none;
+    }
+    #wrapper {
+        overflow: visible;
+    }
+    #previewer {
+        border: 0;
+    }
 }
 
-/* ---- Dark mode: syntax highlighting ---- */
-body.dark .hljs {
-  color: #c9d1d9;
-  background: #0d1117;
-}
-body.dark .hljs-doctag,
-body.dark .hljs-keyword,
-body.dark .hljs-meta .hljs-keyword,
-body.dark .hljs-template-tag,
-body.dark .hljs-template-variable,
-body.dark .hljs-type,
-body.dark .hljs-variable.language_ {
-  color: #ff7b72;
-}
-body.dark .hljs-title,
-body.dark .hljs-title.class_,
-body.dark .hljs-title.class_.inherited__,
-body.dark .hljs-title.function_ {
-  color: #d2a8ff;
-}
-body.dark .hljs-attr,
-body.dark .hljs-attribute,
-body.dark .hljs-literal,
-body.dark .hljs-meta,
-body.dark .hljs-number,
-body.dark .hljs-operator,
-body.dark .hljs-variable,
-body.dark .hljs-selector-attr,
-body.dark .hljs-selector-class,
-body.dark .hljs-selector-id {
-  color: #79c0ff;
-}
-body.dark .hljs-regexp,
-body.dark .hljs-string,
-body.dark .hljs-meta .hljs-string {
-  color: #a5d6ff;
-}
-body.dark .hljs-built_in,
-body.dark .hljs-symbol {
-  color: #ffa657;
-}
-body.dark .hljs-comment,
-body.dark .hljs-code,
-body.dark .hljs-formula {
-  color: #8b949e;
-}
-body.dark .hljs-name,
-body.dark .hljs-quote,
-body.dark .hljs-selector-tag,
-body.dark .hljs-selector-pseudo {
-  color: #7ee787;
-}
-body.dark .hljs-subst {
-  color: #c9d1d9;
-}
-body.dark .hljs-section {
-  color: #1f6feb;
-  font-weight: bold;
-}
-body.dark .hljs-bullet {
-  color: #f2cc60;
-}
-body.dark .hljs-emphasis {
-  color: #c9d1d9;
-  font-style: italic;
-}
-body.dark .hljs-strong {
-  color: #c9d1d9;
-  font-weight: bold;
-}
-body.dark .hljs-addition {
-  color: #aff5b4;
-  background-color: #033a16;
-}
-body.dark .hljs-deletion {
-  color: #ffdcd7;
-  background-color: #67060c;
-}
-
-/* ---- Dark mode: inline code ---- */
-body.dark #previewer code:not(pre code) {
-  background-color: #21262d;
-  color: #ff7b72;
-}
-
-/* GFM Notes / GitHub-style Alerts */
-
-.gfm-note {
-  padding: 0.5rem 1rem;
-  margin: 1rem 0;
-  border-left: 0.25rem solid var(--border, #d0d7de);
-}
-
-#previewer .gfm-note > :last-child {
-  margin-bottom: 0;
-}
-
-.gfm-note__title {
-  display: flex;
-  align-items: center;
-  font-weight: 500;
-  gap: 0.5em;
-  margin-bottom: 0.25rem;
-}
-
-.gfm-note__title svg {
-  flex-shrink: 0;
-  fill: currentColor;
-}
-
-/* Note (blue) */
-.gfm-note--note {
-  border-left-color: #0969da;
-}
-.gfm-note--note .gfm-note__title {
-  color: #0969da;
-}
-
-/* Tip (green) */
-.gfm-note--tip {
-  border-left-color: #1f883d;
-}
-.gfm-note--tip .gfm-note__title {
-  color: #1f883d;
-}
-
-/* Important (purple) */
-.gfm-note--important {
-  border-left-color: #8250df;
-}
-.gfm-note--important .gfm-note__title {
-  color: #8250df;
-}
-
-/* Warning (yellow/amber) */
-.gfm-note--warning {
-  border-left-color: #9a6700;
-}
-.gfm-note--warning .gfm-note__title {
-  color: #9a6700;
-}
-
-/* Caution (red) */
-.gfm-note--caution {
-  border-left-color: #cf222e;
-}
-.gfm-note--caution .gfm-note__title {
-  color: #cf222e;
-}
-
-/* Dark mode overrides */
-body.dark .gfm-note--note {
-  border-left-color: #58a6ff;
-}
-body.dark .gfm-note--note .gfm-note__title {
-  color: #58a6ff;
-}
-body.dark .gfm-note--tip {
-  border-left-color: #3fb950;
-}
-body.dark .gfm-note--tip .gfm-note__title {
-  color: #3fb950;
-}
-body.dark .gfm-note--important {
-  border-left-color: #a371f7;
-}
-body.dark .gfm-note--important .gfm-note__title {
-  color: #a371f7;
-}
-body.dark .gfm-note--warning {
-  border-left-color: #d29922;
-}
-body.dark .gfm-note--warning .gfm-note__title {
-  color: #d29922;
-}
-body.dark .gfm-note--caution {
-  border-left-color: #f85149;
-}
-body.dark .gfm-note--caution .gfm-note__title {
-  color: #f85149;
-}
-
-pre code.hljs {
-  display: block;
-  overflow-x: auto;
-  padding: 1em
-}
-code.hljs {
-  padding: 3px 5px
-}
-/*!
-  Theme: GitHub
-  Description: Light theme as seen on github.com
-  Author: github.com
-  Maintainer: @Hirse
-  Updated: 2021-05-15
-
-  Outdated base version: https://github.com/primer/github-syntax-light
-  Current colors taken from GitHub's CSS
-*/
-.hljs {
-  color: #24292e;
-  background: #ffffff
-}
-.hljs-doctag,
-.hljs-keyword,
-.hljs-meta .hljs-keyword,
-.hljs-template-tag,
-.hljs-template-variable,
-.hljs-type,
-.hljs-variable.language_ {
-  /* prettylights-syntax-keyword */
-  color: #d73a49
-}
-.hljs-title,
-.hljs-title.class_,
-.hljs-title.class_.inherited__,
-.hljs-title.function_ {
-  /* prettylights-syntax-entity */
-  color: #6f42c1
-}
-.hljs-attr,
-.hljs-attribute,
-.hljs-literal,
-.hljs-meta,
-.hljs-number,
-.hljs-operator,
-.hljs-variable,
-.hljs-selector-attr,
-.hljs-selector-class,
-.hljs-selector-id {
-  /* prettylights-syntax-constant */
-  color: #005cc5
-}
-.hljs-regexp,
-.hljs-string,
-.hljs-meta .hljs-string {
-  /* prettylights-syntax-string */
-  color: #032f62
-}
-.hljs-built_in,
-.hljs-symbol {
-  /* prettylights-syntax-variable */
-  color: #e36209
-}
-.hljs-comment,
-.hljs-code,
-.hljs-formula {
-  /* prettylights-syntax-comment */
-  color: #6a737d
-}
-.hljs-name,
-.hljs-quote,
-.hljs-selector-tag,
-.hljs-selector-pseudo {
-  /* prettylights-syntax-entity-tag */
-  color: #22863a
-}
-.hljs-subst {
-  /* prettylights-syntax-storage-modifier-import */
-  color: #24292e
-}
-.hljs-section {
-  /* prettylights-syntax-markup-heading */
-  color: #005cc5;
-  font-weight: bold
-}
-.hljs-bullet {
-  /* prettylights-syntax-markup-list */
-  color: #735c0f
-}
-.hljs-emphasis {
-  /* prettylights-syntax-markup-italic */
-  color: #24292e;
-  font-style: italic
-}
-.hljs-strong {
-  /* prettylights-syntax-markup-bold */
-  color: #24292e;
-  font-weight: bold
-}
-.hljs-addition {
-  /* prettylights-syntax-markup-inserted */
-  color: #22863a;
-  background-color: #f0fff4
-}
-.hljs-deletion {
-  /* prettylights-syntax-markup-deleted */
-  color: #b31d28;
-  background-color: #ffeef0
-}
-.hljs-char.escape_,
-.hljs-link,
-.hljs-params,
-.hljs-property,
-.hljs-punctuation,
-.hljs-tag {
-  /* purposely ignored */
-  
-}
-</style>
-<style>
-/*
- * Custom CSS for previewer
- * Changes take effect on next preview refresh.
- */
 </style>
 </head>
-<body class="view-mode">
-<div id="previewer" class="full-width">
-<h1>かんたんMarkdown新規作成</h1>
+<body>
+<div id="wrapper">
+    <div id="previewer"><h1 id="-markdown-">かんたんMarkdown新規作成</h1>
 <p>ご利用になるエディションを選んでください。</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-lite.html">Lite</a></th>
-<th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-std.html">Standard</a></th>
-<th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-full.html">Full</a></th>
+<th style="text-align:center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-lite.html">Lite</a></th>
+<th style="text-align:center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-std.html">Standard</a></th>
+<th style="text-align:center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-full.html">Full</a></th>
 </tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>空の容量</td>
-<td align="center">約80b</td>
-<td align="center">約120kb</td>
-<td align="center">約330kb</td>
+<td style="text-align:center">約117kb</td>
+<td style="text-align:center">約161kb</td>
+<td style="text-align:center">約371kb</td>
 </tr>
 <tr>
 <td>Markdown</td>
-<td align="center">○</td>
-<td align="center">○</td>
-<td align="center">○</td>
+<td style="text-align:center">○</td>
+<td style="text-align:center">○</td>
+<td style="text-align:center">○</td>
 </tr>
 <tr>
 <td>シンタックスハイライト</td>
-<td align="center"></td>
-<td align="center">○</td>
-<td align="center">○</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">○</td>
+<td style="text-align:center">○</td>
 </tr>
 <tr>
 <td>シーケンス図</td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center">○</td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">○</td>
 </tr>
 <tr>
 <td>フローチャート</td>
-<td align="center"></td>
-<td align="center"></td>
-<td align="center">○</td>
+<td style="text-align:center"></td>
+<td style="text-align:center"></td>
+<td style="text-align:center">○</td>
 </tr>
-</tbody></table>
-
+</tbody>
+</table>
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><table><thead><tr><th></th><th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-lite.html">Lite</a></th><th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-std.html">Standard</a></th><th align="center"><a href="https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-full.html">Full</a></th></tr></thead><tbody><tr><td>空の容量</td><td align="center">約80b</td><td align="center">約120kb</td><td align="center">約330kb</td></tr><tr><td>Markdown</td><td align="center">○</td><td align="center">○</td><td align="center">○</td></tr><tr><td>シンタックスハイライト</td><td align="center"></td><td align="center">○</td><td align="center">○</td></tr><tr><td>シーケンス図</td><td align="center"></td><td align="center"></td><td align="center">○</td></tr><tr><td>フローチャート</td><td align="center"></td><td align="center"></td><td align="center">○</td></tr></tbody></table></div>
 </div>
+<script>
+document.querySelectorAll("#toc .toc-link").forEach(function(link) {
+    link.addEventListener("click", function(e) {
+        e.preventDefault();
+        var target = document.getElementById(this.getAttribute("href").substring(1));
+        if (target) target.scrollIntoView({ behavior: "smooth" });
+    });
+});
+window.addEventListener("scroll", function() {
+    var headings = document.querySelectorAll("#previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6");
+    var links = document.querySelectorAll("#toc .toc-link");
+    var activeIndex = -1;
+    var previewerTop = document.getElementById("previewer").getBoundingClientRect().top;
+    headings.forEach(function(heading, i) {
+        if (heading.getBoundingClientRect().top - previewerTop <= 50) activeIndex = i;
+    });
+    if (activeIndex === -1 && headings.length > 0) activeIndex = 0;
+    links.forEach(function(link, i) {
+        if (i === activeIndex) link.classList.add("active"); else link.classList.remove("active");
+    });
+});
+<' + '/script>
 </body>
 </html>
