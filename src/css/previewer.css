@@ -5,23 +5,16 @@
  * また、CSSの変更はプレビューしないと反映しません。
  */
  
-.previewMode #previewer {
-    width: 980px;
-}
 #previewer {
     word-wrap: break-word;
-    border: 1px solid gray;
-    font-family: Helvetica, arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    background-color: white;
-    padding: 45px;
 }
 #previewer > *:first-child {
     margin-top: 0 !important;
 }
-#previewer > *:last-child {
-    margin-bottom: 0 !important;
+
+#previewer p {
+    margin-top: 0;
+    margin-bottom: 16px;
 }
 a {
     color: #4183C4;
