@@ -7,48 +7,187 @@
  * https://github.com/tatesuke/KanTanMarkdown/blob/master/LICENSE
  --><head>
 <meta charset="utf-8">
-<style>body {
+<style>:root {
+    --bg: #f6f8fa;
+    --bg-surface: #fff;
+    --bg-editor: #f7f8f9;
+    --bg-preview: #fff;
+    --bg-toolbar: #fff;
+    --border: #d1d9e0;
+    --text: #1f2328;
+    --text-muted: #59636e;
+    --accent: #0969da;
+    --accent-hover: #0550ae;
+    --danger: #cf222e;
+    --radius: 6px;
+    --toolbar-height: 40px;
+    --inline-code-bg: #818b981f;
+    --shadow-button: 0 1px 1px 0 #1f23280a, 0 1px 2px 0 #1f232808;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;
+    --font-mono: "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace;
+}
+
+body.dark {
+    --bg: #0d1117;
+    --bg-surface: #161b22;
+    --bg-editor: #11161c;
+    --bg-preview: #1c2128;
+    --bg-toolbar: #161b22;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+}
+
+body {
 	margin: 0;
 	padding: 0;
 	position:relative;
+	font-family: var(--font-sans);
+	color: var(--text);
+	background: var(--bg);
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	font-size: 14px;
+	overflow: hidden;
+}
+
+body.view-mode {
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+}
+
+/* 閲覧モードではページだけをスクロールさせ、プレビュー領域との二重スクロールを防ぐ。 */
+body.view-mode #previewer {
+    overflow-y: visible;
 }
 
 body.onDragover {
-	border : 5px dashed #99cde1;
+	border : 5px dashed var(--accent);
 }
 
-nav {
-	margint:0;
+#toolbar-toggle {
+    z-index: 2000;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    color: var(--text);
+    box-shadow: var(--shadow-button);
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    transition: background .2s;
+    display: flex;
+    position: fixed;
+    top: 4px;
+    right: 8px;
 }
 
-nav #leftNav{
-	float:left;
+#toolbar-toggle:hover {
+    background: var(--bg);
 }
 
-nav #rightNav {
-	float:right;
+#toolbar {
+    background: var(--bg-toolbar);
+    z-index: 1000;
+    border-bottom: none;
+    flex-shrink: 0;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    max-height: 0;
+    padding: 0 48px 0 12px;
+    transition: max-height .25s;
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    overflow: hidden;
 }
 
-nav:after {
-	content: "."; 
-	display: block; 
-	height: 0; 
-	font-size:0;	
-	clear: both; 
-	visibility:hidden;
+#toolbar.visible {
+    max-height: 60px;
+    min-height: var(--toolbar-height);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 48px 4px 12px;
+}
+
+#toolbar-left,
+#toolbar-center,
+#toolbar-right {
+    align-items: center;
+    gap: 4px;
+    display: flex;
+}
+
+#toolbar button {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--font-sans);
+    white-space: nowrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    display: inline-flex;
+}
+
+.btn-icon {
+    color: var(--text-muted);
+    align-items: center;
+    display: inline-flex;
+}
+
+body.dark .btn-icon {
+    color: var(--text);
+}
+
+#toolbar button:hover {
+    background: var(--bg);
+    border-color: var(--accent);
+}
+
+#message-area {
+    color: var(--text-muted);
+    font-size: 12px;
 }
 
 #attach {
+	box-sizing: border-box;
 	width:100%;
-	border-top:1px solid gray;
-	border-bottom:1px solid gray;
+	border-top:1px solid var(--border);
+	border-bottom:1px solid var(--border);
+	background: var(--bg-surface);
 	display:none;
+	flex-shrink: 0;
+	padding: 8px 12px;
 }
+
+.previewMode #attach {
+	display: none !important;
+}
+
+.editMode #attach {
+	display: block !important;
+}
+
 #attach #attachForm {
 	box-sizing:border-box;
 	width:100%;
-	height:100%;
+	height:auto;
 	display:none;
+	margin-bottom: 6px;
 }
 
 #attach #attachForm input[type="file"] {
@@ -58,40 +197,85 @@ nav:after {
 #attach #filer{
 	box-sizing:border-box;
 	width:100%;
-	height:150px;
-	overflow: auto;
+	height:auto;
+	max-height:150px;
+	overflow:auto;
 	display:none;
+}
+
+#attach #fileList {
+	list-style:none;
+	margin:0 0 6px;
+	padding:0;
+}
+
+#attach #fileList:empty {
+	display:none;
+	margin:0;
 }
 
 #attach #filer input{
 	width: 300px;
 }
 
-#attach #pasteArea {
+#attach #paste-area {
 	box-sizing:border-box;
 	width:100%;
-	border: 1px solid gray;
-	text-align:center;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+	color: var(--text-muted);
+	background: var(--bg);
+	cursor:text;
+	text-align:left;
+	padding:8px;
+	font-size:12px;
 }
 
 #attach #attachToggleButton,
-#attach #previewToggleButton{
-	width: 50%;
+#attach #previewToggleButton {
+	display: none !important;
 }
 
 #wrapper {
-	overflow: auto;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	overflow: hidden;
+	transition: padding-top .25s;
+}
+
+/* ツールバー開閉時のオフセット制御 */
+body.toolbar-open.previewMode #wrapper {
+	padding-top: var(--toolbar-height, 40px);
+}
+
+body.toolbar-open.editMode #attach {
+	margin-top: var(--toolbar-height, 40px);
+}
+
+body.toolbar-open.editMode #wrapper {
+	padding-top: 0;
+}
+
+body.view-mode #wrapper {
+	flex: none;
+	height: auto !important;
+	min-height: auto;
+	overflow: visible;
 }
 
 #wrapper #editorTabWrapper {
 	box-sizing:border-box;
-	width:50%;
+	width: var(--editor-width, 50%);
 	height:100%;
-	float:left;
 	border-top:none;
 	display:none;
 	margin: 0;
 	padding: 0;
+	flex-direction: column;
+	flex-shrink: 0;
+	min-width: 240px;
+	min-height: 0;
 }
 
 #wrapper #editorTabWrapper #editorTabContents {
@@ -112,6 +296,19 @@ nav:after {
 	-o-tab-size: 4;
 	tab-size: 4;
 	margin: 0;
+	background: var(--bg-editor);
+	color: var(--text);
+	border: none;
+	outline: none;
+	padding: 16px;
+	font-family: var(--font-mono);
+	line-height: 1.6;
+	overflow-y: auto;
+}
+
+body.dark #wrapper #editorTabWrapper #editorTabContents #editor,
+body.dark #wrapper #editorTabWrapper #editorTabContents #cssEditor {
+	box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
 }
 
 #wrapper #editorTabWrapper #editorTabContents #cssEditor {
@@ -120,9 +317,10 @@ nav:after {
 
 #wrapper #editorTabWrapper #editorTabs {
 	box-sizing:border-box;
-	border:0;
-	width: 100%;
-	height:20px; /* #editorTabContentsの高さと合わせる */
+	border-top:1px solid var(--border);
+	flex-shrink: 0;
+	list-style: none;
+	display: flex;
 	margin: 0;
 	padding: 0;
 }
@@ -130,16 +328,16 @@ nav:after {
 #wrapper #editorTabWrapper #editorTabs li {
 	box-sizing:border-box;
 	list-style: none;
-	float:left;
 	width:50%;
 	height:100%;
 	text-align:center;
-	margin-left:0;
-	border-top:0;
-	border-right:1px solid gray;
-	border-bottom:1px solid gray;
-	border-left:1px solid gray;
-	border-radius: 0 0 10px 10px/0 0 10px 10px;
+	padding: 6px;
+	font-size: 12px;
+	border-right: 1px solid var(--border);
+}
+
+#wrapper #editorTabWrapper #editorTabs li:last-child {
+	border-right: none;
 }
 
 #wrapper #editorTabWrapper #editorTabs li a {
@@ -147,36 +345,74 @@ nav:after {
 	width:100%;
 	height:100%;
 	text-decoration:none;
-	color:black;
+	color: var(--text-muted);
 }
 
 #wrapper #editorTabWrapper #editorTabs li.selected {
-	background-color:#7a9cd3;
+	background-color: transparent;
+	border-bottom: 2px solid var(--accent);
+}
+
+#wrapper #editorTabWrapper #editorTabs li.selected a {
+	color: var(--accent);
+	font-weight: 600;
 }
 
 #wrapper #editorTabWrapper.fullWidth {
-	width:100%;
+	width:100% !important;
+}
+
+#resize-handle {
+    cursor: col-resize;
+    background: var(--border);
+    z-index: 10;
+    flex-shrink: 0;
+    width: 5px;
+    transition: background .15s;
+    position: relative;
+}
+
+#resize-handle:hover,
+#resize-handle.active {
+    background: var(--accent);
 }
 
 #previewer {
 	box-sizing:border-box;
-	margin: 0 auto;
-	height:auto;
-	overflow:auto;
+	background: var(--bg-preview);
+	flex: 1;
+	min-width: 240px;
+	padding: 32px 40px;
+	overflow-y: auto;
 }
 
-.previewMode #previewer {
+body.view-mode #previewer.full-width {
+	box-sizing: border-box;
+	border: 1px solid var(--border);
+	width: min(240mm, calc(100% - 32px)) !important;
+	max-width: 240mm;
+	min-height: 297mm;
+	box-shadow: var(--shadow-button);
+	border-radius: 4px;
+	flex: none;
+	margin: 32px auto;
+	overflow-y: visible !important;
+	height: auto !important;
+	display: flow-root;
+}
+
+body.dark #previewer.full-width {
+	box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+body.previewMode:not(.view-mode) #previewer {
 	height: auto;
 	overflow:auto;
 }
 
 .editMode #previewer {
-	width:50%;
+	flex: 1;
 	height:100%;
-}
-
-#previewer:empty {
-	border: 0;
 }
 
 #previewer:focus {
@@ -275,14 +511,181 @@ nav:after {
 	display:none !important;
 }
 
+#settings-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-button);
+    display: none;
+    position: fixed;
+    top: 50px;
+    right: 16px;
+    z-index: 1500;
+    width: 280px;
+}
+
+#settings-panel:not([hidden]) {
+	display: block !important;
+}
+
+#settings-panel h3 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 5px;
+}
+
+#settings-panel label {
+	display: block;
+	margin-bottom: 8px;
+	cursor: pointer;
+}
+
+body.dark #settings-panel {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+#toc {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    width: 300px;
+    max-height: calc(100vh - 80px);
+    box-shadow: var(--shadow-button);
+    border-radius: 4px;
+    flex-direction: column;
+    flex: 0 0 300px;
+    align-self: flex-start;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: none;
+    position: sticky;
+    top: 32px;
+}
+
+body.dark #toc {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+body.toc-visible.view-mode #toc {
+    display: flex;
+    max-height: none;
+}
+
+body.toc-visible.view-mode #toc .toc-body {
+    overflow-y: visible;
+}
+
+body.toc-visible.view-mode #wrapper {
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 32px 24px 32px 72px;
+}
+
+body.toc-visible.view-mode #previewer.full-width {
+    flex: 240mm;
+    width: auto;
+    min-width: 0;
+    max-width: 240mm;
+    margin: 0;
+}
+
+#toc .toc-header {
+    flex-shrink: 0;
+}
+
+#toc .toc-body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#toc .toc-title {
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    padding: 0 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+}
+
+#toc .toc-empty {
+    color: var(--text-muted);
+    padding: 8px 6px;
+    font-size: 12px;
+}
+
+#toc .toc-link {
+    color: var(--text-muted);
+    cursor: pointer;
+    word-break: break-word;
+    border-radius: 4px;
+    padding: 4px 6px 4px 14px;
+    text-decoration: none;
+    transition: color .15s, background .15s;
+    display: block;
+    position: relative;
+}
+
+#toc .toc-link:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
+#toc .toc-link.active {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+#toc .toc-link:before {
+    content: "";
+    width: 2px;
+    position: absolute;
+    left: 4px;
+    top: 4px;
+    bottom: 4px;
+    background: transparent;
+    transition: background .15s;
+}
+
+#toc .toc-link.active:before {
+    background: var(--accent);
+}
+
+/* markdown-previewer background styling */
+#previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6 {
+	border-bottom: 1px solid var(--border);
+	padding-bottom: 0.3em;
+}
+
+body.dark #previewer {
+	color: var(--text);
+	background-color: var(--bg-preview);
+}
+
 @media print {
-  nav {
-  	display:none;
+  html, body {
+  	background: transparent !important;
+  	background-color: transparent !important;
+  }
+  #toolbar, #toolbar-toggle, #attach-section, #settings-panel {
+  	display:none !important;
   }
   #previewer {
   	border:0 !important;
   	margin:0 !important;
   	padding:0 !important;
+  	width:auto !important;
+  	max-width:none !important;
+  	min-height:0 !important;
+  	display:block !important;
+  	zoom:0.9 !important;
+  	background: transparent !important;
+  	background-color: transparent !important;
   }
 }
 #drawArea {
@@ -385,14 +788,22 @@ nav:after {
 <style id="previewerStyle"></style>
 <title>無題</title>
 </head>
-<body class="initialState">
-<nav>
-	<div id="leftNav">
-		<button id="onlineMenuButton">オンラインメニュー</button><button id="settingMenuButton">設定</button>
+<body class="initialState view-mode">
+<div id="toolbar-toggle" title="メニュー"><span id="toolbar-toggle-icon">☰</span></div>
+<nav id="toolbar">
+	<div id="toolbar-left">
+		<button id="btn-settings" title="設定"><span class="btn-icon">⚙</span><span class="btn-text">設定</span></button>
 	</div>
-	<div id="rightNav">
-		<span id="messageArea"></span>
-		<button id="syncButton">プレビュー(F5)</button><button id="headingSyncButton">見出し同期(F2)</button><button id="toggleButton">編集/閲覧(ESC)</button><button id="saveButton">保存(Ctrl+S)</button>
+	<div id="toolbar-center">
+		<span id="message-area"></span>
+	</div>
+	<div id="toolbar-right">
+		<button id="btn-toggle-toc" title="目次表示切替"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 4zm2.5 4a.5.5 0 0 1 .5-.5h8.5a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h8.5a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"></path><path d="M.5 3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5zm0 4a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0V8a.5.5 0 0 1 .5-.5zm0 4a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0v-1.5a.5.5 0 0 1 .5-.5z"></path></svg></span><span class="btn-text">目次</span></button>
+		<button id="btn-toggle-attach" title="添付ファイル表示切替 (Alt+↑)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"></path></svg></span><span class="btn-text">画像を添付</span></button>
+		<button id="btn-dark-mode" title="ダークモード切替"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"></path></svg></span><span class="btn-text">ダーク</span></button>
+		<button id="btn-toggle-mode" title="編集/閲覧切替 (ESC)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"></path></svg></span><span class="btn-text">編集</span></button>
+		<button id="btn-export" title="編集不可のHTMLを書き出します (Ctrl+Shift+S)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"></path><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V9.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"></path></svg></span><span class="btn-text">書き出し</span></button>
+		<button id="btn-save" title="保存 (Ctrl+S)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"></path><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"></path></svg></span><span class="btn-text">保存</span></button>
 	</div>
 </nav>
 <div id="attach">
@@ -400,7 +811,7 @@ nav:after {
 	<div id="filer">
 		<ul id="fileList">
 		</ul>
-		<div id="pasteArea" contenteditable="true">ここをクリックしてCtrl+V(Cmd+V)するとクリップボードの画像を添付できます。</div>
+		<div id="paste-area" contenteditable="true">ここをクリックしてCtrl+Vでクリップボードの画像を添付できます</div>
 	</div>
 	<button id="attachToggleButton">添付ファイルを表示(Alt+↓)</button><button id="previewToggleButton">プレビューを隠す(Alt+→)</button>
 </div>
@@ -416,23 +827,16 @@ nav:after {
  * また、CSSの変更はプレビューしないと反映しません。
  */
  
-.previewMode #previewer {
-    width: 980px;
-}
 #previewer {
     word-wrap: break-word;
-    border: 1px solid gray;
-    font-family: Helvetica, arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    background-color: white;
-    padding: 45px;
 }
 #previewer > *:first-child {
     margin-top: 0 !important;
 }
-#previewer > *:last-child {
-    margin-bottom: 0 !important;
+
+#previewer p {
+    margin-top: 0;
+    margin-bottom: 16px;
 }
 a {
     color: #4183C4;
@@ -927,23 +1331,33 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 			<li><a href="#" id="cssTab">CSS</a></li>
 		</ol>
 	</div>
-	<div id="previewer" tabindex="-1"></div>
+	<div id="resize-handle" style="display: none;"></div>
+	<div id="previewer" class="full-width" tabindex="-1"></div>
+	<aside id="toc" aria-label="目次">
+		<div class="toc-header">
+			<span class="toc-title">目次</span>
+		</div>
+		<nav class="toc-body">
+			<!-- 目次内容が動的に生成されます -->
+		</nav>
+	</aside>
 </div>
-<div id="onlineMenu" class="popupMenu">
-	<ul>
-		<li><a href="https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html" target="_blank">新規作成</a></li>
-		<li><a href="http://tatesuke.github.io/KanTanMarkdown/syntax.html" id="helpButton" target="_blank">Markdown記法ヘルプ(F1)</a></li>
-		<li><a href="#" id="updateButton">最新版にアップデート(機能実験中)</a></li>
-		<li><a href="http://tatesuke.github.io/KanTanMarkdown/" target="_blank">かんたんMarkdown <span class="version"></span></a></li>
-	</ul>
-</div>
-<div id="settingMenu" class="popupMenu">
-	<ul>
-		<li><input type="checkbox" id="settingAutoSync" checked="checked"><label for="settingAutoSync">自動プレビュー</label></li>
-		<li><input type="checkbox" id="settingExpandtab"><label for="settingExpandtab">タブキーでスペースを挿入</label></li>
-		<li><input type="checkbox" id="settingAutoCloseTab"><label for="settingAutoCloseTab">`/`を入力したときに閉じタグを自動挿入</label></li>
-		<li><input type="checkbox" id="settingInsertImgTagAfterAttach"><label for="settingInsertImgTagAfterAttach">画像を添付したらタグを挿入</label></li>
-	</ul>
+<div id="settings-panel" hidden="">
+	<h3>設定</h3>
+	<label><input type="checkbox" id="setting-auto-sync" checked="checked"> 自動プレビュー</label>
+	<label><input type="checkbox" id="setting-expand-tab"> タブキーでスペースを挿入</label>
+	<label><input type="checkbox" id="setting-auto-close-tag"> 閉じタグを自動挿入</label>
+	<label><input type="checkbox" id="setting-insert-img-tag"> 画像添付時にタグを挿入</label>
+	<label><input type="checkbox" id="setting-require-trailing-spaces"> 改行に末尾スペース2個を必須にする</label>
+	
+	<hr style="border-top:1px solid var(--border); margin: 10px 0;">
+	<p style="font-weight: bold; margin-bottom: 5px;">メニュー</p>
+	<a href="https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">新規作成</a>
+	<a href="http://tatesuke.github.io/KanTanMarkdown/syntax.html" id="helpButton" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">Markdown記法ヘルプ(F1)</a>
+	<a href="#" id="updateButton" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">最新版にアップデート</a>
+	<a href="http://tatesuke.github.io/KanTanMarkdown/" target="_blank" style="display:block; margin: 5px 0; color: var(--text-muted); text-decoration: none; font-size: 11px;">かんたんMarkdown <span class="version"></span></a>
+	
+	<button id="btn-settings-close" style="margin-top:10px; width:100%; border:1px solid var(--border); border-radius: var(--radius); padding:4px; cursor:pointer; background: var(--bg-surface); color: var(--text);">閉じる</button>
 </div>
 <div id="importDialog">
 	<p id="importDialogMessage"></p>
@@ -1094,7 +1508,7 @@ function toKantanEditor(editor) {
 			/* いわゆる普通のtab */
 			var text = editor.value;
 			var insertString;
-			if (document.querySelector("#settingExpandtab").checked) {
+			if (document.querySelector("#setting-expand-tab").checked) {
 				insertString = "";
 				var tabSize = 4;
 				var posOfLine = 0;
@@ -1273,7 +1687,7 @@ function toKantanEditor(editor) {
 		}
 		
 		// 閉じタグ挿入がoffなら終了
-		if (!document.querySelector("#settingAutoCloseTab").checked) {
+		if (!document.querySelector("#setting-auto-close-tag").checked) {
 			return true;
 		}
 		
@@ -2450,9 +2864,9 @@ LetterModeStrategy.prototype = {
 	}
 
 	function setViewOnly() {
-		document.getElementById("messageArea").innerText
+		document.getElementById("message-area").innerText
 				 = "このブラウザでは編集できません。";
-		var navElems = document.querySelectorAll("nav > *");
+		var navElems = document.querySelectorAll("#toolbar button");
 		for (var i = 0; i < navElems.length; i++) {
 			navElems[i].setAttribute("disabled", "disabled");
 		}
@@ -2538,7 +2952,7 @@ LetterModeStrategy.prototype = {
 	// 現在のところチェックボックスのみなので
 	// チェックボックスに特化して実装している
 	var saveValueElements = document.querySelectorAll(
-			"#settingMenu input[type=checkbox]");
+			"#settings-panel input[type=checkbox]");
 	for (var i = 0; i < saveValueElements.length; i++) {
 		var element = saveValueElements[i];
 		var savedValue = getItem(element.id, null);
@@ -2623,23 +3037,112 @@ LetterModeStrategy.prototype = {
 	
 	/* 起動時にコンテンツ読み込み */
 	addClass(document.querySelector("body"), "previewMode");
+	addClass(document.querySelector("body"), "view-mode");
 	removeClass(document.querySelector("body"), "editMode");
 	removeClass(document.querySelector("body"), "initialState");
-	if (isEnable(document.getElementById("toggleButton")) 
-			&& (document.getElementById("editor").innerHTML == "")) {
-		// 編集モードでなく、内容が空であれば初期状態を編集モードにする
-		toggleMode();
+
+	// 起動時は常に閲覧（プレビュー）モードなので、アタッチ領域、エディタ領域、リサイズハンドルを明示的に非表示にする
+	hide(document.getElementById("attach"));
+	hide(document.getElementById("editorTabWrapper"));
+	hide(document.getElementById("resize-handle"));
+
+	// ツールバーとハンバーガーのイベント
+	var toolbar = document.getElementById("toolbar");
+	var toggleBtn = document.getElementById("toolbar-toggle");
+	var toggleIcon = document.getElementById("toolbar-toggle-icon");
+	var isToolbarVisible = getItem("toolbar-visible", "false") === "true";
+
+	if (isToolbarVisible) {
+		addClass(toolbar, "visible");
+		addClass(document.body, "toolbar-open");
+		toggleIcon.innerText = "✕";
 	} else {
-		doPreview();
+		removeClass(toolbar, "visible");
+		removeClass(document.body, "toolbar-open");
+		toggleIcon.innerText = "☰";
 	}
+
+	on("#toolbar-toggle", "click", function() {
+		if (toolbar.classList.contains("visible")) {
+			removeClass(toolbar, "visible");
+			removeClass(document.body, "toolbar-open");
+			toggleIcon.innerText = "☰";
+			setItem("toolbar-visible", "false");
+			
+			// ツールバーを閉じる際、もし現在編集モード中なら閲覧（プレビュー）モードに切り替える
+			if (isEditMode()) {
+				toggleMode();
+			}
+		} else {
+			addClass(toolbar, "visible");
+			addClass(document.body, "toolbar-open");
+			toggleIcon.innerText = "✕";
+			setItem("toolbar-visible", "true");
+		}
+		doLayout();
+	});
+
+	// 設定パネルのイベント
+	var settingsPanel = document.getElementById("settings-panel");
+	on("#btn-settings", "click", function() {
+		settingsPanel.removeAttribute("hidden");
+	});
+	on("#btn-settings-close", "click", function() {
+		settingsPanel.setAttribute("hidden", "");
+	});
+
+	// ダークモード
+	var isDark = getItem("dark-mode", "false") === "true";
+	if (isDark) {
+		addClass(document.body, "dark");
+		document.getElementById("btn-dark-mode").querySelector(".btn-text").innerText = "ライト";
+	} else {
+		removeClass(document.body, "dark");
+		document.getElementById("btn-dark-mode").querySelector(".btn-text").innerText = "ダーク";
+	}
+
+	on("#btn-dark-mode", "click", function() {
+		if (document.body.classList.contains("dark")) {
+			removeClass(document.body, "dark");
+			document.getElementById("btn-dark-mode").querySelector(".btn-text").innerText = "ダーク";
+			setItem("dark-mode", "false");
+		} else {
+			addClass(document.body, "dark");
+			document.getElementById("btn-dark-mode").querySelector(".btn-text").innerText = "ライト";
+			setItem("dark-mode", "true");
+		}
+		doPreview();
+	});
+
+	// エディタ幅の復元
+	var savedEditorWidth = getItem("editor-width", "50%");
+	document.documentElement.style.setProperty("--editor-width", savedEditorWidth);
+
+	// 起動時は常に閲覧（プレビュー）モードで開始する
+	doPreview();
 
 	/* レイアウト調整 */
 	doLayout();
 	on(window, "resize", doLayout);
 	function doLayout() {
 		var wrapper = document.getElementById("wrapper");
-		
-		var wrapperHeight = window.innerHeight - wrapper.offsetTop - 10;
+		var offsetTop = wrapper.offsetTop;
+		// toolbar が open の場合は offsetTop を調整
+		if (document.body.classList.contains("toolbar-open")) {
+			offsetTop = 40; // --toolbar-height
+		} else {
+			offsetTop = 0;
+		}
+		var wrapperHeight = window.innerHeight - offsetTop;
+		if (isEditMode()) {
+			// 編集モード時はアタッチセクションもある
+			var attach = document.getElementById("attach");
+			if (isVisible(attach)) {
+				var filer = document.getElementById("filer");
+				var attachHeight = isVisible(filer) ? 200 : 40;
+				wrapperHeight -= attachHeight;
+			}
+		}
 		wrapper.style.height = wrapperHeight + "px";
 	}
 
@@ -2648,13 +3151,29 @@ LetterModeStrategy.prototype = {
 	var caretStartPos = 0;
 	var caretEndPos = 0;
 	var isPreviewerOpened = true;
-	on("#toggleButton", "click", toggleMode);
+	var viewModeIcon = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5 8-5.5 8-5.5zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 4 8 4s3.88.668 5.168 1.957A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12 8 12s-3.879-.668-5.168-1.957A13.134 13.133 0 0 1 1.172 8z"></path><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"></path></svg>';
+	var editModeIcon = '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"></path></svg>';
+
+	on("#btn-toggle-mode", "click", toggleMode);
+	syncModeButton();
+
+	function syncModeButton() {
+		var button = document.getElementById("btn-toggle-mode");
+		if (!button) return;
+		var editMode = isEditMode();
+		button.querySelector(".btn-text").innerText = editMode ? "閲覧" : "編集";
+		button.querySelector(".btn-icon").innerHTML = editMode ? viewModeIcon : editModeIcon;
+	}
 
 	function toggleMode() {
 		var attach = document.getElementById("attach");
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var editor = document.getElementById("editor");
 		var previewer = document.getElementById("previewer");
+		var resizeHandle = document.getElementById("resize-handle");
+		var toc = document.getElementById("toc");
+		var toggleBtnMode = document.getElementById("btn-toggle-mode");
+
 		if (isEditMode()) {
 			editorScrollBarPos    = editor.scrollTop;
 			caretStartPos = editor.selectionStart;
@@ -2670,7 +3189,13 @@ LetterModeStrategy.prototype = {
 			
 			hide(attach);
 			hide(editorTabWrapper);
+			hide(resizeHandle);
 			doPreview();
+			
+			// 目次
+			if (document.body.classList.contains("toc-visible")) {
+				buildToc();
+			}
 			
 			// スクロールバー位置記憶
 			var minDiff = null;
@@ -2686,7 +3211,9 @@ LetterModeStrategy.prototype = {
 			
 			// レイアウト修正
 			addClass(document.querySelector("body"), "previewMode");
+			addClass(document.querySelector("body"), "view-mode");
 			removeClass(document.querySelector("body"), "editMode");
+			addClass(previewer, "full-width");
 			doLayout();
 			
 			previewer.focus();
@@ -2694,10 +3221,14 @@ LetterModeStrategy.prototype = {
 			if (minElem) {
 				wrapper.scrollTop = (minElem.offsetTop - previewer.offsetTop) + minDiff;
 			}
+			
 		} else {
 			// 編集モードへ
 			showBlock(attach);
 			showBlock(editorTabWrapper);
+			if (isPreviewerOpened) {
+				showBlock(resizeHandle);
+			}
 			doPreview();
 			
 			// スクロールバー位置記憶
@@ -2718,14 +3249,29 @@ LetterModeStrategy.prototype = {
 			
 			// レイアウト修正
 			removeClass(document.querySelector("body"), "previewMode");
+			removeClass(document.querySelector("body"), "view-mode");
 			addClass(document.querySelector("body"), "editMode");
+			removeClass(previewer, "full-width");
 			doLayout();
 			
 			if (minElem) {
 				previewer.scrollTop = (minElem.offsetTop - previewer.offsetTop) + minDiff;
 			}
+
 		}
 		
+		// 添付ファイル表示状態の同期
+		var isFilerVis = isVisible(document.getElementById("filer"));
+		document.getElementById("attachToggleButton").innerText = isFilerVis ? "添付ファイルを隠す(Alt+↑)" : "添付ファイルを表示(Alt+↓)";
+		var btnToggleAttach = document.getElementById("btn-toggle-attach");
+		if (btnToggleAttach) {
+			btnToggleAttach.querySelector(".btn-text").innerText = isFilerVis ? "隠す" : "画像を添付";
+		}
+		
+		// プレビュー表示状態の同期
+		var isPrevVis = isVisible(document.getElementById("previewer"));
+		document.getElementById("previewToggleButton").innerText = isPrevVis ? "プレビューを隠す(Alt+→)" : "プレビューを表示(Alt+←)";
+		syncModeButton();
 
 		if (isEditMode()) {
 			editor.scrollTop    = editorScrollBarPos;
@@ -2739,16 +3285,13 @@ LetterModeStrategy.prototype = {
 
 	// 自動同期チェックボックスをクリックしたらchecked属性を更新する
 	// これを行わないと自動同期チェックボックスの状態が保存されない
-	on("#settingAutoSync", "change", function() {
+	on("#setting-auto-sync", "change", function() {
 		if (this.checked == true) {
 			this.setAttribute("checked", "checked");
 		} else {
 			this.removeAttribute("checked");
 		}
 	});
-
-	//更新ボタンを押したら更新する 
-	on("#syncButton", "click", doPreview);
 
 	// エディタに変化があったらプレビュー予約
 	on("#editor", "change", queuePreview);
@@ -2759,7 +3302,7 @@ LetterModeStrategy.prototype = {
 	var previewQueue = null; // キューをストック 
 	var queuePreviewWait = 300; // 0.3秒後に実行の場合 
 	function queuePreview() {
-		var settingAutoSync = document.getElementById("settingAutoSync");
+		var settingAutoSync = document.getElementById("setting-auto-sync");
 		if (!settingAutoSync.checked) {
 			return;
 		}
@@ -2784,6 +3327,13 @@ LetterModeStrategy.prototype = {
 		// スクロールバー下端判定
 		var scrollLockFlag = isMaxScroll("previewer");
 		
+		// 改行に末尾スペース2個を必須にする（require-trailing-spaces）の制御
+		var requireSpacesElem = document.getElementById("setting-require-trailing-spaces");
+		var requireSpaces = requireSpacesElem ? requireSpacesElem.checked : false;
+		marked.setOptions({
+			breaks: !requireSpaces
+		});
+
 		// マークダウンレンダリング
 		previewer.innerHTML = marked(editor.value);
 		
@@ -2826,6 +3376,9 @@ LetterModeStrategy.prototype = {
 				if (matchs) {
 					var name = decodeURIComponent(matchs[1]);
 					getFileBlog(name, function(blob){
+						if (!(blob instanceof Blob)) {
+							return;
+						}
 						var url = window.URL || window.webkitURL;
 						var blobUrl = url.createObjectURL(blob);
 						anchor.href = blobUrl;
@@ -2836,14 +3389,34 @@ LetterModeStrategy.prototype = {
 		}
 		
 		
+	function getDiagramSource(element) {
+		var clone = element.cloneNode(true);
+		var breaks = clone.getElementsByTagName("br");
+		while (breaks.length > 0) {
+			var br = breaks[0];
+			br.parentNode.replaceChild(document.createTextNode("\n"), br);
+		}
+		return clone.textContent;
+	}
+
 		// シーケンス図
 		if (typeof Diagram !== "undefined") {
 			var sequences = document.getElementsByClassName("sequence");
 			for (var i = 0; i < sequences.length; i++) {
 				var sequence = sequences[i];
-				var diagram = Diagram.parse(sequence.textContent);
-				sequence.innerHTML = "";
-				diagram.drawSVG(sequence, {theme: 'simple'});
+				var sequenceSource = getDiagramSource(sequence);
+				try {
+					var diagram = Diagram.parse(sequenceSource);
+					sequence.innerHTML = "";
+					diagram.drawSVG(sequence, {theme: 'simple'});
+				} catch (e) {
+					// 1つの不正な図でプレビュー処理とUI初期化全体を停止させない
+					sequence.textContent = sequenceSource;
+					addClass(sequence, "diagram-error");
+					if (window.console && console.warn) {
+						console.warn("シーケンス図を描画できませんでした。", e);
+					}
+				}
 			}
 		}
 		
@@ -2852,9 +3425,19 @@ LetterModeStrategy.prototype = {
 			var flows = document.getElementsByClassName("flow");
 			for (var i = 0; i < flows.length; i++) {
 				var flow = flows[i];
-				var diagram = flowchart.parse(flow.textContent);
-				flow.innerHTML = "";
-				diagram.drawSVG(flow);
+				var flowSource = getDiagramSource(flow);
+				try {
+					var diagram = flowchart.parse(flowSource);
+					flow.innerHTML = "";
+					diagram.drawSVG(flow);
+				} catch (e) {
+					// 旧flowchart.jsが循環経路などで失敗しても、他の機能は継続する
+					flow.textContent = flowSource;
+					addClass(flow, "diagram-error");
+					if (window.console && console.warn) {
+						console.warn("フローチャートを描画できませんでした。", e);
+					}
+				}
 			}
 		}
 		
@@ -3150,7 +3733,7 @@ LetterModeStrategy.prototype = {
 	} 
 	
 	function showImportDialog(msg, callback) {
-		document.getElementById("saveButton").disabled =  true;
+		document.getElementById("btn-save").disabled =  true;
 		document.getElementById("importDialogMessage").innerText = msg;
 		var dialogElement = document.getElementById("importDialog");
 		dialogElement.querySelector("form").reset();
@@ -3174,8 +3757,8 @@ LetterModeStrategy.prototype = {
 			if (document.getElementById("importDialogCancelButton")) {
 				document.getElementById("importDialogCancelButton").onclick;
 			}
-			if (document.getElementById("saveButton")) {
-				document.getElementById("saveButton").disabled =  false;
+			if (document.getElementById("btn-save")) {
+				document.getElementById("btn-save").disabled =  false;
 			}
 			
 			return false;
@@ -3191,7 +3774,7 @@ LetterModeStrategy.prototype = {
 			
 			delete document.getElementById("importDialogOkButton").onclick;
 			delete document.getElementById("importDialogCancelButton").onclick;
-			document.getElementById("saveButton").disabled =  false;
+			document.getElementById("btn-save").disabled =  false;
 			
 			return false;
 		}
@@ -3287,18 +3870,17 @@ LetterModeStrategy.prototype = {
 		
 		// ファイル添付領域を開く
 		var editor = document.getElementById("editor");
-		var toggleButton = document.getElementById("toggleButton");
 		var filer = document.getElementById("filer");
 		if (!isEditMode()) {
-			toggleButton.click();
+			toggleMode();
 		}
 		if (!isVisible(filer)) {
 			openFiler();
 		}
 		
 		// イメージタグを挿入
-		var setting = document.querySelector("#settingInsertImgTagAfterAttach");
-		if (isImage && insertImgTag && setting.checked) {
+		var setting = document.querySelector("#setting-insert-img-tag");
+		if (isImage && insertImgTag && setting && setting.checked) {
 			var tag = '<img src="attach:' + name  + '">';
 			insertToEditor(document.getElementById("editor"), tag);
 		}
@@ -3311,6 +3893,7 @@ LetterModeStrategy.prototype = {
 		var script = document.getElementById("attach-" + name);
 		if (!script) {
 			onLoaded(null);
+			return;
 		}
 		
 		var callBack = function(imageUrl) {
@@ -3530,6 +4113,19 @@ LetterModeStrategy.prototype = {
 			openFiler();
 		}
 	});
+	on("#btn-toggle-attach", "click", function() {
+		// もし現在閲覧モード（プレビューモード）なら、自動的に編集モードへ移行する
+		if (!isEditMode()) {
+			toggleMode();
+		}
+		
+		// 底のボタンのクリックを呼ぶのではなく、直接 filer の表示・非表示関数を実行する
+		if (isVisible(document.getElementById("filer"))){
+			closeFiler();
+		} else {
+			openFiler();
+		}
+	});
 
 	/* プレビュー領域開け閉め */
 	on("#previewToggleButton", "click", function() {
@@ -3544,6 +4140,10 @@ LetterModeStrategy.prototype = {
 		document.getElementById("attachToggleButton").innerText = "添付ファイルを隠す(Alt+↑)";
 		showBlock(document.getElementById("attachForm"));
 		showBlock(document.getElementById("filer"));
+		var btnToggleAttach = document.getElementById("btn-toggle-attach");
+		if (btnToggleAttach) {
+			btnToggleAttach.querySelector(".btn-text").innerText = "隠す";
+		}
 		doLayout();
 	}
 
@@ -3551,6 +4151,10 @@ LetterModeStrategy.prototype = {
 		document.getElementById("attachToggleButton").innerText = "添付ファイルを表示(Alt+↓)";
 		hide(document.getElementById("attachForm"));
 		hide(document.getElementById("filer"));
+		var btnToggleAttach = document.getElementById("btn-toggle-attach");
+		if (btnToggleAttach) {
+			btnToggleAttach.querySelector(".btn-text").innerText = "画像を添付";
+		}
 		doLayout();
 	}
 
@@ -3559,10 +4163,12 @@ LetterModeStrategy.prototype = {
 		// 閲覧モード時は実行しない
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var previewer = document.getElementById("previewer");
+		var resizeHandle = document.getElementById("resize-handle");
 		if (isEditMode() && !isVisible(previewer)) {
 			document.getElementById("previewToggleButton").innerText = "プレビューを隠す(Alt+→)";
 			removeClass(editorTabWrapper, "fullWidth");
 			showBlock(previewer);
+			showBlock(resizeHandle);
 			doLayout();
 		}
 	}
@@ -3572,17 +4178,19 @@ LetterModeStrategy.prototype = {
 		// 閲覧モード時は実行しない
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var previewer = document.getElementById("previewer");
+		var resizeHandle = document.getElementById("resize-handle");
 		if (isEditMode() && isVisible(previewer)) {
 			document.getElementById("previewToggleButton").innerText = "プレビューを表示(Alt+←)";
 			addClass(editorTabWrapper, "fullWidth");
 			hide(previewer);
+			hide(resizeHandle);
 			doLayout();
 		}
 	}
 
 	/* 保存 */
 	var contentAtSave = editor.value;
-	on("#saveButton", "click", save);
+	on("#btn-save", "click", save);
 	function save() {
 		var html = getHTMLForSave();
 		
@@ -3614,7 +4222,7 @@ LetterModeStrategy.prototype = {
 		
 		// テキストエリアは値を入れなおさないと保存されない。
 		var editor = document.getElementById("editor");
-		editor.innerHTML = editor.value.replace(/</g, "&lt;");
+		editor.innerHTML = editor.value.replace(/</g, "\x26lt;");
 		
 		var cssEditor = document.getElementById("cssEditor");
 		cssEditor.innerHTML = cssEditor.value;
@@ -3627,7 +4235,7 @@ LetterModeStrategy.prototype = {
 		
 		/* ファイルの肥大化を防ぐため中身を消去 */
 		document.getElementById("previewer").innerHTML = "";
-		document.getElementById("messageArea").innerHTML = "";
+		document.getElementById("message-area").innerHTML = "";
 		document.getElementById("previewerStyle").innerHTML="";
 		
 		// 不要なdiffの原因となるスタイルなどを削除
@@ -3641,7 +4249,7 @@ LetterModeStrategy.prototype = {
 			stylee.removeAttribute("style");
 		}
 		
-		document.querySelector("#previewer").removeAttribute("class");
+		document.querySelector("#previewer").className = "full-width";
 		
 		// HTML生成
 		var html = "<!doctype html>\n<html>\n";
@@ -3682,50 +4290,7 @@ LetterModeStrategy.prototype = {
 		}
 	}
 
-	/* オンラインメニュー */
-	on("#onlineMenuButton", "click", function(){
-		var button = this;
-		var onlineMenu = document.getElementById("onlineMenu");
-		onlineMenu.style.top = (this.offsetTop + this.scrollHeight) + "px";
-		showBlock(onlineMenu);
-	});
-
-	on("body", "click", function(e){
-		var onlineMenuButton = document.getElementById("onlineMenuButton");
-		if (e.target != onlineMenuButton) {
-			hide(document.getElementById("onlineMenu"));
-		}
-	});
-	
-	/* 設定メニュー */
-	on("#settingMenuButton", "click", function(){
-		var button = this;
-		var settingMenu = document.getElementById("settingMenu");
-		settingMenu.style.top = (this.offsetTop + this.scrollHeight) + "px";
-		settingMenu.style.left = this.offsetLeft + "px";
-		showBlock(settingMenu);
-	});
-
-	on("body", "click", function(e){
-		var current = e.target;
-		
-		var settingMenuButton = document.getElementById("settingMenuButton");
-		if (current ==  settingMenuButton) {
-			return true;
-		}
-		
-		var settingMenu = document.getElementById("settingMenu");
-		while (current != null) {
-			if (current == settingMenu) {
-				return true;
-			}
-			current = current.parentNode;
-		}
-		hide(settingMenu);
-	});
-
 	/* 見出し同期 */
-	on("#headingSyncButton", "click", headingSyncToPreviewer);
 
 	on("#previewer", "previewed", function(e) {
 		if (isEditMode()) {
@@ -4026,7 +4591,7 @@ LetterModeStrategy.prototype = {
 	
 	/* 画面キャプチャ貼り付け */
 	// Chrome向け
-	on("#pasteArea", "paste",function(e){
+	on("#paste-area", "paste",function(e){
 		if (!e.clipboardData || !e.clipboardData.types) {
 			return true;
 		}
@@ -4050,7 +4615,7 @@ LetterModeStrategy.prototype = {
 	});
 	
 	// FF, IE向け
-	on("#pasteArea", "keyup",function(e){
+	on("#paste-area", "keyup",function(e){
 		e.preventDefault();
 		
 		var dummyElement = document.createElement("div");
@@ -4061,7 +4626,7 @@ LetterModeStrategy.prototype = {
 			addAttachFileElement("clipboard", base64, "", "", true);
 		}
 		
-		this.innerHTML = "ここをクリックしてCtrl+V(Cmd+V)するとクリップボードの画像を添付できます。";
+		this.innerHTML = "ここをクリックしてCtrl+Vでクリップボードの画像を添付できます";
 		return false;
 	});
 	
@@ -4082,26 +4647,34 @@ LetterModeStrategy.prototype = {
 			// ESCキー
 			event.preventDefault();
 			
-			var onlineMenu = document.getElementById("onlineMenu");
-			if (isVisible(onlineMenu)) {
-				// オンラインメニュー閉じる
-				hide(onlineMenu);
+			var settingsPanel = document.getElementById("settings-panel");
+			if (settingsPanel && !settingsPanel.hasAttribute("hidden")) {
+				settingsPanel.setAttribute("hidden", "");
 			} else {
 				// 閲覧/編集モード切り替え
-				var toggleButton = document.getElementById("toggleButton");
-				if (isEnable(toggleButton)) {
-					toggleButton.click();
+				var toggleBtn = document.getElementById("btn-toggle-mode");
+				if (isEnable(toggleBtn)) {
+					toggleBtn.click();
 				}
 			}
 			return false;
 		}
 		
+		if (code == 83 && event.shiftKey && (event.ctrlKey || event.metaKey)) {
+			// CTRL+SHIFT+Sで書き出し
+			event.preventDefault();
+			var exportBtn = document.getElementById("btn-export");
+			if (isEnable(exportBtn)) {
+				exportBtn.click();
+			}
+			return false;
+		}
 		
 		if (code == 83 && (event.ctrlKey || event.metaKey)){
 			// CTRL+Sで保存する
 			event.preventDefault();
 			
-			var saveButton = document.getElementById("saveButton");
+			var saveButton = document.getElementById("btn-save");
 			if (isEnable(saveButton)) {
 				saveButton.click();
 			}
@@ -4112,11 +4685,7 @@ LetterModeStrategy.prototype = {
 				((code == 82) && (event.ctrlKey || event.metaKey))){
 			// F5 or Ctrl + Rでエディタとプレビューアを同期
 			event.preventDefault();
-			
-			var syncButton = document.getElementById("syncButton");
-			if (isEnable(syncButton)) {
-				syncButton.click();
-			}
+			doPreview();
 			return false;
 		}
 		
@@ -4161,10 +4730,7 @@ LetterModeStrategy.prototype = {
 		if (code == 113) {
 			// F2で見出し同期（エディタ→プレビューア）
 			event.preventDefault();
-			
-			var headingSyncButton = document.getElementById("headingSyncButton");
-			headingSyncButton.click();
-			
+			headingSyncToPreviewer();
 			return false;
 		}
 		
@@ -4220,6 +4786,322 @@ LetterModeStrategy.prototype = {
 		elem.classList.remove(className);
 		if (elem.className == "") {
 			elem.removeAttribute("class");
+		}
+	}
+
+	// 新規移植機能: リサイズ、目次、書き出し（エクスポート）
+
+	// --- 1. リサイズハンドル ---
+	var resizeHandle = document.getElementById("resize-handle");
+	var editorTabWrapper = document.getElementById("editorTabWrapper");
+	var isResizing = false;
+
+	on(resizeHandle, "mousedown", startResize);
+	on(resizeHandle, "touchstart", startResize);
+
+	function startResize(e) {
+		isResizing = true;
+		addClass(resizeHandle, "active");
+		document.body.style.userSelect = "none";
+		document.body.style.cursor = "col-resize";
+		
+		window.addEventListener("mousemove", resize);
+		window.addEventListener("touchmove", resize);
+		window.addEventListener("mouseup", stopResize);
+		window.addEventListener("touchend", stopResize);
+	}
+
+	function resize(e) {
+		if (!isResizing) return;
+		var clientX = e.clientX || (e.touches && e.touches[0].clientX);
+		if (!clientX) return;
+		var widthPercent = (clientX / window.innerWidth) * 100;
+		if (widthPercent < 20) widthPercent = 20;
+		if (widthPercent > 80) widthPercent = 80;
+		var widthStr = widthPercent + "%";
+		document.documentElement.style.setProperty("--editor-width", widthStr);
+		setItem("editor-width", widthStr);
+	}
+
+	function stopResize() {
+		if (!isResizing) return;
+		isResizing = false;
+		removeClass(resizeHandle, "active");
+		document.body.style.userSelect = "";
+		document.body.style.cursor = "";
+		window.removeEventListener("mousemove", resize);
+		window.removeEventListener("touchmove", resize);
+		window.removeEventListener("mouseup", stopResize);
+		window.removeEventListener("touchend", stopResize);
+	}
+
+	// --- 2. 目次機能 ---
+	var isTocVisible = getItem("toc-visible", "false") === "true";
+	if (isTocVisible) {
+		addClass(document.body, "toc-visible");
+		addClass(document.getElementById("btn-toggle-toc"), "active-toggle");
+	} else {
+		removeClass(document.body, "toc-visible");
+		removeClass(document.getElementById("btn-toggle-toc"), "active-toggle");
+	}
+
+	on("#btn-toggle-toc", "click", toggleToc);
+
+	function toggleToc() {
+		var btn = document.getElementById("btn-toggle-toc");
+		if (document.body.classList.contains("toc-visible")) {
+			removeClass(document.body, "toc-visible");
+			removeClass(btn, "active-toggle");
+			setItem("toc-visible", "false");
+		} else {
+			addClass(document.body, "toc-visible");
+			addClass(btn, "active-toggle");
+			setItem("toc-visible", "true");
+		}
+		buildToc();
+		doLayout();
+	}
+
+	on("#previewer", "previewed", buildToc);
+
+	function buildToc() {
+		var toc = document.getElementById("toc");
+		if (!toc) return;
+		var tocBody = toc.querySelector(".toc-body");
+		tocBody.innerHTML = "";
+		
+		var previewer = document.getElementById("previewer");
+		var headings = previewer.querySelectorAll("h1, h2, h3, h4, h5, h6");
+		
+		if (headings.length === 0) {
+			tocBody.innerHTML = '<div class="toc-empty">見出しがありません</div>';
+			return;
+		}
+
+		var minLevel = 6;
+		for (var i = 0; i < headings.length; i++) {
+			var level = parseInt(headings[i].tagName.substring(1));
+			if (level < minLevel) minLevel = level;
+		}
+
+		for (var i = 0; i < headings.length; i++) {
+			var heading = headings[i];
+			var level = parseInt(heading.tagName.substring(1));
+			var text = heading.textContent;
+			
+			if (!heading.id) {
+				heading.id = "heading-" + i;
+			}
+			
+			var link = document.createElement("a");
+			link.className = "toc-link toc-h" + level;
+			link.href = "#" + heading.id;
+			link.innerText = text;
+			link.setAttribute("data-target", heading.id);
+			
+			var paddingLeft = (level - minLevel + 1) * 14;
+			link.style.paddingLeft = paddingLeft + "px";
+			
+			on(link, "click", function(e) {
+				e.preventDefault();
+				var targetId = this.getAttribute("data-target");
+				var targetElem = document.getElementById(targetId);
+				if (targetElem) {
+					targetElem.scrollIntoView({ behavior: "smooth" });
+				}
+			});
+			
+			tocBody.appendChild(link);
+		}
+		
+		updateTocActive();
+	}
+
+	var isScrolling = false;
+	on("#previewer", "scroll", function() {
+		if (!isScrolling) {
+			isScrolling = true;
+			requestAnimationFrame(function() {
+				updateTocActive();
+				isScrolling = false;
+			});
+		}
+	});
+
+	function updateTocActive() {
+		if (!document.body.classList.contains("toc-visible")) return;
+		var previewer = document.getElementById("previewer");
+		var headings = previewer.querySelectorAll("h1, h2, h3, h4, h5, h6");
+		var links = document.querySelectorAll("#toc .toc-link");
+		
+		var activeIndex = -1;
+		var previewerTop = previewer.getBoundingClientRect().top;
+		
+		for (var i = 0; i < headings.length; i++) {
+			var rect = headings[i].getBoundingClientRect();
+			if (rect.top - previewerTop <= 20) {
+				activeIndex = i;
+			} else {
+				break;
+			}
+		}
+		
+		if (activeIndex === -1 && headings.length > 0) activeIndex = 0;
+		
+		for (var i = 0; i < links.length; i++) {
+			if (i === activeIndex) {
+				addClass(links[i], "active");
+			} else {
+				removeClass(links[i], "active");
+			}
+		}
+	}
+
+	// --- 3. 書き出し（エクスポート） ---
+	on("#btn-export", "click", exportHTML);
+
+	function exportHTML() {
+		doPreview(); // 最新の状態で書き出し
+		
+		var title = document.title.replace(/^\* /, "");
+		var previewerStyle = document.getElementById("previewerStyle").innerHTML;
+		var previewerContent = document.getElementById("previewer").innerHTML;
+		
+		var tocHtml = "";
+		if (document.body.classList.contains("toc-visible")) {
+			var tocClone = document.getElementById("toc").cloneNode(true);
+			tocHtml = tocClone.outerHTML;
+		}
+
+		var html = '<!doctype html>\n<html lang="ja">\n<head>\n';
+		html += '<meta charset="utf-8">\n';
+		html += '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
+		html += '<title>' + title + '</title>\n';
+		html += '<style>\n';
+		html += ':root {\n';
+		html += '    --bg: #f6f8fa;\n';
+		html += '    --bg-surface: #fff;\n';
+		html += '    --bg-preview: #fff;\n';
+		html += '    --border: #d1d9e0;\n';
+		html += '    --text: #1f2328;\n';
+		html += '    --text-muted: #59636e;\n';
+		html += '    --accent: #0969da;\n';
+		html += '    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;\n';
+		html += '}\n';
+		if (document.body.classList.contains("dark")) {
+			html += 'body {\n';
+			html += '    --bg: #0d1117;\n';
+			html += '    --bg-surface: #161b22;\n';
+			html += '    --bg-preview: #1c2128;\n';
+			html += '    --border: #30363d;\n';
+			html += '    --text: #c9d1d9;\n';
+			html += '    --text-muted: #8b949e;\n';
+			html += '    --accent: #58a6ff;\n';
+			html += '}\n';
+		}
+		html += 'body {\n';
+		html += '    font-family: var(--font-sans);\n';
+		html += '    color: var(--text);\n';
+		html += '    background: var(--bg);\n';
+		html += '    margin: 0; padding: 0;\n';
+		html += '}\n';
+		html += '#wrapper {\n';
+		html += '    display: flex;\n';
+		html += '    justify-content: center;\n';
+		html += '    align-items: flex-start;\n';
+		html += '    gap: 16px;\n';
+		html += '    padding: 32px 24px;\n';
+		html += '}\n';
+		html += '#previewer {\n';
+		html += '    background: var(--bg-preview);\n';
+		html += '    border: 1px solid var(--border);\n';
+		html += '    width: 100%;\n';
+		html += '    max-width: 980px;\n';
+		html += '    border-radius: 4px;\n';
+		html += '    padding: 32px 40px;\n';
+		html += '    box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n';
+		html += '}\n';
+		html += '#toc {\n';
+		html += '    background: var(--bg-surface);\n';
+		html += '    border: 1px solid var(--border);\n';
+		html += '    width: 300px;\n';
+		html += '    border-radius: 4px;\n';
+		html += '    padding: 16px;\n';
+		html += '    font-size: 13px;\n';
+		html += '    line-height: 1.5;\n';
+		html += '    position: sticky;\n';
+		html += '    top: 32px;\n';
+		html += '    display: block;\n';
+		html += '}\n';
+		html += '#toc .toc-title {\n';
+		html += '    border-bottom: 1px solid var(--border);\n';
+		html += '    margin-bottom: 8px;\n';
+		html += '    padding-bottom: 8px;\n';
+		html += '    font-weight: 600;\n';
+		html += '}\n';
+		html += '#toc .toc-link {\n';
+		html += '    color: var(--text-muted);\n';
+		html += '    text-decoration: none;\n';
+		html += '    display: block;\n';
+		html += '    padding: 4px 6px 4px 14px;\n';
+		html += '    border-radius: 4px;\n';
+		html += '}\n';
+		html += '#toc .toc-link:hover { background: var(--bg); color: var(--text); }\n';
+		html += '#toc .toc-link.active { color: var(--accent); font-weight: 600; }\n';
+		html += '#previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6 {\n';
+		html += '    border-bottom: 1px solid var(--border);\n';
+		html += '    padding-bottom: 0.3em;\n';
+		html += '}\n';
+		html += previewerStyle + '\n';
+		html += '</style>\n';
+		html += '</head>\n';
+		html += '<body>\n';
+		html += '<div id="wrapper">\n';
+		html += '    <div id="previewer">' + previewerContent + '</div>\n';
+		if (tocHtml !== "") {
+			html += '    ' + tocHtml + '\n';
+		}
+		html += '</div>\n';
+		
+		html += '<script>\n';
+		html += 'document.querySelectorAll("#toc .toc-link").forEach(function(link) {\n';
+		html += '    link.addEventListener("click", function(e) {\n';
+		html += '        e.preventDefault();\n';
+		html += '        var target = document.getElementById(this.getAttribute("href").substring(1));\n';
+		html += '        if (target) target.scrollIntoView({ behavior: "smooth" });\n';
+		html += '    });\n';
+		html += '});\n';
+		html += 'window.addEventListener("scroll", function() {\n';
+		html += '    var headings = document.querySelectorAll("#previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6");\n';
+		html += '    var links = document.querySelectorAll("#toc .toc-link");\n';
+		html += '    var activeIndex = -1;\n';
+		html += '    var previewerTop = document.getElementById("previewer").getBoundingClientRect().top;\n';
+		html += '    headings.forEach(function(heading, i) {\n';
+		html += '        if (heading.getBoundingClientRect().top - previewerTop <= 50) activeIndex = i;\n';
+		html += '    });\n';
+		html += '    if (activeIndex === -1 && headings.length > 0) activeIndex = 0;\n';
+		html += '    links.forEach(function(link, i) {\n';
+		html += '        if (i === activeIndex) link.classList.add("active"); else link.classList.remove("active");\n';
+		html += '    });\n';
+		html += '});\n';
+		html += '<\' + \'/script>\n';
+		
+		html += '</body>\n</html>';
+
+		var blob = new Blob([html], {type: "text/html;charset=utf-8"});
+		if (window.navigator.msSaveBlob) {
+			window.navigator.msSaveBlob(blob, title + "_export.html");
+		} else {
+			var url = window.URL || window.webkitURL;		
+			var blobURL = url.createObjectURL(blob);
+			var a = document.createElement('a');
+			a.download = title.replace(/^\* /, "") + "_export.html";
+			a.href = blobURL;
+			
+			var ev = document.createEvent("MouseEvents");
+			ev.initMouseEvent("click", true, false, self, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+			a.dispatchEvent(ev);
+			delete a;
 		}
 	}
 

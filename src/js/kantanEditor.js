@@ -12,7 +12,7 @@ function toKantanEditor(editor) {
 			/* いわゆる普通のtab */
 			var text = editor.value;
 			var insertString;
-			if (document.querySelector("#settingExpandtab").checked) {
+			if (document.querySelector("#setting-expand-tab").checked) {
 				insertString = "";
 				var tabSize = 4;
 				var posOfLine = 0;
@@ -191,7 +191,7 @@ function toKantanEditor(editor) {
 		}
 		
 		// 閉じタグ挿入がoffなら終了
-		if (!document.querySelector("#settingAutoCloseTab").checked) {
+		if (!document.querySelector("#setting-auto-close-tag").checked) {
 			return true;
 		}
 		
