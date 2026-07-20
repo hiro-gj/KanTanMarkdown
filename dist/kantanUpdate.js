@@ -126,12 +126,10 @@ kantanUpdate({
 "}\n" + 
 "h1 {\n" + 
 "    font-size: 28px;\n" + 
-"    color: black;\n" + 
 "}\n" + 
 "h2 {\n" + 
 "    font-size: 24px;\n" + 
 "    border-bottom: 1px solid #cccccc;\n" + 
-"    color: black;\n" + 
 "}\n" + 
 "h3 {\n" + 
 "    font-size: 18px;\n" + 
