@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ja"><head><meta name="robots" content="noindex, nofollow">
+  <meta charset="utf-8">
+<script type="text/markdown" id="markdown-source">
+# kantan-md
+
+メモ帳感覚で使える軽量Markdownエディタ・プレビューアです。ブラウザさえあればどこでも動作し、リアルタイムプレビューにも対応しています。
+
+* ちょっとメモしたいけどMarkdownの環境がない
+* 人に渡す簡単な資料をMarkdownで作りたい
+* チーム内で小規模なドキュメントを共有したいけどWiki等は立てられない
+
+そんな時にぴったりなエディタです。  
+[tatesuke氏のかんたんMarkdown](https://tatesuke.github.io/KanTanMarkdown/) に影響を受けて作られました。
+
+> [!CAUTION]
+> **免責事項**  
+> 本ツールの利用により、バグや操作ミス等で大切な文章やファイルが消失した場合、またはその他いかなる損害が生じた場合も、開発者は一切の責任を負いません。
+
+## 特徴
+
+### 単一ファイルで完結
+kantan-md は**完全に単一のHTMLファイル**で動作します。JavaScriptが動作するブラウザさえあれば、Markdownを書いてそのまま閲覧・共有できます。面倒な環境構築は不要。Windows、Mac、Linux などOSを意識する必要もほとんどありません。
+
+### 非クラウドアプリ
+ブラウザ上で動作しますがクラウドアプリではありません。編集内容を外部に送信する機能は一切備わっていません。セキュリティ上クラウドアプリを利用できない環境でも安心して使えます。
+
+### 変換不要
+kantan-md本体に編集機能も閲覧機能も備わっています。閲覧者や共有相手のためにHTMLやPDFに変換する必要はありません。ファイルを渡すだけでOKです。
+
+### 添付ファイル
+画像をドラッグ＆ドロップするだけで、ファイルそのものに埋め込むことができます。画像を使った文章ですら**単一ファイル**で扱えます。
+
+添付ファイルはダウンロードも可能なため、参考資料一式を1ファイルにまとめることもできます。
+
+### プログラマ向け機能
+主要言語のシンタックスハイライト（highlight.js + 14言語）に対応。  
+[Mermaid](https://mermaid.js.org/) によるダイアグラム（フローチャート、シーケンス図、クラス図、状態遷移図、ER図、ガントチャート、円グラフ、Gitグラフ、マインドマップ…）もテキストで記述できます。
+
+[KaTeX](https://katex.org/) による数式レンダリングにも対応しています。
+
+> [!TIP]
+> **ポイント** Mermaidの図やKaTeXの数式は画像ではありません。テキストから動的にレンダリングされるため、拡大しても劣化しません。
+
+## 使い方
+
+今ご覧になっているこのページ自体が kantan-md で作成されています。このページを使って使い方を確認してください。
+
+### 閲覧モード
+ページを開いた直後は**閲覧モード**です。MarkdownをHTMLにレンダリングした状態で表示されます。
+
+### 編集モード
+右上のハンバーガーボタン（☰）をクリックするとツールバーが表示されます。「編集」ボタン（または `Esc` キー）で編集モードに切り替わります。
+
+編集モードでは左側に**エディタ**、右側に**プレビュー**が表示されます。エディタでMarkdownを編集すると、プレビューにリアルタイムで反映されます。
+
+エディタとプレビューの境界はドラッグで幅を調整できます。
+
+### 添付ファイル
+ツールバーの「画像を添付」ボタン（または `Alt+↑`）で添付ファイル領域を開きます。ここに画像ファイルをドラッグ＆ドロップするか、Ctrl+V でクリップボードの画像を貼り付けることができます。
+
+添付した画像は以下のように参照します：
+
+```markdown
+![画像名](attach:ファイル名.png)
+```
+
+> [!NOTE]
+> `attach:` から始まるパスで、埋め込まれた画像を参照できます。
+
+### 保存
+ツールバーの「保存」ボタン（または `Ctrl+S`）で、編集機能ごとHTMLファイルとしてダウンロードできます。保存したファイルは `app.js` / `app.css` などの外部ファイルを参照しますが、それらは kantan-md のデプロイ先から読み込まれるため、保存したHTML単体をどこに置いても動きます。ブラウザで開けば再編集も可能です。
+
+### 書き出し
+ツールバーの「書き出し」ボタン（または `Ctrl+Shift+S`）で、編集不可の完全自己完結HTMLとして書き出せます。CSS・画像等すべてが埋め込まれ、**外部ファイルを一切参照しません**。閲覧専用・配布用としてお使いください。
+
+> [!NOTE]
+> **保存 vs 書き出し**  
+> 保存は編集可能なHTML（JS/CSSはデプロイ先から読込）、書き出しは閲覧専用の完全自己完結HTML（外部参照ゼロ）です。配布・共有には書き出しをお使いください。
+
+[📖 記法リファレンスはこちら](https://kantan-md.pages.dev/reference)
+</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <!-- Google Tag Manager -->
+  
+  <!-- End Google Tag Manager -->
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAABVUlEQVR4nJVSu6rCQBA9MxtBLCSFYCWCWPgfdlY2/ovfI9jEQpvkByws/QLBzkowBEM0uzsW4129xRXvNHt2d848zgzSNBUR55x8NHVI05REBP+xyHvPzAA+MIlIgff+qwwhKIBIDxEpyzJ8O+eIyBgDoNlsRlH0iy0il8tlNBrFcczMzBzHcavVAsDMw+EwSZLQN3nviSjP806nMxgMxuPx6XTabDb9fn8ymVRVtVwuu93u4XBoNBoi8sxQFAWA+XyuIrbb7cpng6nRJRURQi4r1/Kw4oy9Jae7/fjTFVVVlrVaJ3YV6E6MectcysODiqgoDkoJK19nq9Kj6fz3meA7jdbnVdM7PW/HQVkbqukyTZ7/fKXK/X2+3We388Hnu9HoDVaqVC4cP+qB673W6xWIQrOed0ilp6wDo4EQl78e1qaOBX01mW6etfBGY2xqhDlmUPP/U/N0/xKXsAAAAASUVORK5CYII=">
+  <title>kantan-md</title>
+  <meta name="description" content="単一HTMLファイルで動作する軽量Markdownエディタ・プレビューア。GFM/Mermaid/KaTeX対応。">
+  <meta name="default-toc-visible" content="true">
+  <link rel="canonical" href="https://kantan-md.pages.dev/">
+  <meta property="og:title" content="kantan-md">
+  <meta property="og:description" content="単一HTMLファイルで動作する軽量Markdownエディタ・プレビューア。GFM/Mermaid/KaTeX対応。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://kantan-md.pages.dev/">
+  <meta property="og:site_name" content="kantan-md">
+  <style id="inline-css">/*
+ * Custom CSS for previewer
+ * Changes take effect on next preview refresh.
+ */</style>
+<!-- for local -->
+  <script src="./js/app.js" defer="" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="./css/app.css" referrerpolicy="no-referrer">
+<!--
+  <script src="https://kantan-md.pages.dev/app.js" defer="" referrerpolicy="no-referrer"></script>
+  <link rel="stylesheet" href="https://kantan-md.pages.dev/app.css" referrerpolicy="no-referrer">
+-->
+  <meta name="public-url" content="https://kantan-md.pages.dev">
+</head>
+<body class="view-mode toc-visible" cz-shortcut-listen="true">
+  <!-- Google Tag Manager (noscript) -->
+  
+  <!-- End Google Tag Manager (noscript) -->
+
+  <div id="toolbar-toggle" title="メニュー"><span id="toolbar-toggle-icon">☰</span></div>
+  <nav id="toolbar" class="">
+  <!-- navの内容はapp.jsで上書きされます -->
+  <!--
+    <div id="toolbar-left">
+      <button id="btn-settings" title="設定"><span class="btn-icon">⚙</span><span class="btn-text">設定</span></button>
+      <button id="btn-about" title="kantan-md トップページ"><span class="btn-icon">？</span><span class="btn-text">kantan-mdとは</span></button>
+    </div>
+    <div id="toolbar-center">
+      <span id="message-area"></span>
+    </div>
+    <div id="toolbar-right">
+      <button id="btn-toggle-toc" title="目次表示切替" class="active-toggle"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 4zm2.5 4a.5.5 0 0 1 .5-.5h8.5a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm0 4a.5.5 0 0 1 .5-.5h8.5a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"></path><path d="M.5 3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5zm0 4a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0V8a.5.5 0 0 1 .5-.5zm0 4a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 0 1H1v.5a.5.5 0 0 1-1 0v-1.5a.5.5 0 0 1 .5-.5z"></path></svg></span><span class="btn-text">目次を隠す</span></button>
+      <button id="btn-toggle-attach" title="添付ファイル表示切替 (Alt+↑)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"></path></svg></span><span class="btn-text">画像を添付</span></button>
+      <button id="btn-dark-mode" title="ダークモード切替"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 .278a.768.768 0 0 1 .08.858 7.208 7.208 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.787.787 0 0 1 .81.316.733.733 0 0 1-.031.893A8.349 8.349 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.752.752 0 0 1 6 .278z"></path></svg></span><span class="btn-text">ダーク</span></button>
+      <button id="btn-toggle-mode" title="編集/閲覧切替 (ESC)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"></path></svg></span><span class="btn-text">編集</span></button>
+      <button id="btn-export" title="編集不可のHTMLを書き出します (Ctrl+Shift+S)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"></path><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V9.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"></path></svg></span><span class="btn-text">書き出し</span></button>
+      <button id="btn-save" title="保存 (Ctrl+S)"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"></path><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"></path></svg></span><span class="btn-text">保存</span></button>
+    </div>
+  -->
+  </nav>
+
+  <section id="attach-section" style="display:none">
+    <input type="file" id="file-input" multiple="">
+    <ul id="file-list"></ul>
+    <div id="paste-area" contenteditable="true">ここをクリックしてCtrl+Vでクリップボードの画像を添付できます</div>
+  </section>
+
+  <main id="wrapper">
+    <div id="editor-tab-wrapper" style="display: none;">
+      <textarea id="editor" spellcheck="false" readonly=""></textarea>
+      <textarea id="css-editor" spellcheck="false" readonly="">/*
+ * Custom CSS for previewer
+ * Changes take effect on next preview refresh.
+ */</textarea>
+      <ul id="editor-tabs">
+        <li id="tab-markdown" class="active">Markdown</li>
+        <li id="tab-css">CSS</li>
+      </ul>
+    </div>
+    <div id="resize-handle" style="display: none;"></div>
+    <div id="previewer" class="full-width"><h1>kantan-md</h1>
+<p>メモ帳感覚で使える軽量Markdownエディタ・プレビューアです。ブラウザさえあればどこでも動作し、リアルタイムプレビューにも対応しています。</p>
+<ul>
+<li>ちょっとメモしたいけどMarkdownの環境がない</li>
+<li>人に渡す簡単な資料をMarkdownで作りたい</li>
+<li>チーム内で小規模なドキュメントを共有したいけどWiki等は立てられない</li>
+</ul>
+<p>そんな時にぴったりなエディタです。<br><a target="_blank" rel="noopener noreferrer" href="https://tatesuke.github.io/KanTanMarkdown/">tatesuke氏のかんたんMarkdown</a> に影響を受けて作られました。</p>
+<div class="gfm-note gfm-note--caution"><p class="gfm-note__title"><svg class="octicon octicon-stop" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Caution</p><p><strong>免責事項</strong><br>本ツールの利用により、バグや操作ミス等で大切な文章やファイルが消失した場合、またはその他いかなる損害が生じた場合も、開発者は一切の責任を負いません。</p>
+</div><h2>特徴</h2>
+<h3>単一ファイルで完結</h3>
+<p>kantan-md は<strong>完全に単一のHTMLファイル</strong>で動作します。JavaScriptが動作するブラウザさえあれば、Markdownを書いてそのまま閲覧・共有できます。面倒な環境構築は不要。Windows、Mac、Linux などOSを意識する必要もほとんどありません。</p>
+<h3>非クラウドアプリ</h3>
+<p>ブラウザ上で動作しますがクラウドアプリではありません。編集内容を外部に送信する機能は一切備わっていません。セキュリティ上クラウドアプリを利用できない環境でも安心して使えます。</p>
+<h3>変換不要</h3>
+<p>kantan-md本体に編集機能も閲覧機能も備わっています。閲覧者や共有相手のためにHTMLやPDFに変換する必要はありません。ファイルを渡すだけでOKです。</p>
+<h3>添付ファイル</h3>
+<p>画像をドラッグ＆ドロップするだけで、ファイルそのものに埋め込むことができます。画像を使った文章ですら<strong>単一ファイル</strong>で扱えます。</p>
+<p>添付ファイルはダウンロードも可能なため、参考資料一式を1ファイルにまとめることもできます。</p>
+<h3>プログラマ向け機能</h3>
+<p>主要言語のシンタックスハイライト（highlight.js + 14言語）に対応。<br><a target="_blank" rel="noopener noreferrer" href="https://mermaid.js.org/">Mermaid</a> によるダイアグラム（フローチャート、シーケンス図、クラス図、状態遷移図、ER図、ガントチャート、円グラフ、Gitグラフ、マインドマップ…）もテキストで記述できます。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://katex.org/">KaTeX</a> による数式レンダリングにも対応しています。</p>
+<div class="gfm-note gfm-note--tip"><p class="gfm-note__title"><svg class="octicon octicon-light-bulb" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z"></path></svg>Tip</p><p><strong>ポイント</strong> Mermaidの図やKaTeXの数式は画像ではありません。テキストから動的にレンダリングされるため、拡大しても劣化しません。</p>
+</div><h2>使い方</h2>
+<p>今ご覧になっているこのページ自体が kantan-md で作成されています。このページを使って使い方を確認してください。</p>
+<h3>閲覧モード</h3>
+<p>ページを開いた直後は<strong>閲覧モード</strong>です。MarkdownをHTMLにレンダリングした状態で表示されます。</p>
+<h3>編集モード</h3>
+<p>右上のハンバーガーボタン（☰）をクリックするとツールバーが表示されます。「編集」ボタン（または <code>Esc</code> キー）で編集モードに切り替わります。</p>
+<p>編集モードでは左側に<strong>エディタ</strong>、右側に<strong>プレビュー</strong>が表示されます。エディタでMarkdownを編集すると、プレビューにリアルタイムで反映されます。</p>
+<p>エディタとプレビューの境界はドラッグで幅を調整できます。</p>
+<h3>添付ファイル</h3>
+<p>ツールバーの「画像を添付」ボタン（または <code>Alt+↑</code>）で添付ファイル領域を開きます。ここに画像ファイルをドラッグ＆ドロップするか、Ctrl+V でクリップボードの画像を貼り付けることができます。</p>
+<p>添付した画像は以下のように参照します：</p>
+<pre><code class="language-markdown hljs">![<span class="hljs-string">画像名</span>](<span class="hljs-link">attach:ファイル名.png</span>)</code></pre><div class="gfm-note gfm-note--note"><p class="gfm-note__title"><svg class="octicon octicon-info" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p><p><code>attach:</code> から始まるパスで、埋め込まれた画像を参照できます。</p>
+</div><h3>保存</h3>
+<p>ツールバーの「保存」ボタン（または <code>Ctrl+S</code>）で、編集機能ごとHTMLファイルとしてダウンロードできます。保存したファイルは <code>app.js</code> / <code>app.css</code> などの外部ファイルを参照しますが、それらは kantan-md のデプロイ先から読み込まれるため、保存したHTML単体をどこに置いても動きます。ブラウザで開けば再編集も可能です。</p>
+<h3>書き出し</h3>
+<p>ツールバーの「書き出し」ボタン（または <code>Ctrl+Shift+S</code>）で、編集不可の完全自己完結HTMLとして書き出せます。CSS・画像等すべてが埋め込まれ、<strong>外部ファイルを一切参照しません</strong>。閲覧専用・配布用としてお使いください。</p>
+<div class="gfm-note gfm-note--note"><p class="gfm-note__title"><svg class="octicon octicon-info" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"></path></svg>Note</p><p><strong>保存 vs 書き出し</strong><br>保存は編集可能なHTML（JS/CSSはデプロイ先から読込）、書き出しは閲覧専用の完全自己完結HTML（外部参照ゼロ）です。配布・共有には書き出しをお使いください。</p>
+</div><p><a target="_blank" rel="noopener noreferrer" href="https://kantan-md.pages.dev/reference">📖 記法リファレンスはこちら</a></p>
+</div>
+    <aside id="toc" aria-label="目次"><div class="toc-header"><span class="toc-title">目次</span></div><nav class="toc-body"><a class="toc-link toc-h1 active" data-i="0" style="padding-left:14px">kantan-md</a><a class="toc-link toc-h2" data-i="1" style="padding-left:28px">特徴</a><a class="toc-link toc-h3" data-i="2" style="padding-left:42px">単一ファイルで完結</a><a class="toc-link toc-h3" data-i="3" style="padding-left:42px">非クラウドアプリ</a><a class="toc-link toc-h3" data-i="4" style="padding-left:42px">変換不要</a><a class="toc-link toc-h3" data-i="5" style="padding-left:42px">添付ファイル</a><a class="toc-link toc-h3" data-i="6" style="padding-left:42px">プログラマ向け機能</a><a class="toc-link toc-h2" data-i="7" style="padding-left:28px">使い方</a><a class="toc-link toc-h3" data-i="8" style="padding-left:42px">閲覧モード</a><a class="toc-link toc-h3" data-i="9" style="padding-left:42px">編集モード</a><a class="toc-link toc-h3" data-i="10" style="padding-left:42px">添付ファイル</a><a class="toc-link toc-h3" data-i="11" style="padding-left:42px">保存</a><a class="toc-link toc-h3" data-i="12" style="padding-left:42px">書き出し</a></nav></aside>
+  </main>
+
+  <div id="settings-panel" hidden="">
+    <h3>設定</h3>
+    <label><input type="checkbox" id="setting-auto-sync" checked=""> 自動プレビュー</label>
+    <label><input type="checkbox" id="setting-expand-tab"> タブキーでスペースを挿入</label>
+    <label><input type="checkbox" id="setting-auto-close-tag"> 閉じタグを自動挿入</label>
+    <label><input type="checkbox" id="setting-insert-img-tag"> 画像添付時にタグを挿入</label>
+    <label><input type="checkbox" id="setting-require-trailing-spaces"> 改行に末尾スペース2個を必須にする</label>
+    <button id="btn-settings-close">閉じる</button>
+  </div>
+
+<div id="attach-data" hidden=""></div>
+
+
+
+</body></html>
