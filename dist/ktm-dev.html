@@ -672,6 +672,13 @@ body.dark #previewer {
   	background: transparent !important;
   	background-color: transparent !important;
   }
+  body.dark {
+    background: var(--bg-preview) !important;
+    background-color: var(--bg-preview) !important;
+    color: var(--text) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   #toolbar, #toolbar-toggle, #attach-section, #settings-panel {
   	display:none !important;
   }
@@ -686,6 +693,13 @@ body.dark #previewer {
   	zoom:0.9 !important;
   	background: transparent !important;
   	background-color: transparent !important;
+  }
+  body.dark #previewer {
+    background: var(--bg-preview) !important;
+    background-color: var(--bg-preview) !important;
+    color: var(--text) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 #drawArea {
