@@ -681,19 +681,77 @@ body.dark #previewer {
     print-color-adjust: exact;
   }
   #toolbar, #toolbar-toggle, #attach-section, #settings-panel {
-  	display:none !important;
+    display: none !important;
   }
+
+  body:not(.toc-visible) #toc {
+    display: none !important;
+  }
+
+  body.toc-visible #toc {
+    display: block !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 0 24px 0 !important;
+  }
+
+  /*
+   * DOM上では #toc が #previewer の後にあるため、通常のブロックフローでは
+   * 目次が本文の後に印刷される。印刷時だけ縦方向フレックスにして表示順を反転する。
+   */
+  #wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+
+  body.toc-visible #toc {
+    order: -1 !important;
+  }
+
+  /*
+   * 画面表示用の .toc-body はスクロール領域になっている。
+   * 印刷時は目次タイトルとすべての見出しリンクを通常フローへ戻し、
+   * 途中で切り捨てられず印刷対象となるようにする。
+   */
+  body.toc-visible #toc .toc-header,
+  body.toc-visible #toc .toc-title,
+  body.toc-visible #toc .toc-body,
+  body.toc-visible #toc .toc-link {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+  }
+
   #previewer {
-  	border:0 !important;
-  	margin:0 !important;
-  	padding:0 !important;
-  	width:auto !important;
-  	max-width:none !important;
-  	min-height:0 !important;
-  	display:block !important;
-  	zoom:0.9 !important;
-  	background: transparent !important;
-  	background-color: transparent !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    display: block !important;
+    zoom: 0.9 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  body.view-mode #previewer.full-width {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
   }
   body.dark #previewer {
     background: var(--bg-preview) !important;
