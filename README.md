@@ -1,5 +1,24 @@
 # かんたんMarkdown (Fork by hiro-gj)
 
+---
+
+## リリースノート
+
+### [v2.20260720.01](https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html)
+
+#### 機能追加・変更
+* v1.201604012.01 (master)をベースとしました。
+* `kantan-md`( https://kantan-md.pages.dev/ )からGFM Alertsデザインとナビゲーションをスクラッチで移植。
+* GoogleChrome拡張機能「[GitHubMarkDown→かんたんMarkDown](https://github.com/hiro-gj/GitHubtoKanTanMDExport)」での動作確認。
+
+#### 既知の課題
+* `kantan-md`の「プログラマ向け機能」未実装
+  - 主要言語のシンタックスハイライト（highlight.js + 14言語）
+  - Mermaid によるダイアグラム（フローチャート、シーケンス図、クラス図、状態遷移図、ER図、ガントチャート、円グラフ、Gitグラフ、マインドマップ…）
+  - KaTeX による数式レンダリング
+
+---
+
 ## 🛠️ 最新のビルド手順（Windows / OneDrive環境対応）
 
 本リポジトリ（ローカル）でのビルド手順、ならびに今回導入された最新のビルド検証済みコマンドは以下の通りです。
