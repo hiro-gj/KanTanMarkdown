@@ -519,8 +519,9 @@ body.previewMode:not(.view-mode) #previewer {
     box-shadow: var(--shadow-button);
     display: none;
     position: fixed;
-    top: 50px;
-    right: 16px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 1500;
     width: 280px;
 }
@@ -1454,7 +1455,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 </div>
 
 </div>
-<input type="hidden" id="kantanVersion" value="v1.20160412.01">
+<input type="hidden" id="kantanVersion" value="v2.20260720.01">
 <input type="hidden" id="kantanEdition" value="dev">
 <div id="updateScriptArea"></div>
 <script id="markedJs">
