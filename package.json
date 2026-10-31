@@ -1,5 +1,8 @@
 {
   "name": "KanTanMarkdown",
+  "scripts": {
+    "test": "node .tests/run-tests.js"
+  },
   "devDependencies": {
     "grunt": "^1.6.2",
     "grunt-contrib-clean": "^1.0.0",
