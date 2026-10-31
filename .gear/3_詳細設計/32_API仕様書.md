@@ -15,6 +15,8 @@
 | getHTMLForSave() | なし | 編集可能HTML文字列。画面も一時変更・復元 |
 | save() / exportHTML() | なし | Blobダウンロード要求。後者はtitle_export.html |
 | buildToc() / updateTocActive() | 現在DOM | 目次再生成 / activeクラス更新 |
+| applyEditorZoom() | なし | CSS変数 `--editor-zoom` に現在の編集画面ズーム倍率（0.67〜2）を反映 |
+| syncEditorPreviewScroll(source,target,sourceName) | スクロール元・同期先DOM・識別子 | 編集モード時にエディタとプレビューのスクロール位置を比率同期（循環防止ロック付き） |
 | getItem(name,defaultValue) / setItem(name,value) | 設定名・値 | 接頭辞付きLocalStorage。例外捕捉 |
 | kantanUpdate(json) | {newVersion,ktmString,doUpdate,rewirteHtml} | json.doUpdate実行。rewirteHtmlは実装の綴り通り |
 
