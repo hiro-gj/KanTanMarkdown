@@ -303,8 +303,10 @@
 				var attachHeight = isVisible(filer) ? 200 : 40;
 				wrapperHeight -= attachHeight;
 			}
+			wrapper.style.height = wrapperHeight + "px";
+		} else {
+			wrapper.style.height = "";
 		}
-		wrapper.style.height = wrapperHeight + "px";
 	}
 
 	/* 編集・閲覧切り替え */
@@ -1427,6 +1429,10 @@
 		if (toggleFlag == true) {
 			toggleMode();
 		}
+		document.documentElement.style.setProperty("--editor-width", getItem("editor-width", "50%"));
+		if (typeof applyEditorZoom === "function") {
+			applyEditorZoom();
+		}
 		
 		document.getElementById("previewer").scrollTop = previewerScrollTop;
 		document.getElementById("wrapper").scrollTop = wrapperScrollTop;
@@ -2079,7 +2085,55 @@
 	}
 
 	var isScrolling = false;
+	var scrollSyncLock = null;
+	var scrollSyncTimer = null;
+	var editorZoomLevels = [0.67, 1, 1.2, 1.4, 1.6, 1.8, 2];
+	var editorZoomIndex = 0;
+
+	function applyEditorZoom() {
+		var zoomVal = editorZoomLevels[editorZoomIndex];
+		document.documentElement.style.setProperty("--editor-zoom", String(zoomVal));
+	}
+
+	on("#btn-editor-zoom-in", "click", function() {
+		if (editorZoomIndex < editorZoomLevels.length - 1) {
+			editorZoomIndex++;
+			applyEditorZoom();
+		}
+	});
+
+	on("#btn-editor-zoom-reset", "click", function() {
+		editorZoomIndex = 0;
+		applyEditorZoom();
+	});
+
+	function syncEditorPreviewScroll(source, target, sourceName) {
+		if (!isEditMode() || !isVisible(source) || !isVisible(target)) return;
+		if (scrollSyncLock && scrollSyncLock !== sourceName) return;
+
+		scrollSyncLock = sourceName;
+		var sourceMax = source.scrollHeight - source.clientHeight;
+		var targetMax = target.scrollHeight - target.clientHeight;
+		if (sourceMax > 0 && targetMax > 0) {
+			var nextTop = (source.scrollTop / sourceMax) * targetMax;
+			if (Math.abs(target.scrollTop - nextTop) > 1) {
+				target.scrollTop = nextTop;
+			}
+		} else if (source.scrollTop === 0 && target.scrollTop !== 0) {
+			target.scrollTop = 0;
+		}
+		clearTimeout(scrollSyncTimer);
+		scrollSyncTimer = setTimeout(function() {
+			scrollSyncLock = null;
+		}, 60);
+	}
+
+	on("#editor", "scroll", function() {
+		syncEditorPreviewScroll(document.getElementById("editor"), document.getElementById("previewer"), "editor");
+	});
+
 	on("#previewer", "scroll", function() {
+		syncEditorPreviewScroll(document.getElementById("previewer"), document.getElementById("editor"), "previewer");
 		if (!isScrolling) {
 			isScrolling = true;
 			requestAnimationFrame(function() {
@@ -2177,7 +2231,9 @@
 		html += '    background: var(--bg-preview);\n';
 		html += '    border: 1px solid var(--border);\n';
 		html += '    width: 100%;\n';
-		html += '    max-width: 980px;\n';
+		html += '    max-width: 300mm;\n';
+		html += '    min-height: 424mm;\n';
+		html += '    aspect-ratio: 210 / 297;\n';
 		html += '    border-radius: 4px;\n';
 		html += '    padding: 32px 40px;\n';
 		html += '    box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n';

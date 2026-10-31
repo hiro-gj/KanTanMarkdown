@@ -102,6 +102,36 @@ function runTests() {
             `dist/kantanUpdate.js must embed newVersion ${expectedVersion}`);
     });
 
+    // Test 5: Updated license header, A4 layout CSS, 2-pane zoom, zoom buttons, and scroll sync
+    test('Generated HTML files include updated license, A4 layout rules, edit-mode zoom/controls, and scroll sync', () => {
+        const licenseText = fs.readFileSync(path.join(rootDir, 'LICENSE'), 'utf-8');
+        assert(licenseText.includes('Copyright (c) 2016 tatesuke') && licenseText.includes('Copyright (c) 2026 hiro-gj'),
+            'LICENSE must include both 2016 tatesuke and 2026 hiro-gj copyright notices');
+
+        const htmlFiles = [
+            path.join('dist', 'ktm-dev.html'),
+            path.join('dist', 'ktm-lite.html'),
+            path.join('dist', 'ktm-std.html'),
+            path.join('dist', 'ktm-full.html')
+        ];
+
+        for (const relPath of htmlFiles) {
+            const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
+            assert(content.includes('Copyright (c) 2026 hiro-gj'),
+                `${relPath} must include Copyright (c) 2026 hiro-gj`);
+            assert(content.includes('https://github.com/hiro-gj/KanTanMarkdown/blob/master/LICENSE'),
+                `${relPath} must link to hiro-gj LICENSE URL`);
+            assert(content.includes('id="btn-editor-zoom-in"') && content.includes('id="btn-editor-zoom-reset"'),
+                `${relPath} must contain editor zoom-in and zoom-reset buttons`);
+            assert(content.includes('300mm') && content.includes('424mm') && content.includes('210'),
+                `${relPath} must contain A4 aspect-ratio and 300mm/424mm previewer layout rules`);
+            assert(content.includes('--editor-zoom') && content.includes('.67'),
+                `${relPath} must contain editMode 67% zoom rules`);
+            assert(content.includes('syncEditorPreviewScroll') && content.includes('applyEditorZoom'),
+                `${relPath} must contain bidirectional scroll sync and editor zoom functions`);
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);

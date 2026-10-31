@@ -3,8 +3,9 @@
 <!--
  * KanTanMarkdown
  * Copyright (c) 2016 tatesuke
+ * Copyright (c) 2026 hiro-gj
  * Released under the MIT license
- * https://github.com/tatesuke/KanTanMarkdown/blob/master/LICENSE
+ * https://github.com/hiro-gj/KanTanMarkdown/blob/master/LICENSE
  --><head>
 <meta charset="utf-8">
 <style>:root {
@@ -259,7 +260,7 @@ body.toolbar-open.editMode #wrapper {
 
 body.view-mode #wrapper {
 	flex: none;
-	height: auto !important;
+	height: auto;
 	min-height: auto;
 	overflow: visible;
 }
@@ -389,15 +390,16 @@ body.dark #wrapper #editorTabWrapper #editorTabContents #cssEditor {
 body.view-mode #previewer.full-width {
 	box-sizing: border-box;
 	border: 1px solid var(--border);
-	width: min(240mm, calc(100% - 32px)) !important;
-	max-width: 240mm;
-	min-height: 297mm;
+	width: min(300mm, calc(100% - 32px));
+	max-width: 300mm;
+	min-height: 424mm;
+	aspect-ratio: 210 / 297;
 	box-shadow: var(--shadow-button);
 	border-radius: 4px;
 	flex: none;
 	margin: 32px auto;
-	overflow-y: visible !important;
-	height: auto !important;
+	overflow-y: visible;
+	height: auto;
 	display: flow-root;
 }
 
@@ -410,9 +412,25 @@ body.previewMode:not(.view-mode) #previewer {
 	overflow:auto;
 }
 
+.editMode #wrapper #editorTabWrapper #editorTabContents #editor,
+.editMode #wrapper #editorTabWrapper #editorTabContents #cssEditor {
+	zoom: var(--editor-zoom, 0.67);
+}
+
 .editMode #previewer {
+	zoom: 0.67;
 	flex: 1;
 	height:100%;
+}
+
+#toolbar #btn-editor-zoom-in,
+#toolbar #btn-editor-zoom-reset {
+	display: none;
+}
+
+body.editMode #toolbar #btn-editor-zoom-in,
+body.editMode #toolbar #btn-editor-zoom-reset {
+	display: inline-flex;
 }
 
 #previewer:focus {
@@ -586,10 +604,10 @@ body.toc-visible.view-mode #wrapper {
 }
 
 body.toc-visible.view-mode #previewer.full-width {
-    flex: 240mm;
-    width: auto;
+    flex: 0 1 300mm;
+    width: min(300mm, calc(100% - 316px));
     min-width: 0;
-    max-width: 240mm;
+    max-width: 300mm;
     margin: 0;
 }
 
@@ -670,53 +688,58 @@ body.dark #previewer {
 
 @media print {
   html, body {
-  	background: transparent !important;
-  	background-color: transparent !important;
+    background: transparent;
+    background-color: transparent;
+    height: auto;
+    overflow: visible;
   }
   body.dark {
-    background: var(--bg-preview) !important;
-    background-color: var(--bg-preview) !important;
-    color: var(--text) !important;
+    background: var(--bg-preview);
+    background-color: var(--bg-preview);
+    color: var(--text);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  #toolbar, #toolbar-toggle, #attach-section, #settings-panel {
-    display: none !important;
+  #toolbar, #toolbar-toggle, #attach, #attach-section, #settings-panel, #editorTabWrapper, #resize-handle {
+    display: none;
   }
 
   body:not(.toc-visible) #toc {
-    display: none !important;
+    display: none;
   }
 
-  body.toc-visible #toc {
-    display: block !important;
-    width: 100% !important;
-    max-height: none !important;
-    overflow: visible !important;
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 0 24px 0 !important;
+  body.toc-visible #toc,
+  body.toc-visible.view-mode #toc {
+    display: block;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    position: relative;
+    top: auto;
+    left: auto;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0 0 24px 0;
+    order: -1;
   }
 
   /*
    * DOM上では #toc が #previewer の後にあるため、通常のブロックフローでは
    * 目次が本文の後に印刷される。印刷時だけ縦方向フレックスにして表示順を反転する。
    */
-  #wrapper {
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    width: 100% !important;
-  }
-
-  body.toc-visible #toc {
-    order: -1 !important;
+  #wrapper,
+  body.view-mode #wrapper,
+  body.toc-visible.view-mode #wrapper,
+  body.toolbar-open.previewMode #wrapper {
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: auto;
+    overflow: visible;
   }
 
   /*
@@ -728,35 +751,36 @@ body.dark #previewer {
   body.toc-visible #toc .toc-title,
   body.toc-visible #toc .toc-body,
   body.toc-visible #toc .toc-link {
-    display: block !important;
-    flex: none !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    overflow-y: visible !important;
+    display: block;
+    flex: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    overflow-y: visible;
   }
 
-  #previewer {
-    border: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    min-height: 0 !important;
-    display: block !important;
-    zoom: 0.9 !important;
-    background: transparent !important;
-    background-color: transparent !important;
+  #previewer,
+  .editMode #previewer,
+  body.view-mode #previewer.full-width,
+  body.toc-visible.view-mode #previewer.full-width {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    aspect-ratio: auto;
+    box-shadow: none;
+    display: block;
+    zoom: 1;
+    background: transparent;
+    background-color: transparent;
   }
-  body.view-mode #previewer.full-width {
-    width: 100% !important;
-    max-width: none !important;
-    min-height: 0 !important;
-  }
-  body.dark #previewer {
-    background: var(--bg-preview) !important;
-    background-color: var(--bg-preview) !important;
-    color: var(--text) !important;
+  body.dark #previewer,
+  body.dark.view-mode #previewer.full-width {
+    background: var(--bg-preview);
+    background-color: var(--bg-preview);
+    color: var(--text);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -866,6 +890,8 @@ body.dark #previewer {
 <nav id="toolbar">
 	<div id="toolbar-left">
 		<button id="btn-settings" title="設定"><span class="btn-icon">⚙</span><span class="btn-text">設定</span></button>
+		<button id="btn-editor-zoom-in" title="編集画面の文字を拡大"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 4.5a.5.5 0 0 0-1 0v1.5H4a.5.5 0 0 0 0 1h1.5V8.5a.5.5 0 0 0 1 0V7H8a.5.5 0 0 0 0-1H6.5V4.5z"></path><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"></path></svg></span><span class="btn-text">拡大</span></button>
+		<button id="btn-editor-zoom-reset" title="編集画面の文字サイズを戻す"><span class="btn-icon"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"></path></svg></span><span class="btn-text">戻す</span></button>
 	</div>
 	<div id="toolbar-center">
 		<span id="message-area"></span>
@@ -3213,8 +3239,10 @@ LetterModeStrategy.prototype = {
 				var attachHeight = isVisible(filer) ? 200 : 40;
 				wrapperHeight -= attachHeight;
 			}
+			wrapper.style.height = wrapperHeight + "px";
+		} else {
+			wrapper.style.height = "";
 		}
-		wrapper.style.height = wrapperHeight + "px";
 	}
 
 	/* 編集・閲覧切り替え */
@@ -4337,6 +4365,10 @@ LetterModeStrategy.prototype = {
 		if (toggleFlag == true) {
 			toggleMode();
 		}
+		document.documentElement.style.setProperty("--editor-width", getItem("editor-width", "50%"));
+		if (typeof applyEditorZoom === "function") {
+			applyEditorZoom();
+		}
 		
 		document.getElementById("previewer").scrollTop = previewerScrollTop;
 		document.getElementById("wrapper").scrollTop = wrapperScrollTop;
@@ -4989,7 +5021,55 @@ LetterModeStrategy.prototype = {
 	}
 
 	var isScrolling = false;
+	var scrollSyncLock = null;
+	var scrollSyncTimer = null;
+	var editorZoomLevels = [0.67, 1, 1.2, 1.4, 1.6, 1.8, 2];
+	var editorZoomIndex = 0;
+
+	function applyEditorZoom() {
+		var zoomVal = editorZoomLevels[editorZoomIndex];
+		document.documentElement.style.setProperty("--editor-zoom", String(zoomVal));
+	}
+
+	on("#btn-editor-zoom-in", "click", function() {
+		if (editorZoomIndex < editorZoomLevels.length - 1) {
+			editorZoomIndex++;
+			applyEditorZoom();
+		}
+	});
+
+	on("#btn-editor-zoom-reset", "click", function() {
+		editorZoomIndex = 0;
+		applyEditorZoom();
+	});
+
+	function syncEditorPreviewScroll(source, target, sourceName) {
+		if (!isEditMode() || !isVisible(source) || !isVisible(target)) return;
+		if (scrollSyncLock && scrollSyncLock !== sourceName) return;
+
+		scrollSyncLock = sourceName;
+		var sourceMax = source.scrollHeight - source.clientHeight;
+		var targetMax = target.scrollHeight - target.clientHeight;
+		if (sourceMax > 0 && targetMax > 0) {
+			var nextTop = (source.scrollTop / sourceMax) * targetMax;
+			if (Math.abs(target.scrollTop - nextTop) > 1) {
+				target.scrollTop = nextTop;
+			}
+		} else if (source.scrollTop === 0 && target.scrollTop !== 0) {
+			target.scrollTop = 0;
+		}
+		clearTimeout(scrollSyncTimer);
+		scrollSyncTimer = setTimeout(function() {
+			scrollSyncLock = null;
+		}, 60);
+	}
+
+	on("#editor", "scroll", function() {
+		syncEditorPreviewScroll(document.getElementById("editor"), document.getElementById("previewer"), "editor");
+	});
+
 	on("#previewer", "scroll", function() {
+		syncEditorPreviewScroll(document.getElementById("previewer"), document.getElementById("editor"), "previewer");
 		if (!isScrolling) {
 			isScrolling = true;
 			requestAnimationFrame(function() {
@@ -5087,7 +5167,9 @@ LetterModeStrategy.prototype = {
 		html += '    background: var(--bg-preview);\n';
 		html += '    border: 1px solid var(--border);\n';
 		html += '    width: 100%;\n';
-		html += '    max-width: 980px;\n';
+		html += '    max-width: 300mm;\n';
+		html += '    min-height: 424mm;\n';
+		html += '    aspect-ratio: 210 / 297;\n';
 		html += '    border-radius: 4px;\n';
 		html += '    padding: 32px 40px;\n';
 		html += '    box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n';
