@@ -1,7 +1,6 @@
 kantanUpdate({
 	"newVersion": "v2.20261101.01",
-	"ktmString": "\n" + 
-"<!--\n" + 
+	"ktmString": "<!--\n" + 
 " * KanTanMarkdown\n" + 
 " * Copyright (c) 2016 tatesuke\n" + 
 " * Released under the MIT license\n" + 
