@@ -5,9 +5,9 @@ on:
     types: [published]
   workflow_dispatch:
 
-# GITHUB_TOKEN に GitHub Pages へのデプロイ権限を設定
+# GITHUB_TOKEN に GitHub Pages へのデプロイ権限およびバージョン同期コミット権限を設定
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -44,15 +44,15 @@ jobs:
           elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
             printf '%s' "$REF_NAME" > src/kantanVersion.txt
           else
-            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            LATEST_TAG=$(git tag --sort=-creatordate | head -n 1)
             if [ -n "$LATEST_TAG" ]; then
               printf '%s' "$LATEST_TAG" > src/kantanVersion.txt
             fi
           fi
-          npm install
+          npm install --no-package-lock
           npx grunt build
           npm test
-          rm -rf node_modules
+          rm -rf node_modules package-lock.json
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v6
@@ -66,3 +66,28 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Commit synced version and dist back to master
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          TARGET_TAG=""
+          if [ -n "$RELEASE_TAG" ]; then
+            TARGET_TAG="$RELEASE_TAG"
+          elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
+            TARGET_TAG="$REF_NAME"
+          else
+            TARGET_TAG=$(git tag --sort=-creatordate | head -n 1)
+          fi
+
+          if [ -n "$TARGET_TAG" ] && ! git diff --quiet src/kantanVersion.txt dist/; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
+            git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
+            git push origin HEAD:refs/heads/master
+            git tag -f "$TARGET_TAG" HEAD
+            git push -f origin "refs/tags/$TARGET_TAG"
+          fi
