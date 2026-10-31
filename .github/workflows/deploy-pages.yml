@@ -44,7 +44,7 @@ jobs:
           elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
             printf '%s' "$REF_NAME" > src/kantanVersion.txt
           else
-            LATEST_TAG=$(git tag --sort=-creatordate | head -n 1)
+            LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
             if [ -n "$LATEST_TAG" ]; then
               printf '%s' "$LATEST_TAG" > src/kantanVersion.txt
             fi
@@ -79,7 +79,7 @@ jobs:
           elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
             TARGET_TAG="$REF_NAME"
           else
-            TARGET_TAG=$(git tag --sort=-creatordate | head -n 1)
+            TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
           fi
 
           if [ -n "$TARGET_TAG" ] && ! git diff --quiet src/kantanVersion.txt dist/; then
