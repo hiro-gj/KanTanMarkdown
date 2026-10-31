@@ -77,6 +77,31 @@ function runTests() {
         }
     });
 
+    // Test 4: Repository link and release version alignment in built artifacts
+    test('Generated HTML and update files contain updated repository link and match kantanVersion.txt', () => {
+        const expectedVersion = fs.readFileSync(path.join(rootDir, 'src', 'kantanVersion.txt'), 'utf-8').trim();
+        assert(expectedVersion.length > 0, 'src/kantanVersion.txt must not be empty');
+
+        const htmlFiles = [
+            path.join('dist', 'ktm-dev.html'),
+            path.join('dist', 'ktm-lite.html'),
+            path.join('dist', 'ktm-std.html'),
+            path.join('dist', 'ktm-full.html')
+        ];
+
+        for (const relPath of htmlFiles) {
+            const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
+            assert(content.includes('href="https://github.com/hiro-gj/KanTanMarkdown"'),
+                `${relPath} must link to https://github.com/hiro-gj/KanTanMarkdown`);
+            assert(content.includes(`id="kantanVersion" value="${expectedVersion}"`),
+                `${relPath} must embed version ${expectedVersion}`);
+        }
+
+        const updateJsContent = fs.readFileSync(path.join(rootDir, 'dist', 'kantanUpdate.js'), 'utf-8');
+        assert(updateJsContent.includes(`"newVersion": "${expectedVersion}"`),
+            `dist/kantanUpdate.js must embed newVersion ${expectedVersion}`);
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);

@@ -1,5 +1,5 @@
 kantanUpdate({
-	"newVersion": "v2.20260720.01",
+	"newVersion": "v2.20261101.01",
 	"ktmString": "\n" + 
 "<!--\n" + 
 " * KanTanMarkdown\n" + 
@@ -577,7 +577,7 @@ kantanUpdate({
 "	<a href=\"https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html\" target=\"_blank\" style=\"display:block; margin: 5px 0; color: var(--accent); text-decoration: none;\">新規作成</a>\n" + 
 "	<a href=\"http://tatesuke.github.io/KanTanMarkdown/syntax.html\" id=\"helpButton\" target=\"_blank\" style=\"display:block; margin: 5px 0; color: var(--accent); text-decoration: none;\">Markdown記法ヘルプ(F1)</a>\n" + 
 "	<a href=\"#\" id=\"updateButton\" style=\"display:block; margin: 5px 0; color: var(--accent); text-decoration: none;\">最新版にアップデート</a>\n" + 
-"	<a href=\"http://tatesuke.github.io/KanTanMarkdown/\" target=\"_blank\" style=\"display:block; margin: 5px 0; color: var(--text-muted); text-decoration: none; font-size: 11px;\">かんたんMarkdown <span class=\"version\"></span></a>\n" + 
+"	<a href=\"https://github.com/hiro-gj/KanTanMarkdown\" target=\"_blank\" style=\"display:block; margin: 5px 0; color: var(--text-muted); text-decoration: none; font-size: 11px;\">かんたんMarkdown <span class=\"version\"></span></a>\n" + 
 "	\n" + 
 "	<button id=\"btn-settings-close\" style=\"margin-top:10px; width:100%; border:1px solid var(--border); border-radius: var(--radius); padding:4px; cursor:pointer; background: var(--bg-surface); color: var(--text);\">閉じる</button>\n" + 
 "</div>\n" + 
@@ -664,7 +664,7 @@ kantanUpdate({
 "</div>\n" + 
 "\n" + 
 "</div>\n" + 
-"<input type=\"hidden\" id=\"kantanVersion\" value=\"v2.20260720.01\">\n" + 
+"<input type=\"hidden\" id=\"kantanVersion\" value=\"v2.20261101.01\">\n" + 
 "<input type=\"hidden\" id=\"kantanEdition\" value=\"__KANTAN_EDITION__\">\n" + 
 "<div id=\"updateScriptArea\"></div>\n" + 
 "<script id=\"markedJs\">\n" + 
