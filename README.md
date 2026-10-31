@@ -1,5 +1,7 @@
 # かんたんMarkdown (Fork by hiro-gj)
 
+### かんたんMarkdown新規作成： https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html
+
 ---
 
 ## リリースノート
