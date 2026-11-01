@@ -244,12 +244,17 @@ module.exports = function(grunt) {
 		"inline:makeKantanUpdateJs",
 		"copy:afterBuild_updateJs",
 	]);
+	grunt.registerTask("update-new-sizes", "Update file sizes in ktm-new.html based on dist/", function() {
+		var updateSizes = require("./scripts/update-new-sizes.js").updateKtmNewSizes;
+		updateSizes(__dirname);
+	});
 	grunt.registerTask("build", [
 		"build-dev",
 		"build-lite",
 		"build-std",
 		"build-full",
 		"build-updateJs",
+		"update-new-sizes",
 	]);
 };
 

@@ -11,6 +11,7 @@ const rootDir = path.resolve(__dirname, '..');
 
 const filesToCheck = [
     'Gruntfile.js',
+    path.join('scripts', 'update-new-sizes.js'),
     path.join('src', 'kantanUpdate.js'),
     path.join('src', 'js', 'flowchart.min.js'),
     path.join('src', 'js', 'github-alerts.js'),
