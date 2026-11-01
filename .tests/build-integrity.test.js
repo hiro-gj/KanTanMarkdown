@@ -75,6 +75,8 @@ function runTests() {
         const previewMatch = content.match(previewSizeRegex);
         assert(previewMatch, 'ktm-new.html preview table must also have "空の容量" row with valid size format');
         assert(content.includes('<td>Mermaid</td>'), 'ktm-new.html feature comparison must include Mermaid row');
+        assert(content.includes('a[href*="/dist/"]') && content.includes('"?t=" + Date.now()'),
+            'ktm-new.html must append cache-busting timestamp parameter on edition link click');
     });
 
     // Test 3: HTML distribution files structure

@@ -108,6 +108,13 @@
 		
 		return false;
 	})
+
+	var updateNewDocHref = function() {
+		var baseUrl = this.href.split("?")[0];
+		this.href = baseUrl + "?t=" + Date.now();
+	};
+	on('a[href*="ktm-new.html"]', "mousedown", updateNewDocHref);
+	on('a[href*="ktm-new.html"]', "click", updateNewDocHref);
 	
 	/* 端末固有設定 */
 	// 現在のところチェックボックスのみなので
