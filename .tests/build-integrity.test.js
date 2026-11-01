@@ -132,6 +132,72 @@ function runTests() {
         }
     });
 
+    // Test 6: dist/preview/ subfolder artifacts existence, size bounds, and HTML structure
+    test('dist/preview subfolder contains valid preview distribution artifacts', () => {
+        const previewArtifacts = [
+            { file: path.join('dist', 'preview', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 600, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 200, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 250, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-full.html'), minSizeKb: 300, maxSizeKb: 500, isHtml: true },
+            { file: path.join('dist', 'preview', 'kantanUpdate.js'), minSizeKb: 300, maxSizeKb: 550, isHtml: false }
+        ];
+
+        for (const item of previewArtifacts) {
+            const filePath = path.join(rootDir, item.file);
+            assert(fs.existsSync(filePath), `Preview artifact ${item.file} must exist`);
+
+            const stat = fs.statSync(filePath);
+            const sizeKb = stat.size / 1024;
+            assert(stat.size > 0, `${item.file} must not be empty`);
+            assert(sizeKb >= item.minSizeKb, `${item.file} size (${sizeKb.toFixed(1)} KB) should be >= ${item.minSizeKb} KB`);
+            assert(sizeKb <= item.maxSizeKb, `${item.file} size (${sizeKb.toFixed(1)} KB) should be <= ${item.maxSizeKb} KB`);
+
+            const content = fs.readFileSync(filePath, 'utf-8');
+            if (item.isHtml) {
+                assert(content.toLowerCase().includes('<!doctype html>'), `${item.file} must contain doctype`);
+                assert(content.toLowerCase().includes('</html>'), `${item.file} must contain closing html tag`);
+                assert(content.includes('href="https://github.com/hiro-gj/KanTanMarkdown"'),
+                    `${item.file} must link to https://github.com/hiro-gj/KanTanMarkdown`);
+                assert(content.includes('Copyright (c) 2026 hiro-gj'),
+                    `${item.file} must include Copyright (c) 2026 hiro-gj`);
+            } else {
+                assert(content.includes('"newVersion":'),
+                    `${item.file} must contain newVersion metadata`);
+            }
+        }
+    });
+
+    // Test 7: GitHub Actions workflows configuration for release (dist/) and master push (dist/preview/)
+    test('GitHub Actions workflows configure dist/preview deployment on master push while protecting release dist/', () => {
+        const deployWorkflowPath = path.join(rootDir, '.github', 'workflows', 'deploy-pages.yml');
+        assert(fs.existsSync(deployWorkflowPath), '.github/workflows/deploy-pages.yml must exist');
+        const deployYaml = fs.readFileSync(deployWorkflowPath, 'utf-8');
+
+        // Release trigger and master push trigger with functional paths filter
+        assert(deployYaml.includes('release:') && deployYaml.includes('types: [published]'),
+            'deploy-pages.yml must trigger on release published');
+        assert(deployYaml.includes('push:') && deployYaml.includes('- master') && deployYaml.includes('paths:'),
+            'deploy-pages.yml must trigger on master push with paths filter');
+        assert(deployYaml.includes("'src/**'") && deployYaml.includes("'Gruntfile.js'") && deployYaml.includes("'package.json'"),
+            'deploy-pages.yml push paths must include functional build targets');
+        assert(!deployYaml.includes("'README.md'") && !deployYaml.includes("'.gear/**'"),
+            'deploy-pages.yml push paths must not trigger on non-functional documentation files');
+
+        // Preview subfolder deployment and release dist/ restoration on push
+        assert(deployYaml.includes('mkdir -p dist/preview') && deployYaml.includes('dist/preview/'),
+            'deploy-pages.yml must populate dist/preview/');
+        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html'),
+            'deploy-pages.yml must restore root dist/ files from LATEST_TAG during push preview deployment');
+        assert(deployYaml.includes('chore(preview): update dist/preview from master [skip ci]'),
+            'deploy-pages.yml must commit dist/preview updates with [skip ci]');
+
+        const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
+        assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
+        const testYaml = fs.readFileSync(testWorkflowPath, 'utf-8');
+        assert(testYaml.includes('paths-ignore:') && testYaml.includes("'README.md'") && testYaml.includes("'.gear/**'") && testYaml.includes("'dist/preview/**'"),
+            'test.yml must ignore non-functional and preview artifact paths');
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);

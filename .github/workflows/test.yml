@@ -3,8 +3,16 @@ name: CI and Automated Tests
 on:
   push:
     branches: [master, main]
+    paths-ignore:
+      - 'README.md'
+      - '.gear/**'
+      - 'dist/preview/**'
   pull_request:
     branches: [master, main]
+    paths-ignore:
+      - 'README.md'
+      - '.gear/**'
+      - 'dist/preview/**'
   workflow_dispatch:
 
 jobs:
