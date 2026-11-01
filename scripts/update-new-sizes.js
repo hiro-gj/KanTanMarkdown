@@ -46,7 +46,7 @@ function updateKtmNewSizes(rootDir) {
 
     let content = fs.readFileSync(ktmNewPath, 'utf-8');
 
-    // Pattern matching the "空の容量" row in ktm-new.html
+    // 1. Pattern matching the release "空の容量" row in ktm-new.html (based on dist/)
     const regex = /(<td>空の容量<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>)/;
 
     if (!regex.test(content)) {
@@ -55,8 +55,26 @@ function updateKtmNewSizes(rootDir) {
     }
 
     content = content.replace(regex, `$1${liteSize}$3${stdSize}$5${fullSize}$7`);
+
+    // 2. Pattern matching the preview "空の容量" row in ktm-new.html (based on dist/preview/)
+    const previewLitePath = fs.existsSync(path.join(baseDir, 'dist', 'preview', 'ktm-lite.html'))
+        ? path.join(baseDir, 'dist', 'preview', 'ktm-lite.html') : litePath;
+    const previewStdPath = fs.existsSync(path.join(baseDir, 'dist', 'preview', 'ktm-std.html'))
+        ? path.join(baseDir, 'dist', 'preview', 'ktm-std.html') : stdPath;
+    const previewFullPath = fs.existsSync(path.join(baseDir, 'dist', 'preview', 'ktm-full.html'))
+        ? path.join(baseDir, 'dist', 'preview', 'ktm-full.html') : fullPath;
+
+    const previewLiteSize = formatSize(fs.statSync(previewLitePath).size);
+    const previewStdSize = formatSize(fs.statSync(previewStdPath).size);
+    const previewFullSize = formatSize(fs.statSync(previewFullPath).size);
+
+    const previewRegex = /(dist\/preview\/ktm-full\.html[\s\S]*?<td>空の容量<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>[\s\S]*?<td[^>]*>)(.*?)(<\/td>)/;
+    if (previewRegex.test(content)) {
+        content = content.replace(previewRegex, `$1${previewLiteSize}$3${previewStdSize}$5${previewFullSize}$7`);
+    }
+
     fs.writeFileSync(ktmNewPath, content, 'utf-8');
-    console.log(`[update-new-sizes] ktm-new.html updated: Lite=${liteSize}, Standard=${stdSize}, Full=${fullSize}`);
+    console.log(`[update-new-sizes] ktm-new.html updated: Release(Lite=${liteSize}, Standard=${stdSize}, Full=${fullSize}), Preview(Lite=${previewLiteSize}, Standard=${previewStdSize}, Full=${previewFullSize})`);
     return true;
 }
 

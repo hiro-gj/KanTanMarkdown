@@ -72,40 +72,44 @@ jobs:
             cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html
             rm -rf /tmp/release-backup
 
+            # リリース版の容量表記は維持しつつ、プレビュー版テーブルのファイルサイズ表記を dist/preview/ の実サイズで更新
+            node scripts/update-new-sizes.js
+
             npm test
             rm -rf dist/temp node_modules package-lock.json
           else
-            # リリース公開時 / workflow_dispatch 時: 最新 master を基点に dist/ 直下（および dist/preview/）を更新
+            # リリース公開時 / workflow_dispatch 時: dist/preview/ktm-*.html および kantanUpdate.js を dist/ 直下 にコピーして更新
             git checkout -B master origin/master
 
+            TARGET_TAG=""
             if [ -n "$RELEASE_TAG" ]; then
-              printf '%s' "$RELEASE_TAG" > src/kantanVersion.txt
+              TARGET_TAG="$RELEASE_TAG"
             elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
-              printf '%s' "$REF_NAME" > src/kantanVersion.txt
+              TARGET_TAG="$REF_NAME"
             elif [ -n "$LATEST_TAG" ]; then
-              printf '%s' "$LATEST_TAG" > src/kantanVersion.txt
+              TARGET_TAG="$LATEST_TAG"
             fi
 
-            npm install --no-package-lock
-            npx grunt build
-            mkdir -p dist/preview
-            cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
+            cp -p dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html dist/
+
+            if [ -n "$TARGET_TAG" ]; then
+              printf '%s' "$TARGET_TAG" > src/kantanVersion.txt
+              node -e '
+                const fs = require("fs");
+                const ver = process.argv[1];
+                for (const f of ["dist/ktm-dev.html", "dist/ktm-lite.html", "dist/ktm-std.html", "dist/ktm-full.html"]) {
+                  fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace(/id="kantanVersion" value="[^"]*"/g, `id="kantanVersion" value="${ver}"`));
+                }
+                const u = "dist/kantanUpdate.js";
+                fs.writeFileSync(u, fs.readFileSync(u, "utf8")
+                  .replace(/"newVersion":\s*"[^"]*"/, `"newVersion": "${ver}"`)
+                  .replace(/id=\\"kantanVersion\\" value=\\"[^\\"]*\\"/g, `id=\\"kantanVersion\\" value=\\"${ver}\\"`));
+              ' "$TARGET_TAG"
+            fi
+
+            node scripts/update-new-sizes.js
             npm test
-            rm -rf dist/temp node_modules package-lock.json
           fi
-
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v6
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          # リポジトリ全体（ktm-new.html、リリース版 dist/ 直下、および dist/preview/ 配下を含む）を公開対象とする
-          path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
 
       - name: Commit synced artifacts back to master
         env:
@@ -118,7 +122,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           if [ "$EVENT_NAME" = "push" ]; then
-            git add dist/preview/ src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
+            git add dist/preview/ src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
             if ! git diff --cached --quiet; then
               git commit -m "chore(preview): update dist/preview from master [skip ci]"
               git pull --rebase origin master
@@ -134,7 +138,7 @@ jobs:
               TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
             fi
 
-            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/ ktm-new.html
+            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
             if [ -n "$TARGET_TAG" ] && ! git diff --cached --quiet; then
               git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
               git pull --rebase origin master
@@ -142,4 +146,20 @@ jobs:
               git tag -f "$TARGET_TAG" HEAD
               git push -f origin "refs/tags/$TARGET_TAG"
             fi
+
+            # actions/deploy-pages が最新コミットSHAを pages_build_version として使用し直前の push デプロイと衝突しないよう更新
+            echo "GITHUB_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           fi
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          # リポジトリ全体（ktm-new.html、リリース版 dist/ 直下、および dist/preview/ 配下を含む）を公開対象とする
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
