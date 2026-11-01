@@ -66,11 +66,14 @@ function runTests() {
         assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/preview/ktm-full.html'),
             'ktm-new.html must link to dist/preview/ktm-full.html');
 
-        // Check "空の容量" size table structure
+        // Check "空の容量" size table structure (release table and preview table)
         assert(content.includes('<td>空の容量</td>'), 'ktm-new.html must have "空の容量" row');
         const sizeRegex = /<td>空の容量<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約[\d\.]+(?:kb|MB))<\/td>/;
         const match = content.match(sizeRegex);
         assert(match, 'ktm-new.html "空の容量" row must match size format (e.g. 約121kb, 約165kb, 約3.1MB)');
+        const previewSizeRegex = /dist\/preview\/ktm-full\.html[\s\S]*?<td>空の容量<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約[\d\.]+(?:kb|MB))<\/td>/;
+        const previewMatch = content.match(previewSizeRegex);
+        assert(previewMatch, 'ktm-new.html preview table must also have "空の容量" row with valid size format');
         assert(content.includes('<td>Mermaid</td>'), 'ktm-new.html feature comparison must include Mermaid row');
     });
 
@@ -203,10 +206,15 @@ function runTests() {
             'deploy-pages.yml must restore root dist/ files from LATEST_TAG during push preview deployment');
         assert(deployYaml.includes('cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html'),
             'deploy-pages.yml must preserve ktm-new.html pre-build state during push preview deployment');
+        assert(deployYaml.includes('cp -p dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html dist/'),
+            'deploy-pages.yml must copy artifacts from dist/preview/ to root dist/ on release publish');
         assert(deployYaml.includes('chore(preview): update dist/preview from master [skip ci]'),
             'deploy-pages.yml must commit dist/preview updates with [skip ci]');
         assert(deployYaml.includes('ktm-new.html') && deployYaml.includes('chore(release): sync version to ${TARGET_TAG} [skip ci]'),
             'deploy-pages.yml must commit ktm-new.html on release publish');
+        assert(deployYaml.indexOf('Commit synced artifacts back to master') < deployYaml.indexOf('Deploy to GitHub Pages') &&
+            deployYaml.includes('echo "GITHUB_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"'),
+            'deploy-pages.yml must commit synced release artifacts and update GITHUB_SHA before deploying to GitHub Pages');
 
         const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
         assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
