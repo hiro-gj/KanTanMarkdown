@@ -274,26 +274,12 @@
 	// 設定パネルのイベント
 	var settingsPanel = document.getElementById("settings-panel");
 	function checkAndClearVersionCache() {
-		if (typeof window === "undefined" || typeof fetch !== "function" || !window.location) {
+		if (typeof window === "undefined" || typeof fetch !== "function") {
 			return;
 		}
-		var protocol = window.location.protocol;
-		if (protocol !== "http:" && protocol !== "https:") {
-			return;
-		}
-		var cleanUrl = window.location.href.split("?")[0].split("#")[0];
-		// 1. 元URLのブラウザHTTPキャッシュを強制リロード更新
-		fetch(cleanUrl, {
-			cache: "reload",
-			headers: {
-				"Pragma": "no-cache",
-				"Cache-Control": "no-cache"
-			}
-		}).catch(function() {});
-
-		// 2. キャッシュバスター付きURLから最新HTMLを取得してバージョン更新を確認
-		var bustUrl = cleanUrl + "?t=" + Date.now();
-		fetch(bustUrl, {
+		// 1. サーバー上の kantanVersion.txt をキャッシュ無効(no-store)で取得し、バージョン情報表示部分のみを最新化（画面リロードは行わず編集中の文章を保持）
+		var versionUrl = "https://hiro-gj.github.io/KanTanMarkdown/src/kantanVersion.txt?t=" + Date.now();
+		fetch(versionUrl, {
 			cache: "no-store",
 			headers: {
 				"Pragma": "no-cache",
@@ -302,29 +288,25 @@
 		}).then(function(res) {
 			if (!res || !res.ok) return null;
 			return res.text();
-		}).then(function(htmlText) {
-			if (!htmlText) return;
-			var match = htmlText.match(/id="kantanVersion"\s+value="([^"]+)"/);
-			if (!match || !match[1]) return;
-			var latestVer = match[1].trim();
-			var currentVerEl = document.getElementById("kantanVersion");
-			var currentVer = currentVerEl ? currentVerEl.value.trim() : "";
-			if (latestVer && latestVer !== currentVer) {
+		}).then(function(verText) {
+			if (!verText) return;
+			var latestVer = verText.trim();
+			if (latestVer) {
 				updateKantanVersion(latestVer);
-				var editorEl = document.getElementById("editor");
-				var isUnedited = saved && (!editorEl || editorEl.value === "") && document.querySelectorAll("#fileList li").length === 0;
-				var lastReloadedVer = "";
-				try {
-					lastReloadedVer = sessionStorage.getItem("com.tatesuke.ktm.reloaded_ver") || "";
-				} catch (e) {}
-				if (isUnedited && lastReloadedVer !== latestVer) {
-					try {
-						sessionStorage.setItem("com.tatesuke.ktm.reloaded_ver", latestVer);
-					} catch (e) {}
-					window.location.replace(cleanUrl + "?t=" + Date.now());
-				}
 			}
 		}).catch(function() {});
+
+		// 2. 次回アクセス時用に元URLのブラウザキャッシュのみバックグラウンドで更新（現在の画面・編集中原稿には一切影響しない）
+		if (window.location && (window.location.protocol === "http:" || window.location.protocol === "https:")) {
+			var cleanUrl = window.location.href.split("?")[0].split("#")[0];
+			fetch(cleanUrl, {
+				cache: "reload",
+				headers: {
+					"Pragma": "no-cache",
+					"Cache-Control": "no-cache"
+				}
+			}).catch(function() {});
+		}
 	}
 
 	on("#btn-settings", "click", function() {
