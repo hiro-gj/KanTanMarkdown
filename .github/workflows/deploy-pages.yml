@@ -53,21 +53,22 @@ jobs:
           LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
 
           if [ "$EVENT_NAME" = "push" ]; then
-            # masterマージ時: リリース公開中の dist/ 直下を保護しつつ dist/preview/ のみを更新
+            # masterマージ時: リリース公開中の dist/ 直下および ktm-new.html を保護しつつ dist/preview/ のみを更新
             mkdir -p /tmp/release-backup
-            cp -p src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html /tmp/release-backup/
+            cp -p src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html /tmp/release-backup/
 
             npm install --no-package-lock
             npx grunt build
             mkdir -p dist/preview
             cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
 
-            # dist/ 直下のリリース公開中ファイルを最新リリース版（または退避ファイル）から復元
+            # dist/ 直下のリリース公開中ファイルおよび ktm-new.html を最新リリース版（または退避ファイル）から復元
             if [ -n "$LATEST_TAG" ] && git cat-file -e "${LATEST_TAG}:dist/ktm-lite.html" 2>/dev/null; then
-              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
+              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
             else
               cp -p /tmp/release-backup/kantanVersion.txt src/kantanVersion.txt
               cp -p /tmp/release-backup/kantanUpdate.js /tmp/release-backup/ktm-dev.html /tmp/release-backup/ktm-lite.html /tmp/release-backup/ktm-std.html /tmp/release-backup/ktm-full.html dist/
+              cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html
             fi
             rm -rf /tmp/release-backup
 
@@ -133,7 +134,7 @@ jobs:
               TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
             fi
 
-            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
+            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/ ktm-new.html
             if [ -n "$TARGET_TAG" ] && ! git diff --cached --quiet; then
               git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
               git pull --rebase origin master

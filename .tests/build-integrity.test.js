@@ -48,8 +48,8 @@ function runTests() {
         }
     });
 
-    // Test 2: ktm-new.html links integrity
-    test('ktm-new.html contains valid links to each distribution edition', () => {
+    // Test 2: ktm-new.html links and size table integrity
+    test('ktm-new.html contains valid links and auto-updated size table for each edition', () => {
         const ktmNewPath = path.join(rootDir, 'ktm-new.html');
         const content = fs.readFileSync(ktmNewPath, 'utf-8');
 
@@ -59,6 +59,13 @@ function runTests() {
             'ktm-new.html must link to dist/ktm-std.html');
         assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-full.html'),
             'ktm-new.html must link to dist/ktm-full.html');
+
+        // Check "空の容量" size table structure
+        assert(content.includes('<td>空の容量</td>'), 'ktm-new.html must have "空の容量" row');
+        const sizeRegex = /<td>空の容量<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約\d+(?:kb|MB))<\/td>[\s\S]*?<td[^>]*>(約[\d\.]+(?:kb|MB))<\/td>/;
+        const match = content.match(sizeRegex);
+        assert(match, 'ktm-new.html "空の容量" row must match size format (e.g. 約121kb, 約165kb, 約3.1MB)');
+        assert(content.includes('<td>Mermaid</td>'), 'ktm-new.html feature comparison must include Mermaid row');
     });
 
     // Test 3: HTML distribution files structure
@@ -186,10 +193,12 @@ function runTests() {
         // Preview subfolder deployment and release dist/ restoration on push
         assert(deployYaml.includes('mkdir -p dist/preview') && deployYaml.includes('dist/preview/'),
             'deploy-pages.yml must populate dist/preview/');
-        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html'),
-            'deploy-pages.yml must restore root dist/ files from LATEST_TAG during push preview deployment');
+        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html'),
+            'deploy-pages.yml must restore root dist/ files and ktm-new.html from LATEST_TAG during push preview deployment');
         assert(deployYaml.includes('chore(preview): update dist/preview from master [skip ci]'),
             'deploy-pages.yml must commit dist/preview updates with [skip ci]');
+        assert(deployYaml.includes('ktm-new.html') && deployYaml.includes('chore(release): sync version to ${TARGET_TAG} [skip ci]'),
+            'deploy-pages.yml must commit ktm-new.html on release publish');
 
         const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
         assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
