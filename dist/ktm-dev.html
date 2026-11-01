@@ -1583,7 +1583,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 </div>
 
 </div>
-<input type="hidden" id="kantanVersion" value="v2.20261101.07">
+<input type="hidden" id="kantanVersion" value="v2.20261101.08">
 <input type="hidden" id="kantanEdition" value="dev">
 <div id="updateScriptArea"></div>
 <script id="markedJs">
@@ -4659,8 +4659,11 @@ LetterModeStrategy.prototype = {
 		}
 		
 		var script = document.createElement("script");
-		script.src = "http://tatesuke.github.io/KanTanMarkdown/kantanUpdate.js";
-		//script.src = "http://localhost:3000/kantanUpdate.js";
+		var isPreviewPath = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var updateBaseUrl = isPreviewPath
+			? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
+			: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		script.src = updateBaseUrl + "?t=" + Date.now();
 		script.class = "kantanUpdateScript";
 		script.onerror = function () {
 			alert("アップデートに失敗しました。\n" + 
@@ -4833,12 +4836,51 @@ LetterModeStrategy.prototype = {
 
 	// 設定パネルのイベント
 	var settingsPanel = document.getElementById("settings-panel");
+	function checkAndClearVersionCache() {
+		if (typeof window === "undefined" || typeof fetch !== "function") {
+			return;
+		}
+		// 1. サーバー上の kantanVersion.txt をキャッシュ無効(no-store)で取得し、バージョン情報表示部分のみを最新化（画面リロードは行わず編集中の文章を保持）
+		var versionUrl = "https://hiro-gj.github.io/KanTanMarkdown/src/kantanVersion.txt?t=" + Date.now();
+		fetch(versionUrl, {
+			cache: "no-store",
+			headers: {
+				"Pragma": "no-cache",
+				"Cache-Control": "no-cache"
+			}
+		}).then(function(res) {
+			if (!res || !res.ok) return null;
+			return res.text();
+		}).then(function(verText) {
+			if (!verText) return;
+			var latestVer = verText.trim();
+			if (latestVer) {
+				updateKantanVersion(latestVer);
+			}
+		}).catch(function() {});
+
+		// 2. 次回アクセス時用に元URLのブラウザキャッシュのみバックグラウンドで更新（現在の画面・編集中原稿には一切影響しない）
+		if (window.location && (window.location.protocol === "http:" || window.location.protocol === "https:")) {
+			var cleanUrl = window.location.href.split("?")[0].split("#")[0];
+			fetch(cleanUrl, {
+				cache: "reload",
+				headers: {
+					"Pragma": "no-cache",
+					"Cache-Control": "no-cache"
+				}
+			}).catch(function() {});
+		}
+	}
+
 	on("#btn-settings", "click", function() {
 		settingsPanel.removeAttribute("hidden");
+		checkAndClearVersionCache();
 	});
 	on("#btn-settings-close", "click", function() {
 		settingsPanel.setAttribute("hidden", "");
 	});
+
+	setTimeout(checkAndClearVersionCache, 100);
 
 	// ダークモード
 	var isDark = getItem("dark-mode", "false") === "true";
