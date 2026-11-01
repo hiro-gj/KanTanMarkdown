@@ -774,4 +774,27 @@ body.dark #previewer {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .mermaid,
+  .mermaid-rendered {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    max-width: 100% !important;
+  }
+  .mermaid svg,
+  .mermaid-rendered svg {
+    max-width: 100%;
+    height: auto;
+  }
+  .mermaid svg[aria-roledescription^="flowchart"],
+  .mermaid-rendered svg[aria-roledescription^="flowchart"],
+  .mermaid svg[aria-roledescription="sequence"],
+  .mermaid-rendered svg[aria-roledescription="sequence"],
+  .mermaid svg[aria-roledescription^="class"],
+  .mermaid-rendered svg[aria-roledescription^="class"],
+  .mermaid svg[aria-roledescription^="state"],
+  .mermaid-rendered svg[aria-roledescription^="state"],
+  .mermaid svg.statediagram,
+  .mermaid-rendered svg.statediagram {
+    zoom: 0.5;
+  }
 }
