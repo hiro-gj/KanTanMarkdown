@@ -1583,7 +1583,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 </div>
 
 </div>
-<input type="hidden" id="kantanVersion" value="v2.20261101.05">
+<input type="hidden" id="kantanVersion" value="v2.20261101.06">
 <input type="hidden" id="kantanEdition" value="dev">
 <div id="updateScriptArea"></div>
 <script id="markedJs">
@@ -4671,6 +4671,13 @@ LetterModeStrategy.prototype = {
 		
 		return false;
 	})
+
+	var updateNewDocHref = function() {
+		var baseUrl = this.href.split("?")[0];
+		this.href = baseUrl + "?t=" + Date.now();
+	};
+	on('a[href*="ktm-new.html"]', "mousedown", updateNewDocHref);
+	on('a[href*="ktm-new.html"]', "click", updateNewDocHref);
 	
 	/* 端末固有設定 */
 	// 現在のところチェックボックスのみなので
