@@ -3,6 +3,15 @@ name: Deploy KanTanMarkdown to GitHub Pages
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'Gruntfile.js'
+      - 'package.json'
+      - 'ktm-new.html'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 # GITHUB_TOKEN に GitHub Pages へのデプロイ権限およびバージョン同期コミット権限を設定
@@ -33,26 +42,56 @@ jobs:
         with:
           node-version: 24
 
-      - name: Sync version with release tag and build
+      - name: Build and prepare distribution artifacts
         env:
+          EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ -n "$RELEASE_TAG" ]; then
-            printf '%s' "$RELEASE_TAG" > src/kantanVersion.txt
-          elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
-            printf '%s' "$REF_NAME" > src/kantanVersion.txt
+          git fetch origin master --tags
+          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            # masterマージ時: リリース公開中の dist/ 直下を保護しつつ dist/preview/ のみを更新
+            mkdir -p /tmp/release-backup
+            cp -p src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html /tmp/release-backup/
+
+            npm install --no-package-lock
+            npx grunt build
+            mkdir -p dist/preview
+            cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
+
+            # dist/ 直下のリリース公開中ファイルを最新リリース版（または退避ファイル）から復元
+            if [ -n "$LATEST_TAG" ] && git cat-file -e "${LATEST_TAG}:dist/ktm-lite.html" 2>/dev/null; then
+              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
+            else
+              cp -p /tmp/release-backup/kantanVersion.txt src/kantanVersion.txt
+              cp -p /tmp/release-backup/kantanUpdate.js /tmp/release-backup/ktm-dev.html /tmp/release-backup/ktm-lite.html /tmp/release-backup/ktm-std.html /tmp/release-backup/ktm-full.html dist/
+            fi
+            rm -rf /tmp/release-backup
+
+            npm test
+            rm -rf dist/temp node_modules package-lock.json
           else
-            LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-            if [ -n "$LATEST_TAG" ]; then
+            # リリース公開時 / workflow_dispatch 時: 最新 master を基点に dist/ 直下（および dist/preview/）を更新
+            git checkout -B master origin/master
+
+            if [ -n "$RELEASE_TAG" ]; then
+              printf '%s' "$RELEASE_TAG" > src/kantanVersion.txt
+            elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
+              printf '%s' "$REF_NAME" > src/kantanVersion.txt
+            elif [ -n "$LATEST_TAG" ]; then
               printf '%s' "$LATEST_TAG" > src/kantanVersion.txt
             fi
+
+            npm install --no-package-lock
+            npx grunt build
+            mkdir -p dist/preview
+            cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
+            npm test
+            rm -rf dist/temp node_modules package-lock.json
           fi
-          npm install --no-package-lock
-          npx grunt build
-          npm test
-          rm -rf node_modules package-lock.json
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v6
@@ -60,34 +99,46 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          # リポジトリ全体（ktm-new.html および dist/ 配下を含む）を公開対象とする
+          # リポジトリ全体（ktm-new.html、リリース版 dist/ 直下、および dist/preview/ 配下を含む）を公開対象とする
           path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
 
-      - name: Commit synced version and dist back to master
+      - name: Commit synced artifacts back to master
         env:
+          EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          TARGET_TAG=""
-          if [ -n "$RELEASE_TAG" ]; then
-            TARGET_TAG="$RELEASE_TAG"
-          elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
-            TARGET_TAG="$REF_NAME"
-          else
-            TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ -n "$TARGET_TAG" ] && ! git diff --quiet src/kantanVersion.txt dist/; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
-            git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
-            git push origin HEAD:refs/heads/master
-            git tag -f "$TARGET_TAG" HEAD
-            git push -f origin "refs/tags/$TARGET_TAG"
+          if [ "$EVENT_NAME" = "push" ]; then
+            git add dist/preview/ src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(preview): update dist/preview from master [skip ci]"
+              git pull --rebase origin master
+              git push origin HEAD:refs/heads/master
+            fi
+          else
+            TARGET_TAG=""
+            if [ -n "$RELEASE_TAG" ]; then
+              TARGET_TAG="$RELEASE_TAG"
+            elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
+              TARGET_TAG="$REF_NAME"
+            else
+              TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
+            fi
+
+            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
+            if [ -n "$TARGET_TAG" ] && ! git diff --cached --quiet; then
+              git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
+              git pull --rebase origin master
+              git push origin HEAD:refs/heads/master
+              git tag -f "$TARGET_TAG" HEAD
+              git push -f origin "refs/tags/$TARGET_TAG"
+            fi
           fi
