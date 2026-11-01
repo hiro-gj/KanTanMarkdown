@@ -1,5 +1,5 @@
 kantanUpdate({
-	"newVersion": "v2.20261101.09",
+	"newVersion": "v2.20261101.10",
 	"ktmString": "<!--\n" + 
 " * KanTanMarkdown\n" + 
 " * Copyright (c) 2016 tatesuke\n" + 
@@ -723,7 +723,7 @@ kantanUpdate({
 "</div>\n" + 
 "\n" + 
 "</div>\n" + 
-"<input type=\"hidden\" id=\"kantanVersion\" value=\"v2.20261101.09\">\n" + 
+"<input type=\"hidden\" id=\"kantanVersion\" value=\"v2.20261101.10\">\n" + 
 "<input type=\"hidden\" id=\"kantanEdition\" value=\"__KANTAN_EDITION__\">\n" + 
 "<div id=\"updateScriptArea\"></div>\n" + 
 "<script id=\"markedJs\">\n" + 
