@@ -96,8 +96,11 @@
 		}
 		
 		var script = document.createElement("script");
-		script.src = "http://tatesuke.github.io/KanTanMarkdown/kantanUpdate.js";
-		//script.src = "http://localhost:3000/kantanUpdate.js";
+		var isPreviewPath = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var updateBaseUrl = isPreviewPath
+			? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
+			: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		script.src = updateBaseUrl + "?t=" + Date.now();
 		script.class = "kantanUpdateScript";
 		script.onerror = function () {
 			alert("アップデートに失敗しました。\n" + 
@@ -270,12 +273,69 @@
 
 	// 設定パネルのイベント
 	var settingsPanel = document.getElementById("settings-panel");
+	function checkAndClearVersionCache() {
+		if (typeof window === "undefined" || typeof fetch !== "function" || !window.location) {
+			return;
+		}
+		var protocol = window.location.protocol;
+		if (protocol !== "http:" && protocol !== "https:") {
+			return;
+		}
+		var cleanUrl = window.location.href.split("?")[0].split("#")[0];
+		// 1. 元URLのブラウザHTTPキャッシュを強制リロード更新
+		fetch(cleanUrl, {
+			cache: "reload",
+			headers: {
+				"Pragma": "no-cache",
+				"Cache-Control": "no-cache"
+			}
+		}).catch(function() {});
+
+		// 2. キャッシュバスター付きURLから最新HTMLを取得してバージョン更新を確認
+		var bustUrl = cleanUrl + "?t=" + Date.now();
+		fetch(bustUrl, {
+			cache: "no-store",
+			headers: {
+				"Pragma": "no-cache",
+				"Cache-Control": "no-cache"
+			}
+		}).then(function(res) {
+			if (!res || !res.ok) return null;
+			return res.text();
+		}).then(function(htmlText) {
+			if (!htmlText) return;
+			var match = htmlText.match(/id="kantanVersion"\s+value="([^"]+)"/);
+			if (!match || !match[1]) return;
+			var latestVer = match[1].trim();
+			var currentVerEl = document.getElementById("kantanVersion");
+			var currentVer = currentVerEl ? currentVerEl.value.trim() : "";
+			if (latestVer && latestVer !== currentVer) {
+				updateKantanVersion(latestVer);
+				var editorEl = document.getElementById("editor");
+				var isUnedited = saved && (!editorEl || editorEl.value === "") && document.querySelectorAll("#fileList li").length === 0;
+				var lastReloadedVer = "";
+				try {
+					lastReloadedVer = sessionStorage.getItem("com.tatesuke.ktm.reloaded_ver") || "";
+				} catch (e) {}
+				if (isUnedited && lastReloadedVer !== latestVer) {
+					try {
+						sessionStorage.setItem("com.tatesuke.ktm.reloaded_ver", latestVer);
+					} catch (e) {}
+					window.location.replace(cleanUrl + "?t=" + Date.now());
+				}
+			}
+		}).catch(function() {});
+	}
+
 	on("#btn-settings", "click", function() {
 		settingsPanel.removeAttribute("hidden");
+		checkAndClearVersionCache();
 	});
 	on("#btn-settings-close", "click", function() {
 		settingsPanel.setAttribute("hidden", "");
 	});
+
+	setTimeout(checkAndClearVersionCache, 100);
 
 	// ダークモード
 	var isDark = getItem("dark-mode", "false") === "true";
