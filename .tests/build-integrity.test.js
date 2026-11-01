@@ -59,6 +59,12 @@ function runTests() {
             'ktm-new.html must link to dist/ktm-std.html');
         assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/ktm-full.html'),
             'ktm-new.html must link to dist/ktm-full.html');
+        assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/preview/ktm-lite.html'),
+            'ktm-new.html must link to dist/preview/ktm-lite.html');
+        assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/preview/ktm-std.html'),
+            'ktm-new.html must link to dist/preview/ktm-std.html');
+        assert(content.includes('https://hiro-gj.github.io/KanTanMarkdown/dist/preview/ktm-full.html'),
+            'ktm-new.html must link to dist/preview/ktm-full.html');
 
         // Check "空の容量" size table structure
         assert(content.includes('<td>空の容量</td>'), 'ktm-new.html must have "空の容量" row');
