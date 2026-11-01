@@ -147,8 +147,9 @@ jobs:
               git push -f origin "refs/tags/$TARGET_TAG"
             fi
 
-            # actions/deploy-pages が最新コミットSHAを pages_build_version として使用し直前の push デプロイと衝突しないよう更新
-            echo "GITHUB_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            # actions/deploy-pages が最新コミットSHAを pages_build_version として使用し直前の push デプロイと衝突しないよう DEPLOY_SHA を注入
+            echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            sed -i 's/process\.env\.GITHUB_SHA/(process.env.DEPLOY_SHA || process.env.GITHUB_SHA)/g' /home/runner/work/_actions/actions/deploy-pages/*/dist/index.js 2>/dev/null || true
           fi
 
       - name: Setup GitHub Pages
