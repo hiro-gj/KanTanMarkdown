@@ -20,6 +20,7 @@ const filesToCheck = [
     path.join('src', 'js', 'kantanEditor.js'),
     path.join('src', 'js', 'kantanMarkdown.js'),
     path.join('src', 'js', 'marked.min.js'),
+    path.join('src', 'js', 'mermaid.min.js'),
     path.join('src', 'js', 'raphael.min.js'),
     path.join('src', 'js', 'underscore.min.js')
 ];

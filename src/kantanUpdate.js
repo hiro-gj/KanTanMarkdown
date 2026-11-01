@@ -84,13 +84,15 @@ kantanUpdate({
 					|| (scriptElement.id == "raphaelJs")
 					|| (scriptElement.id == "underscoreJs")
 					|| (scriptElement.id == "jsSequenceDiagramsJs")
-					|| (scriptElement.id == "flowchartJs") )) {
+					|| (scriptElement.id == "flowchartJs")
+					|| (scriptElement.id == "mermaidJs") )) {
 				continue;
 			} else if (kantanEdition == "std" && 
 					(  (scriptElement.id == "raphaelJs")
 					|| (scriptElement.id == "underscoreJs")
 					|| (scriptElement.id == "jsSequenceDiagramsJs")
-					|| (scriptElement.id == "flowchartJs") )) {
+					|| (scriptElement.id == "flowchartJs")
+					|| (scriptElement.id == "mermaidJs") )) {
 				continue;
 			}
 			var newScript = document.createElement("script");

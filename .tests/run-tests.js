@@ -10,6 +10,7 @@ const testSuites = [
     { name: 'Syntax Check', file: 'syntax-check.js' },
     { name: 'GitHub Alerts Parser', file: 'alerts-parser.test.js' },
     { name: 'Editor Logic', file: 'editor-logic.test.js' },
+    { name: 'Mermaid Parser', file: 'mermaid-parser.test.js' },
     { name: 'Build & Artifacts Integrity', file: 'build-integrity.test.js' }
 ];
 
