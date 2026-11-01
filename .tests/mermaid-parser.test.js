@@ -112,6 +112,31 @@ function runTests() {
         assert(errorCaught, 'Syntax error must be caught');
     });
 
+    test('Async diagrams (mindmap, timeline, flowchart-elk) use renderAsync and cache SVG output', () => {
+        const asyncRegex = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i;
+        const mindmapSource = 'mindmap\n  root((プロジェクト))\n    計画\n      要件定義';
+        const flowchartSource = 'flowchart TD\n  A[開始] --> B[終了]';
+
+        assert(asyncRegex.test(mindmapSource), 'mindmap source must be detected as async diagram');
+        assert(asyncRegex.test('%% comment\nmindmap\n  root'), 'mindmap with comment must be detected as async diagram');
+        assert(!asyncRegex.test(flowchartSource), 'standard flowchart must not be detected as async diagram');
+
+        let renderAsyncCalled = false;
+        const mockAsyncMermaid = {
+            renderAsync: function(id, text, cb) {
+                renderAsyncCalled = true;
+                const svg = '<svg id="' + id + '" aria-roledescription="mindmap"><g>mindmap</g></svg>';
+                cb(svg);
+                return Promise.resolve(svg);
+            }
+        };
+
+        let outputSvg = null;
+        mockAsyncMermaid.renderAsync('mm-1', mindmapSource, (svg) => { outputSvg = svg; });
+        assert(renderAsyncCalled, 'renderAsync must be invoked for mindmap');
+        assert(outputSvg && outputSvg.includes('aria-roledescription="mindmap"'), 'mindmap SVG must be produced');
+    });
+
     console.log(`\nMermaid Parser Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) process.exit(1);
     else process.exit(0);

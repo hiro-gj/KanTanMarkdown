@@ -241,6 +241,24 @@ function runTests() {
             'dist/preview/ktm-lite.html must not include mermaidJs');
         assert(!previewStd.includes('id="mermaidJs"'),
             'dist/preview/ktm-std.html must not include mermaidJs');
+
+        // Verify print scaling (zoom: 0.5 for flowchart, sequence, class, state) and async mindmap support in source
+        const previewerCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'previewer.css'), 'utf-8');
+        const kantanCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'kantan.css'), 'utf-8');
+        const kantanMdJs = fs.readFileSync(path.join(rootDir, 'src', 'js', 'kantanMarkdown.js'), 'utf-8');
+
+        assert(!/\.mermaid\s+svg,\s*\.mermaid-rendered\s+svg\s*\{\s*max-width:\s*100%\s*!important/.test(previewerCss),
+            'previewer.css must not force max-width: 100% !important on .mermaid svg in @media print');
+        assert(previewerCss.includes('svg[aria-roledescription^="flowchart"]') &&
+            previewerCss.includes('svg[aria-roledescription="sequence"]') &&
+            previewerCss.includes('svg[aria-roledescription^="class"]') &&
+            previewerCss.includes('svg[aria-roledescription^="state"]') &&
+            previewerCss.includes('zoom: 0.5;'),
+            'previewer.css must apply zoom: 0.5 in @media print for flowchart, sequence, class, and state diagrams');
+        assert(kantanCss.includes('svg[aria-roledescription^="flowchart"]') && kantanCss.includes('zoom: 0.5;'),
+            'kantan.css must apply zoom: 0.5 in @media print for target Mermaid diagrams');
+        assert(kantanMdJs.includes('mermaid.renderAsync') && kantanMdJs.includes('mindmap'),
+            'kantanMarkdown.js must support mermaid.renderAsync for mindmap diagrams');
     });
 
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);

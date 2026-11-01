@@ -579,6 +579,10 @@
 		var previewerStyle = document.querySelector("#previewerStyle");
 		var cssEditor = document.querySelector("#cssEditor");
 		var replacedCss = replaceAttachURL(cssEditor.value);
+		replacedCss = replacedCss.replace(
+			/@media\s+print\s*\{\s*\.mermaid,\s*\.mermaid-rendered\s*\{\s*page-break-inside:\s*avoid;\s*break-inside:\s*avoid;\s*max-width:\s*100%\s*!important;\s*\}\s*\.mermaid\s+svg,\s*\.mermaid-rendered\s+svg\s*\{\s*max-width:\s*100%\s*!important;\s*\}\s*\}/g,
+			'@media print {\n    .mermaid,\n    .mermaid-rendered {\n        page-break-inside: avoid;\n        break-inside: avoid;\n        max-width: 100% !important;\n    }\n    .mermaid svg,\n    .mermaid-rendered svg {\n        max-width: 100%;\n        height: auto;\n    }\n    .mermaid svg[aria-roledescription^="flowchart"],\n    .mermaid-rendered svg[aria-roledescription^="flowchart"],\n    .mermaid svg[aria-roledescription="sequence"],\n    .mermaid-rendered svg[aria-roledescription="sequence"],\n    .mermaid svg[aria-roledescription^="class"],\n    .mermaid-rendered svg[aria-roledescription^="class"],\n    .mermaid svg[aria-roledescription^="state"],\n    .mermaid-rendered svg[aria-roledescription^="state"],\n    .mermaid svg.statediagram,\n    .mermaid-rendered svg.statediagram {\n        zoom: 0.5;\n    }\n}'
+		);
 		previewerStyle.innerHTML = replacedCss;
 		
 		// タイトル変更
@@ -677,10 +681,12 @@
 		// Mermaid ダイアグラム（full / dev エディションのみ実行）
 		if (typeof mermaid !== "undefined") {
 			var isDark = document.body && document.body.classList.contains("dark");
+			var mermaidTheme = isDark ? "dark" : "default";
+			window.__kantanMermaidCache = window.__kantanMermaidCache || {};
 			try {
 				mermaid.initialize({
 					startOnLoad: false,
-					theme: isDark ? "dark" : "default",
+					theme: mermaidTheme,
 					securityLevel: "loose"
 				});
 			} catch (initErr) {
@@ -691,30 +697,68 @@
 
 			var mermaidNodes = previewer.querySelectorAll(".mermaid, pre code.lang-mermaid, pre code.language-mermaid");
 			for (var mi = 0; mi < mermaidNodes.length; mi++) {
-				var node = mermaidNodes[mi];
-				var container = node;
-				if (node.tagName.toLowerCase() === "code") {
-					container = node.closest("pre") || node;
-				}
-				var mermaidSource = getDiagramSource(node);
-				var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
+				(function (mi) {
+					var node = mermaidNodes[mi];
+					var container = node;
+					if (node.tagName.toLowerCase() === "code") {
+						container = node.closest("pre") || node;
+					}
+					var mermaidSource = getDiagramSource(node);
+					var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
+					var cacheKey = mermaidTheme + "\n" + mermaidSource;
+					var isAsyncDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(mermaidSource);
 
-				try {
-					mermaid.render(diagramId, mermaidSource, function (svgCode, bindFunctions) {
-						container.innerHTML = svgCode;
+					if (window.__kantanMermaidCache[cacheKey]) {
+						container.innerHTML = window.__kantanMermaidCache[cacheKey];
 						container.classList.add("mermaid-rendered");
 						container.classList.remove("mermaid-error");
-						if (typeof bindFunctions === "function") {
-							bindFunctions(container);
+					} else if ((isAsyncDiagram || typeof mermaid.render !== "function") && typeof mermaid.renderAsync === "function") {
+						try {
+							mermaid.renderAsync(diagramId, mermaidSource, function (svgCode, bindFunctions) {
+								window.__kantanMermaidCache[cacheKey] = svgCode;
+								container.innerHTML = svgCode;
+								container.classList.add("mermaid-rendered");
+								container.classList.remove("mermaid-error");
+								if (typeof bindFunctions === "function") {
+									bindFunctions(container);
+								}
+							}, container)["catch"](function (mErr) {
+								container.textContent = mermaidSource;
+								container.classList.add("mermaid-error");
+								container.classList.remove("mermaid-rendered");
+								if (window.console && console.warn) {
+									console.warn("Mermaidを描画できませんでした。", mErr);
+								}
+							});
+						} catch (mErr) {
+							container.textContent = mermaidSource;
+							container.classList.add("mermaid-error");
+							container.classList.remove("mermaid-rendered");
+							if (window.console && console.warn) {
+								console.warn("Mermaidを描画できませんでした。", mErr);
+							}
 						}
-					}, container);
-				} catch (mErr) {
-					container.textContent = mermaidSource;
-					container.classList.add("mermaid-error");
-					if (window.console && console.warn) {
-						console.warn("Mermaidを描画できませんでした。", mErr);
+					} else {
+						try {
+							mermaid.render(diagramId, mermaidSource, function (svgCode, bindFunctions) {
+								window.__kantanMermaidCache[cacheKey] = svgCode;
+								container.innerHTML = svgCode;
+								container.classList.add("mermaid-rendered");
+								container.classList.remove("mermaid-error");
+								if (typeof bindFunctions === "function") {
+									bindFunctions(container);
+								}
+							}, container);
+						} catch (mErr) {
+							container.textContent = mermaidSource;
+							container.classList.add("mermaid-error");
+							container.classList.remove("mermaid-rendered");
+							if (window.console && console.warn) {
+								console.warn("Mermaidを描画できませんでした。", mErr);
+							}
+						}
 					}
-				}
+				})(mi);
 			}
 		}
 		
