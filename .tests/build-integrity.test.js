@@ -213,8 +213,8 @@ function runTests() {
         assert(deployYaml.includes('ktm-new.html') && deployYaml.includes('chore(release): sync version to ${TARGET_TAG} [skip ci]'),
             'deploy-pages.yml must commit ktm-new.html on release publish');
         assert(deployYaml.indexOf('Commit synced artifacts back to master') < deployYaml.indexOf('Deploy to GitHub Pages') &&
-            deployYaml.includes('echo "GITHUB_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"'),
-            'deploy-pages.yml must commit synced release artifacts and update GITHUB_SHA before deploying to GitHub Pages');
+            deployYaml.includes('echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"'),
+            'deploy-pages.yml must commit synced release artifacts and set DEPLOY_SHA before deploying to GitHub Pages');
 
         const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
         assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
