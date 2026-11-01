@@ -62,14 +62,14 @@ jobs:
             mkdir -p dist/preview
             cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
 
-            # dist/ 直下のリリース公開中ファイルおよび ktm-new.html を最新リリース版（または退避ファイル）から復元
+            # dist/ 直下のリリース公開中ファイルを最新リリース版（または退避ファイル）から復元し、ktm-new.html はビルド前の状態を維持
             if [ -n "$LATEST_TAG" ] && git cat-file -e "${LATEST_TAG}:dist/ktm-lite.html" 2>/dev/null; then
-              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
+              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
             else
               cp -p /tmp/release-backup/kantanVersion.txt src/kantanVersion.txt
               cp -p /tmp/release-backup/kantanUpdate.js /tmp/release-backup/ktm-dev.html /tmp/release-backup/ktm-lite.html /tmp/release-backup/ktm-std.html /tmp/release-backup/ktm-full.html dist/
-              cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html
             fi
+            cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html
             rm -rf /tmp/release-backup
 
             npm test

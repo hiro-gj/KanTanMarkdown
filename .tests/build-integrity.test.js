@@ -193,8 +193,10 @@ function runTests() {
         // Preview subfolder deployment and release dist/ restoration on push
         assert(deployYaml.includes('mkdir -p dist/preview') && deployYaml.includes('dist/preview/'),
             'deploy-pages.yml must populate dist/preview/');
-        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html'),
-            'deploy-pages.yml must restore root dist/ files and ktm-new.html from LATEST_TAG during push preview deployment');
+        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html'),
+            'deploy-pages.yml must restore root dist/ files from LATEST_TAG during push preview deployment');
+        assert(deployYaml.includes('cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html'),
+            'deploy-pages.yml must preserve ktm-new.html pre-build state during push preview deployment');
         assert(deployYaml.includes('chore(preview): update dist/preview from master [skip ci]'),
             'deploy-pages.yml must commit dist/preview updates with [skip ci]');
         assert(deployYaml.includes('ktm-new.html') && deployYaml.includes('chore(release): sync version to ${TARGET_TAG} [skip ci]'),
