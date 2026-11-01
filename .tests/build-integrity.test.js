@@ -27,11 +27,11 @@ function runTests() {
 
     const requiredArtifacts = [
         { file: 'ktm-new.html', minSizeKb: 8, maxSizeKb: 30 },
-        { file: path.join('dist', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 600 },
+        { file: path.join('dist', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 4500 },
         { file: path.join('dist', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 200 },
         { file: path.join('dist', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 250 },
-        { file: path.join('dist', 'ktm-full.html'), minSizeKb: 300, maxSizeKb: 500 },
-        { file: path.join('dist', 'kantanUpdate.js'), minSizeKb: 300, maxSizeKb: 550 }
+        { file: path.join('dist', 'ktm-full.html'), minSizeKb: 300, maxSizeKb: 4500 },
+        { file: path.join('dist', 'kantanUpdate.js'), minSizeKb: 300, maxSizeKb: 4500 }
     ];
 
     // Test 1: Existence and file size bounds
@@ -135,11 +135,11 @@ function runTests() {
     // Test 6: dist/preview/ subfolder artifacts existence, size bounds, and HTML structure
     test('dist/preview subfolder contains valid preview distribution artifacts', () => {
         const previewArtifacts = [
-            { file: path.join('dist', 'preview', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 600, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 4500, isHtml: true },
             { file: path.join('dist', 'preview', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 200, isHtml: true },
             { file: path.join('dist', 'preview', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 250, isHtml: true },
-            { file: path.join('dist', 'preview', 'ktm-full.html'), minSizeKb: 300, maxSizeKb: 500, isHtml: true },
-            { file: path.join('dist', 'preview', 'kantanUpdate.js'), minSizeKb: 300, maxSizeKb: 550, isHtml: false }
+            { file: path.join('dist', 'preview', 'ktm-full.html'), minSizeKb: 2500, maxSizeKb: 4500, isHtml: true },
+            { file: path.join('dist', 'preview', 'kantanUpdate.js'), minSizeKb: 2500, maxSizeKb: 4500, isHtml: false }
         ];
 
         for (const item of previewArtifacts) {
@@ -196,6 +196,24 @@ function runTests() {
         const testYaml = fs.readFileSync(testWorkflowPath, 'utf-8');
         assert(testYaml.includes('paths-ignore:') && testYaml.includes("'README.md'") && testYaml.includes("'.gear/**'") && testYaml.includes("'dist/preview/**'"),
             'test.yml must ignore non-functional and preview artifact paths');
+    });
+
+    // Test 8: Mermaid inclusion in full edition and exclusion from lite / std editions
+    test('Mermaid is bundled in full/dev editions and excluded from lite/std editions', () => {
+        // Verify in dist/preview (latest built artifacts) and dist/ if bundled
+        const previewFull = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'ktm-full.html'), 'utf-8');
+        const previewDev = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'ktm-dev.html'), 'utf-8');
+        const previewLite = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'ktm-lite.html'), 'utf-8');
+        const previewStd = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'ktm-std.html'), 'utf-8');
+
+        assert(previewFull.includes('id="mermaidJs"') && previewFull.includes('mermaid'),
+            'dist/preview/ktm-full.html must bundle mermaidJs');
+        assert(previewDev.includes('id="mermaidJs"') && previewDev.includes('mermaid'),
+            'dist/preview/ktm-dev.html must bundle mermaidJs');
+        assert(!previewLite.includes('id="mermaidJs"'),
+            'dist/preview/ktm-lite.html must not include mermaidJs');
+        assert(!previewStd.includes('id="mermaidJs"'),
+            'dist/preview/ktm-std.html must not include mermaidJs');
     });
 
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);

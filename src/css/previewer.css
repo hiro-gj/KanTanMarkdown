@@ -400,3 +400,46 @@ pre tt {
         border: 0;
     }
 }
+
+/* Mermaid ダイアグラム */
+.mermaid,
+.mermaid-rendered {
+    text-align: center;
+    margin: 16px auto;
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.mermaid svg,
+.mermaid-rendered svg {
+    max-width: 100%;
+    height: auto;
+    display: inline-block;
+}
+
+/* Mermaid 構文エラー表示 */
+.mermaid-error {
+    border: 1px dashed #cf222e;
+    background: rgba(207, 34, 46, 0.05);
+    color: #cf222e;
+    padding: 12px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    text-align: left;
+    margin: 16px 0;
+}
+
+@media print {
+    .mermaid,
+    .mermaid-rendered {
+        page-break-inside: avoid;
+        break-inside: avoid;
+        max-width: 100% !important;
+    }
+    .mermaid svg,
+    .mermaid-rendered svg {
+        max-width: 100% !important;
+    }
+}

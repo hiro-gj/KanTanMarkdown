@@ -146,12 +146,30 @@
 	toKantanEditor(document.getElementById("editor"));
 	toKantanEditor(document.getElementById("cssEditor"));
 
+	/* marked カスタムレンダラー（Mermaidフェンス対応） */
+	var markedRenderer = new marked.Renderer();
+	var originalCodeRenderer = markedRenderer.code.bind(markedRenderer);
+	markedRenderer.code = function (code, lang, escaped) {
+		if (lang === "mermaid" && typeof mermaid !== "undefined") {
+			return '<div class="mermaid">' + code + '</div>';
+		}
+		return originalCodeRenderer(code, lang, escaped);
+	};
+
 	/* シンタックスハイライト設定 */
 	if (typeof hljs !== "undefined") {
 		marked.setOptions({
+			renderer: markedRenderer,
 			highlight: function (code, lang) {
+				if (lang === "mermaid") {
+					return code;
+				}
 				return hljs.highlightAuto(code, [lang]).value;
 			}
+		});
+	} else {
+		marked.setOptions({
+			renderer: markedRenderer
 		});
 	}
 	
@@ -271,6 +289,9 @@
 			addClass(document.body, "dark");
 			document.getElementById("btn-dark-mode").querySelector(".btn-text").innerText = "ライト";
 			setItem("dark-mode", "true");
+		}
+		if (typeof mermaid !== "undefined") {
+			doPreview();
 		}
 		doPreview();
 	});
@@ -599,6 +620,50 @@
 					addClass(flow, "diagram-error");
 					if (window.console && console.warn) {
 						console.warn("フローチャートを描画できませんでした。", e);
+					}
+				}
+			}
+		}
+
+		// Mermaid ダイアグラム（full / dev エディションのみ実行）
+		if (typeof mermaid !== "undefined") {
+			var isDark = document.body && document.body.classList.contains("dark");
+			try {
+				mermaid.initialize({
+					startOnLoad: false,
+					theme: isDark ? "dark" : "default",
+					securityLevel: "loose"
+				});
+			} catch (initErr) {
+				if (window.console && console.warn) {
+					console.warn("Mermaid初期化エラー:", initErr);
+				}
+			}
+
+			var mermaidNodes = previewer.querySelectorAll(".mermaid, pre code.lang-mermaid, pre code.language-mermaid");
+			for (var mi = 0; mi < mermaidNodes.length; mi++) {
+				var node = mermaidNodes[mi];
+				var container = node;
+				if (node.tagName.toLowerCase() === "code") {
+					container = node.closest("pre") || node;
+				}
+				var mermaidSource = getDiagramSource(node);
+				var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
+
+				try {
+					mermaid.render(diagramId, mermaidSource, function (svgCode, bindFunctions) {
+						container.innerHTML = svgCode;
+						container.classList.add("mermaid-rendered");
+						container.classList.remove("mermaid-error");
+						if (typeof bindFunctions === "function") {
+							bindFunctions(container);
+						}
+					}, container);
+				} catch (mErr) {
+					container.textContent = mermaidSource;
+					container.classList.add("mermaid-error");
+					if (window.console && console.warn) {
+						console.warn("Mermaidを描画できませんでした。", mErr);
 					}
 				}
 			}

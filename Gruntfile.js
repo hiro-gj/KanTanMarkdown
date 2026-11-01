@@ -2,7 +2,7 @@
 require('util').isRegExp = require('util').isRegExp || function(arg) { return arg instanceof RegExp; };
 
 module.exports = function(grunt) {
-	
+
 	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks("grunt-contrib-copy");
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
@@ -10,7 +10,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-text-replace');
 	grunt.loadNpmTasks("grunt-inline");
 	grunt.loadNpmTasks('grunt-contrib-watch');
-	
+
 	//Gruntの設定
 	grunt.initConfig({
 		clean: {
@@ -53,7 +53,7 @@ module.exports = function(grunt) {
 					dest: "dist/kantanUpdate.js"
 				}]
 			}
-			
+
 		},
 		cssmin: {
 			css: {
@@ -128,6 +128,13 @@ module.exports = function(grunt) {
 					{from: /\s<script id="flowchartJs"[\s|\S]+?<\/script>/g, to: ""},
 				],
 			},
+			removeMermaidJs: {
+				src: ['dist/temp/src/ktm.html'],
+				overwrite: true,
+				replacements: [
+					{from: /\s<script id="mermaidJs"[\s|\S]+?<\/script>/g, to: ""},
+				],
+			},
 			replaceKantanEdition_dev:{
 				src: ['dist/temp/src/ktm.html'],
 				overwrite: true,
@@ -199,6 +206,7 @@ module.exports = function(grunt) {
 		"replace:removeUnderscoreJs",
 		"replace:removeJsSequenceDiagramsJs",
 		"replace:removeFlowChartJs",
+		"replace:removeMermaidJs",
 		"inline:makeKtmHtml",
 		"replace:replaceKantanEdition_lite",
 		"copy:afterBuild_lite",
@@ -212,6 +220,7 @@ module.exports = function(grunt) {
 		"replace:removeUnderscoreJs",
 		"replace:removeJsSequenceDiagramsJs",
 		"replace:removeFlowChartJs",
+		"replace:removeMermaidJs",
 		"inline:makeKtmHtml",
 		"replace:replaceKantanEdition_std",
 		"copy:afterBuild_std",
