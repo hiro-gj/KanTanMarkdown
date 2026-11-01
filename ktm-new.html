@@ -573,6 +573,14 @@ window.addEventListener("scroll", function() {
         if (i === activeIndex) link.classList.add("active"); else link.classList.remove("active");
     });
 });
+document.querySelectorAll('a[href*="/dist/"]').forEach(function(link) {
+    var updateHref = function() {
+        var baseUrl = this.href.split("?")[0];
+        this.href = baseUrl + "?t=" + Date.now();
+    };
+    link.addEventListener("mousedown", updateHref);
+    link.addEventListener("click", updateHref);
+});
 </script>
 </body>
 </html>
