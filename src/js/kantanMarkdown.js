@@ -83,6 +83,17 @@
 		json.doUpdate();
 	}
 	
+	var updateBtnElem = document.getElementById("updateButton");
+	if (updateBtnElem) {
+		var isPreviewLoc = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var currentHrefAttr = updateBtnElem.getAttribute("href") || "";
+		if (isPreviewLoc || currentHrefAttr.indexOf("/dist/preview/") !== -1) {
+			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js";
+		} else {
+			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		}
+	}
+
 	on("#updateButton", "click", function(event) {
 		event.preventDefault();
 		
@@ -96,10 +107,13 @@
 		}
 		
 		var script = document.createElement("script");
-		var isPreviewPath = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var currentHref = this.getAttribute("href") || "";
+		var isPreviewPath = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) ||
+			currentHref.indexOf("/dist/preview/") !== -1;
 		var updateBaseUrl = isPreviewPath
 			? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
 			: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		this.href = updateBaseUrl;
 		script.src = updateBaseUrl + "?t=" + Date.now();
 		script.class = "kantanUpdateScript";
 		script.onerror = function () {
