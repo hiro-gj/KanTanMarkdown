@@ -10,7 +10,9 @@ const vm = require('vm');
 const rootDir = path.resolve(__dirname, '..');
 
 const filesToCheck = [
-    'Gruntfile.js',
+    path.join('scripts', 'build.js'),
+    path.join('scripts', 'watch.js'),
+    path.join('scripts', 'promote-release.js'),
     path.join('scripts', 'update-new-sizes.js'),
     path.join('src', 'kantanUpdate.js'),
     path.join('src', 'js', 'flowchart.min.js'),
@@ -20,6 +22,11 @@ const filesToCheck = [
     path.join('src', 'js', 'kantanDrawer.js'),
     path.join('src', 'js', 'kantanEditor.js'),
     path.join('src', 'js', 'kantanMarkdown.js'),
+    path.join('src', 'js', 'modules', 'preview-mermaid.js'),
+    path.join('src', 'js', 'modules', 'attachment-manager.js'),
+    path.join('src', 'js', 'modules', 'save-export.js'),
+    path.join('src', 'js', 'modules', 'settings-ui.js'),
+    path.join('src', 'js', 'modules', 'update-init.js'),
     path.join('src', 'js', 'marked.min.js'),
     path.join('src', 'js', 'mermaid.min.js'),
     path.join('src', 'js', 'raphael.min.js'),

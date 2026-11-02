@@ -1,2 +1,5 @@
 dist/temp
+_site
 node_modules
+dist/build-manifest.json
+dist/preview/build-manifest.json

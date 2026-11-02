@@ -1,17 +1,6 @@
-	// FirefoxでinnerTextが使えない対策
-    (function(){
-        var temp = document.createElement("div");
-        if (temp.innerText == undefined) {
-            Object.defineProperty(HTMLElement.prototype, "innerText", {
-                get: function()  { return this.textContent },
-                set: function(v) { this.textContent = v; }
-            });
-        }
-    })();
-    
 	/* 編集不可ブラウザ判定 */
 
-	// Blobが使用できないブラウザは保存不可(IE9等)
+	// Blobが使用できないブラウザは保存不可
 	try {
 		new Blob(["temp"]);
 	} catch(e) {
@@ -36,8 +25,16 @@
 	/* アップデート */
     updateKantanVersion(document.getElementById("kantanVersion").value);
 	
-	var eventListeners = [];
+	var eventRegistry = (window.KantanModules && window.KantanModules.UpdateInit)
+		? window.KantanModules.UpdateInit.createEventRegistry(document)
+		: null;
+	var eventListeners = eventRegistry ? eventRegistry.getListeners() : [];
 	function on(elementOrQuery, eventName, callback) {
+		if (eventRegistry) {
+			eventRegistry.register(elementOrQuery, eventName, callback, document);
+			eventListeners = eventRegistry.getListeners();
+			return;
+		}
 		var element;
 		if (typeof elementOrQuery === "string") {
 			element = document.querySelectorAll(elementOrQuery);
@@ -46,10 +43,22 @@
 		}
 		
 		for (var i = 0; i < element.length; i++) {
-			element[i].addEventListener(eventName, callback);
+			var targetEl = element[i];
+			if (!targetEl || typeof targetEl.addEventListener !== "function") continue;
+			var isDuplicate = false;
+			for (var j = 0; j < eventListeners.length; j++) {
+				if (eventListeners[j].element === targetEl &&
+					eventListeners[j].eventName === eventName &&
+					eventListeners[j].callback === callback) {
+					isDuplicate = true;
+					break;
+				}
+			}
+			if (isDuplicate) continue;
+			targetEl.addEventListener(eventName, callback);
 			
 			eventListeners.push({
-				element: element[i],
+				element: targetEl,
 				eventName: eventName,
 				callback: callback,
 			});	
@@ -57,6 +66,11 @@
 	}
 
 	function removeAllEvents() {
+		if (eventRegistry) {
+			eventRegistry.removeAll();
+			eventListeners = eventRegistry.getListeners();
+			return;
+		}
 		for (var i = 0; i < eventListeners.length; i++) {
 			var element = eventListeners[i].element;
 			var eventName = eventListeners[i].eventName;
@@ -69,9 +83,12 @@
 	function updateKantanVersion (version) {
 		document.getElementById("kantanVersion").value = version;
 		var edition = document.getElementById("kantanEdition").value;
+		var versionLabel = (window.KantanModules && window.KantanModules.UpdateInit)
+			? window.KantanModules.UpdateInit.formatVersionEditionLabel(version, edition)
+			: (version + "_" + edition);
 		var versionElements = document.getElementsByClassName("version");
 		for (var i = 0 ; i < versionElements.length; i++) {
-			versionElements[i].innerText = version + "_" + edition;
+			versionElements[i].innerText = versionLabel;
 		}
 	}
 	
@@ -85,12 +102,19 @@
 	
 	var updateBtnElem = document.getElementById("updateButton");
 	if (updateBtnElem) {
-		var isPreviewLoc = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
 		var currentHrefAttr = updateBtnElem.getAttribute("href") || "";
-		if (isPreviewLoc || currentHrefAttr.indexOf("/dist/preview/") !== -1) {
-			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js";
+		if (window.KantanModules && window.KantanModules.UpdateInit) {
+			updateBtnElem.href = window.KantanModules.UpdateInit.resolveUpdateScriptUrl(
+				window.location && window.location.pathname,
+				currentHrefAttr
+			);
 		} else {
-			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+			var isPreviewLoc = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+			if (isPreviewLoc || currentHrefAttr.indexOf("/dist/preview/") !== -1) {
+				updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js";
+			} else {
+				updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+			}
 		}
 	}
 
@@ -108,11 +132,11 @@
 		
 		var script = document.createElement("script");
 		var currentHref = this.getAttribute("href") || "";
-		var isPreviewPath = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) ||
-			currentHref.indexOf("/dist/preview/") !== -1;
-		var updateBaseUrl = isPreviewPath
-			? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
-			: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		var updateBaseUrl = (window.KantanModules && window.KantanModules.UpdateInit)
+			? window.KantanModules.UpdateInit.resolveUpdateScriptUrl(window.location && window.location.pathname, currentHref)
+			: (((window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) || currentHref.indexOf("/dist/preview/") !== -1)
+				? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
+				: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js");
 		this.href = updateBaseUrl;
 		script.src = updateBaseUrl + "?t=" + Date.now();
 		script.class = "kantanUpdateScript";
@@ -150,6 +174,9 @@
 	}
 	
 	function getItem(name, defaultValue) {
+		if (window.KantanModules && window.KantanModules.SettingsUi) {
+			return window.KantanModules.SettingsUi.getStorageItem(name, defaultValue);
+		}
 		try {
 			var value = localStorage.getItem("com.tatesuke.ktm." + name);
 			return (value != null) ? value : defaultValue;
@@ -159,6 +186,10 @@
 	}
 
 	function setItem(name, value) {
+		if (window.KantanModules && window.KantanModules.SettingsUi) {
+			window.KantanModules.SettingsUi.setStorageItem(name, value);
+			return;
+		}
 		try {
 			localStorage.setItem("com.tatesuke.ktm." + name, value);
 		} catch(e) {
@@ -621,8 +652,8 @@
 		
 		// リンク
 		var anchors = document.querySelectorAll("#previewer a");
-		for(i in anchors) {
-			var anchor = anchors[i];
+		for(var aIdx = 0; aIdx < anchors.length; aIdx++) {
+			var anchor = anchors[aIdx];
 			var href = anchor.href;
 			if (href) {
 				var matchs = href.trim().match(/^attach:(.+)/);
@@ -632,8 +663,7 @@
 						if (!(blob instanceof Blob)) {
 							return;
 						}
-						var url = window.URL || window.webkitURL;
-						var blobUrl = url.createObjectURL(blob);
+						var blobUrl = window.URL.createObjectURL(blob);
 						anchor.href = blobUrl;
 						anchor.download = name;
 					});
@@ -653,6 +683,9 @@
 	}
 
 	function isMermaidErrorSvg(svgCode) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid) {
+			return window.KantanModules.PreviewMermaid.isMermaidErrorSvg(svgCode);
+		}
 		if (!svgCode || typeof svgCode !== "string") return true;
 		return svgCode.indexOf('aria-roledescription="error"') !== -1 ||
 			svgCode.indexOf('class="error-text"') !== -1 ||
@@ -660,6 +693,9 @@
 	}
 
 	function cleanupMermaidTempDom(id) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid) {
+			return window.KantanModules.PreviewMermaid.cleanupMermaidTempDom(id, document, previewer);
+		}
 		if (!id || typeof document === "undefined") return;
 		var tempIds = ["d" + id, "i" + id, id];
 		for (var i = 0; i < tempIds.length; i++) {
@@ -673,113 +709,10 @@
 	}
 
 	function normalizeMermaidText(rawText) {
-		if (!rawText || typeof rawText !== "string") return rawText;
-		var headerCheck = rawText.replace(/^\s*(?:%%\{[\s\S]*?\}%%\s*|%%[^\r\n]*\r?\n\s*)*/, "");
-		if (!/^(?:flowchart(?:-elk)?|graph)\b/i.test(headerCheck)) {
-			return rawText;
+		if (window.KantanModules && window.KantanModules.PreviewMermaid) {
+			return window.KantanModules.PreviewMermaid.normalizeMermaidText(rawText);
 		}
-
-		var lines = rawText.split(/\r?\n/);
-		var inDirective = false;
-		var reservedWords = /^(?:subgraph|end|direction|classDef|class|style|linkStyle|click|flowchart|flowchart-elk|graph)$/i;
-
-		for (var i = 0; i < lines.length; i++) {
-			var line = lines[i];
-			var trimmed = line.replace(/^\s+|\s+$/g, "");
-			if (!trimmed || /^%%/.test(trimmed)) {
-				if (/%%\{/.test(trimmed) && !/\}%%/.test(trimmed)) {
-					inDirective = true;
-				}
-				continue;
-			}
-			if (inDirective) {
-				if (/\}%%/.test(trimmed)) {
-					inDirective = false;
-				}
-				continue;
-			}
-			if (/^(?:flowchart(?:-elk)?|graph)\s+(?:TB|TD|BT|RL|LR)\s*;?\s*$/i.test(trimmed) ||
-				/^(?:end|direction\s+\S+|classDef\s+|class\s+|style\s+|linkStyle\s+|click\s+)/i.test(trimmed)) {
-				continue;
-			}
-
-			var tokens = [];
-			function saveToken(str) {
-				var idx = tokens.length;
-				tokens.push(str);
-				return "\x01" + idx + "\x02";
-			}
-			function restoreTokens(str) {
-				var res = str;
-				while (/\x01\d+\x02/.test(res)) {
-					res = res.replace(/\x01(\d+)\x02/g, function(_, idx) {
-						return tokens[parseInt(idx, 10)];
-					});
-				}
-				return res;
-			}
-			function wrapQuotes(label) {
-				var restored = restoreTokens(label).replace(/^\s+|\s+$/g, "");
-				if (!restored) return '""';
-				if ((restored.charAt(0) === '"' && restored.charAt(restored.length - 1) === '"') ||
-					(restored.charAt(0) === '`' && restored.charAt(restored.length - 1) === '`')) {
-					return restored;
-				}
-				return '"' + restored.replace(/"/g, "&quot;") + '"';
-			}
-
-			// 0. Protect already double-quoted strings
-			var work = line.replace(/"[^"\r\n]*"/g, function(m) {
-				return saveToken(m);
-			});
-
-			// 1. Subgraph header: subgraph ID[Label] -> subgraph ID["Label"]
-			if (/^\s*subgraph\b/i.test(work)) {
-				work = work.replace(/^(\s*subgraph\s+[A-Za-z0-9_\u0080-\uFFFF][A-Za-z0-9_.\-\u0080-\uFFFF]*\s*)\[([^\]\r\n]+)\](\s*;?\s*)$/i, function(_, prefix, label, suffix) {
-					return prefix + "[" + saveToken(wrapQuotes(label)) + "]" + suffix;
-				});
-				lines[i] = restoreTokens(work);
-				continue;
-			}
-
-			// 2. Dotted edge labels: -. Label .-> or -. Label .-
-			work = work.replace(/-\.\s+([^\r\n]+?)\s+\.(->|-(?![>-]))/g, function(_, label, arrowEnd) {
-				return "-. " + saveToken(wrapQuotes(label)) + " ." + arrowEnd;
-			});
-
-			// 3. Solid / thick edge labels: -- Label --> or == Label ==>
-			work = work.replace(/--\s+([^\r\n\-]+?)\s+(-->|---(?![>-])|--o|--x)/g, function(_, label, arrowEnd) {
-				return "-- " + saveToken(wrapQuotes(label)) + " " + arrowEnd;
-			});
-			work = work.replace(/==\s+([^\r\n=]+?)\s+(==>|===(?![>=])|==o|==x)/g, function(_, label, arrowEnd) {
-				return "== " + saveToken(wrapQuotes(label)) + " " + arrowEnd;
-			});
-
-			// 4. Pipe edge labels: -->|Label| etc.
-			work = work.replace(/(<-->|<-\.->|<==>|-->|---|-\.->|-\.-|==>|===|--o|--x|-\.o|-\.x|==o|==x)\|\s*([^|\r\n]+?)\s*\|/g, function(_, arrow, label) {
-				return arrow + "|" + saveToken(wrapQuotes(label)) + "|";
-			});
-
-			// 5. Node shapes (composite and single) in a single left-to-right pass
-			work = work.replace(/(^|[^A-Za-z0-9_.\-\u0080-\uFFFF\x01\x02])([A-Za-z0-9_\u0080-\uFFFF][A-Za-z0-9_.\-\u0080-\uFFFF]*)(\(\(\([\s\S]+?\)\)\)|\(\([^()\r\n]+?\)\)|\(\[[^\]\r\n]+?\]\)|\[\[[^\]\r\n]+?\]\]|\[\([^()\r\n]+?\)\]|\{\{[^{}\r\n]+?\}\}|\[\/[^\/\r\n]+?\/\]|\[\\[^\\\r\n]+?\\\]|\[\/[^\\\r\n]+?\\\]|\[\\[^\/\r\n]+?\/\]|\[[^\[\]\r\n]+?\]|\([^()\r\n]+?\)|\{[^{}\r\n]+?\}|>[^\[\]\r\n]+?\])/g, function(full, lead, id, shape) {
-				if (reservedWords.test(id)) return full;
-				var openLen = 1;
-				var closeLen = 1;
-				if (shape.slice(0, 3) === "(((" && shape.slice(-3) === ")))") {
-					openLen = 3; closeLen = 3;
-				} else if (/^(?:\(\(|\(\[|\[\[|\[\(|\{\{|\[\/|\[\\)/.test(shape)) {
-					openLen = 2; closeLen = 2;
-				}
-				var openDelim = shape.slice(0, openLen);
-				var closeDelim = shape.slice(shape.length - closeLen);
-				var inner = shape.slice(openLen, shape.length - closeLen);
-				return lead + id + openDelim + saveToken(wrapQuotes(inner)) + closeDelim;
-			});
-
-			lines[i] = restoreTokens(work);
-		}
-
-		return lines.join("\n");
+		return rawText;
 	}
 
 		// シーケンス図
@@ -938,49 +871,37 @@
 	}
 	
 	function replaceAttachURL(str) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid) {
+			return window.KantanModules.PreviewMermaid.replaceAttachUrlInCss(str, function(name) {
+				return getCachedImageUrl(name, true);
+			});
+		}
 		var replaced = "";
 		var i = 0;
 		var prefix = 'url("attach:';
 		var surfix = '"';
-		var n = prefix.length;
 		while (i < str.length) {
-			// prefixから始まるなら置き換える
-			if ((i + prefix.length) < str.length) {
-				var temp = str.substr(i, prefix.length);
-				if (temp == prefix) {
-					i += prefix.length;
-					
-					// 名前取得
-					var name = "";
-					var c = str.charAt(i++);
-					while (c != surfix) {
-						name += c;
-						c = str.charAt(i++);
-					}
-					
-					// 画像があればURLに置き換えて出力
-					var url = getCachedImageUrl(name, true);
-					if (url == null) {
-						replaced += prefix + name + surfix;
-					} else {
-						replaced += 'url("' + url.blobOrBase64 + surfix;
-					}
-					continue;
+			if ((i + prefix.length) < str.length && str.substr(i, prefix.length) == prefix) {
+				i += prefix.length;
+				var name = "";
+				var c = str.charAt(i++);
+				while (c != surfix) {
+					name += c;
+					c = str.charAt(i++);
 				}
+				var url = getCachedImageUrl(name, true);
+				replaced += (url == null) ? (prefix + name + surfix) : ('url("' + url.blobOrBase64 + surfix);
+				continue;
 			}
-			
 			var c = str.charAt(i++);
 			replaced += c;
-			
-			/* ""で囲まれた文字列ならスキップ */
 			if (c == '"') {
 				c = str.charAt(i++);
 				while (c != '"') {
 					replaced += c;
 					c = str.charAt(i++);
-				};
+				}
 				replaced += c;
-				continue;
 			}
 		}
 		return replaced;
@@ -1272,17 +1193,21 @@
 	}
 	
 	function addAttachFileElement(fileName, content, layerContent, trimInfo, insertImgTag) {
-		var name = fileName;
-		var script = document.querySelector("#fileList script[title='" + name + "']");
-		var i = 2;
-		while (script) {
-			var pos = fileName.lastIndexOf(".");
-			pos = (pos != -1) ? pos : fileName.length;
-			var name = fileName.substring(0, pos);
-			var ext = fileName.substr(pos);
-			name = name + "_" + i + ext;
-			script = document.querySelector("#fileList script[title='" + name + "']");
-			i++;
+		var name = (window.KantanModules && window.KantanModules.AttachmentManager)
+			? window.KantanModules.AttachmentManager.resolveUniqueAttachName(fileName, function(candidate) {
+				return Boolean(document.querySelector("#fileList script[title='" + candidate + "']"));
+			})
+			: fileName;
+		if (!(window.KantanModules && window.KantanModules.AttachmentManager)) {
+			var existingScript = document.querySelector("#fileList script[title='" + name + "']");
+			var i = 2;
+			while (existingScript) {
+				var pos = fileName.lastIndexOf(".");
+				pos = (pos != -1) ? pos : fileName.length;
+				name = fileName.substring(0, pos) + "_" + i + fileName.substr(pos);
+				existingScript = document.querySelector("#fileList script[title='" + name + "']");
+				i++;
+			}
 		}
 		
 		var li = document.createElement("li");
@@ -1397,6 +1322,9 @@
 	}
 
 	function base64ToBlob(base64) {
+		if (window.KantanModules && window.KantanModules.AttachmentManager) {
+			return window.KantanModules.AttachmentManager.base64ToBlob(base64);
+		}
 		var mimeType = base64.match(/^\s*data:(.*);base64/)[1];
 		var bin = atob(base64.replace(/^.*,/, ''));
 		var buffer = new Uint8Array(bin.length);
@@ -1457,17 +1385,22 @@
 		var target = e.target;
 		var name = target.value.trim();
 		var selfName = target.parentNode.querySelector("script").title;
+		var checkResult = (window.KantanModules && window.KantanModules.AttachmentManager)
+			? window.KantanModules.AttachmentManager.validateAttachmentRename(name, selfName, function(candidate) {
+				return Boolean(document.querySelector("#fileList script[title='" + candidate + "']"));
+			})
+			: null;
 		
-		if (name == selfName) {
+		if (checkResult ? checkResult.unchanged : (name == selfName)) {
 			return true;
 		}
-		if (name == "") {
+		if (checkResult ? (checkResult.reason === "empty") : (name == "")) {
 			alert("名前は必ず入力してください。");
 			e.target.focus();
 			return false;
 		}
-		var script = document.querySelector("#fileList script[title='" + name + "']");
-		if (script) {
+		var isDup = checkResult ? (checkResult.reason === "duplicate") : Boolean(document.querySelector("#fileList script[title='" + name + "']"));
+		if (isDup) {
 			alert("名前が重複しています。");
 			target.focus();
 			target.selectionStart = 0;
@@ -1493,18 +1426,17 @@
 		
 		var editor = document.getElementById("editor");
 		if (isVisible(editor)) {
-			var insertText;
-			if (isImage) {
-				insertText = '<img src="attach:' + fileName  + '">';
-			} else {
-				insertText= '<a href="attach:' + fileName +'">' + fileName + '</a>';
-			}
+			var insertText = (window.KantanModules && window.KantanModules.AttachmentManager)
+				? window.KantanModules.AttachmentManager.buildAttachmentInsertTag(fileName, script.innerHTML, "markdown")
+				: (isImage ? ('<img src="attach:' + fileName  + '">') : ('<a href="attach:' + fileName +'">' + fileName + '</a>'));
 			insertToEditor(editor, insertText);
 		}
 		var cssEditor = document.getElementById("cssEditor");
 		if (isVisible(cssEditor) && isImage) {
-			var insertText = 'url("attach:' + fileName  + '")';
-			insertToEditor(cssEditor, insertText);
+			var cssInsertText = (window.KantanModules && window.KantanModules.AttachmentManager)
+				? window.KantanModules.AttachmentManager.buildAttachmentInsertTag(fileName, script.innerHTML, "css")
+				: ('url("attach:' + fileName  + '")');
+			insertToEditor(cssEditor, cssInsertText);
 		}
 	}
 	
@@ -1529,20 +1461,14 @@
 		var script = target.parentNode.querySelector("script");
 		var fileName = script.title;
 		getFileBlog(fileName, function(blob) {
-			if (window.navigator.msSaveBlob) {
-				window.navigator.msSaveBlob(blob, fileName);
+			if (window.KantanModules && window.KantanModules.SaveExport) {
+				window.KantanModules.SaveExport.triggerBlobDownload(blob, fileName, document, window);
 			} else {
-				var url = window.URL || window.webkitURL;
-				var blobURL = url.createObjectURL(blob);
+				var blobURL = window.URL.createObjectURL(blob);
 				var a = document.createElement('a');
 				a.download = fileName;
 				a.href = blobURL;
-				
-				// firefoxでa.click()が効かないため無理やりclickイベントをディスパッチする
-				var ev = document.createEvent("MouseEvents");
-			    ev.initMouseEvent("click", true, false, self, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-				a.dispatchEvent(ev);
-				delete a;
+				a.click();
 			}
 		});
 	}
@@ -1678,39 +1604,46 @@
 	on("#btn-save", "click", save);
 	function save() {
 		var html = getHTMLForSave();
-		
-		var blob = new Blob([html]);
-		if (window.navigator.msSaveBlob) {
-			/* for IE */
-			window.navigator.msSaveBlob(blob, document.title + ".html");
+		var cleanTitle = document.title.replace(/^\* /, "");
+		var blob = new Blob([html], {type: "text/html;charset=utf-8"});
+		if (window.KantanModules && window.KantanModules.SaveExport) {
+			window.KantanModules.SaveExport.triggerBlobDownload(blob, cleanTitle + ".html", document, window);
 		} else {
-			var url = window.URL || window.webkitURL;		
-			var blobURL = url.createObjectURL(blob);
+			var blobURL = window.URL.createObjectURL(blob);
 			var a = document.createElement('a');
-			a.download = document.title.replace(/^\* /, "") + ".html";
+			a.download = cleanTitle + ".html";
 			a.href = blobURL;
-			
-			// firefoxでa.click()が効かないため無理やりclickイベントをディスパッチする
-			var ev = document.createEvent("MouseEvents");
-		    ev.initMouseEvent("click", true, false, self, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-			a.dispatchEvent(ev);
-			delete a;
+			a.click();
 		}
 	}
 
 	function getHTMLForSave() {
 		var wrapperScrollTop = document.getElementById("wrapper").scrollTop;
 		var previewerScrollTop = document.getElementById("previewer").scrollTop;
+		var hasSaveExport = Boolean(window.KantanModules && window.KantanModules.SaveExport);
+
+		// Stage 1: Collect current markdown, CSS, attachments, and settings state
+		var saveState = hasSaveExport
+			? window.KantanModules.SaveExport.collectDocumentSaveState(document)
+			: null;
+		var saveUpdateBtn = document.getElementById("updateButton");
+		var saveHref = saveUpdateBtn ? (saveUpdateBtn.getAttribute("href") || "") : "";
+		var isPrev = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) || saveHref.indexOf("/dist/preview/") !== -1;
+
+		// Stage 2: Assemble and sanitize/escape save payload
+		var savePayload = (hasSaveExport && saveState)
+			? window.KantanModules.SaveExport.prepareSavePayload(saveState, { isPreviewPath: isPrev })
+			: null;
 		
 		// アップデート用のscriptタグを消す
 		document.querySelector("#updateScriptArea").innerHTML = "";
 		
 		// テキストエリアは値を入れなおさないと保存されない。
 		var editor = document.getElementById("editor");
-		editor.innerHTML = editor.value.replace(/</g, "\x26lt;");
+		editor.innerHTML = savePayload ? savePayload.escapedMarkdown : editor.value.replace(/</g, "\x26lt;");
 		
 		var cssEditor = document.getElementById("cssEditor");
-		cssEditor.innerHTML = cssEditor.value;
+		cssEditor.innerHTML = savePayload ? savePayload.rawCss : cssEditor.value;
 		
 		var toggleFlag = isEditMode();
 		if (toggleFlag == true) {
@@ -1730,7 +1663,9 @@
 		}
 		
 		// 不要なdiffの原因となるスタイルなどを削除
-		if (document.title.match(/^\* .*/)) {
+		if (savePayload) {
+			document.title = savePayload.cleanTitle;
+		} else if (document.title.match(/^\* .*/)) {
 			document.title = document.title.substr("\* ".length);
 		}
 		
@@ -1741,27 +1676,31 @@
 		}
 		
 		document.querySelector("#previewer").className = "full-width";
-		var saveUpdateBtn = document.getElementById("updateButton");
 		if (saveUpdateBtn) {
-			var saveHref = saveUpdateBtn.getAttribute("href") || "";
-			var isPrev = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) || saveHref.indexOf("/dist/preview/") !== -1;
-			saveUpdateBtn.setAttribute("href", isPrev ? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js" : "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js");
+			var targetUpdateUrl = savePayload
+				? savePayload.updateScriptUrl
+				: (isPrev ? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js" : "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js");
+			saveUpdateBtn.setAttribute("href", targetUpdateUrl);
 		}
 		var newDocLinks = document.querySelectorAll('a[href*="ktm-new.html"]');
 		for (var n = 0; n < newDocLinks.length; n++) {
-			newDocLinks[n].setAttribute("href", "https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html");
+			newDocLinks[n].setAttribute("href", savePayload ? savePayload.newDocUrl : "https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html");
 		}
 		var tabLinks = document.querySelectorAll("#markdownTab, #cssTab");
 		for (var t = 0; t < tabLinks.length; t++) {
 			tabLinks[t].setAttribute("href", "javascript:void(0)");
 		}
 		
-		// HTML生成
-		var html = "<!doctype html>\n<html>\n";
-		html += document.getElementsByTagName("html")[0].innerHTML;
-		var i = html.lastIndexOf("/script>"); // bug fix #1 #39
-		html = html.substring(0, i);
-		html += "/script>\n</body>\n</html>";
+		// Stage 3: Serialize into self-contained single-file HTML document
+		var html;
+		if (hasSaveExport) {
+			html = window.KantanModules.SaveExport.serializeSingleHtmlDocument(document.getElementsByTagName("html")[0].innerHTML);
+		} else {
+			html = "<!doctype html>\n<html>\n";
+			html += document.getElementsByTagName("html")[0].innerHTML;
+			var idx = html.lastIndexOf("/script>");
+			html = html.substring(0, idx) + "/script>\n</body>\n</html>";
+		}
 		
 		contentAtSave = editor.value;
 		saved = true;
@@ -1931,74 +1870,15 @@
 	}
 
 	function processForHeadingSync(str, length) {
-		var text = str.substring(0, length);
-		var lines = text.split("\n");
-		var newLines = [];
-		
-		var style = editor.currentStyle 
-				|| document.defaultView.getComputedStyle(editor, '');
+		var style = window.getComputedStyle(editor, '');
 		var tabSize = style.tabSize
 					|| style.MozTabSize
 					|| 8;
 		tabSize = Number(tabSize);
-		
-		var tildeCodeBlockFlag = false;
-		var backQuoteCodeBlockFlag = false;
-		var i;
-		for (i = 0; i < lines.length; i++) {
-			var line = lines[i];
-			// 行頭にtabSize以上のスペースがある行は削除
-			line = line.replace(new RegExp("^ {" + tabSize + ",}.*"), "");
-			// 行頭にtabがある行は削除
-			line = line.replace(/^\t+.*/, "");
-			// trim
-			line = line.replace(/^\s+|\s+$/g, "");
-			// 行頭のblockquoteは削除
-			line = line.replace(/^\s*(>\s*)+/, "");
-			
-			if (tildeCodeBlockFlag == true) {
-				if (line == "~~~") {
-					tildeCodeBlockFlag = false;
-				}
-				newLines.push("");
-				continue;
-			}
-			if (backQuoteCodeBlockFlag == true) {
-				if (line == "```") {
-					backQuoteCodeBlockFlag = false;
-				}
-				newLines.push("");
-				continue;
-			}
-			
-			if (line.substring(0, 3) == "~~~"){
-				tildeCodeBlockFlag = true;
-				newLines.push("");
-				continue;
-			}
-			if (line.substring(0, 3) == "```"){
-				backQuoteCodeBlockFlag = true;
-				newLines.push("");
-				continue;
-			}
-			
-			if (line.match(/^={2,}$|^-{2,}$/)
-					&& !newLines[i - 1].match(/^#{1,6}\s(.+)$/)
-					&& (newLines[i - 1] != "")) {
-				newLines[i - 1] = "# " + newLines[i - 1];
-				newLines.push("");
-				continue;
-			}
-			if (line.match(/^#{1,6}\s(.+)$/)
-				|| line.match(/^<h[1-6]>(.*)$/)) {
-				newLines.push("# " + RegExp.$1);
-				continue;
-			}
-			
-			newLines.push(line.replace(/#/g, ""));
+		if (window.KantanModules && window.KantanModules.PreviewMermaid) {
+			return window.KantanModules.PreviewMermaid.parseLinesForHeadingSync(str, length, tabSize);
 		}
-
-		return newLines;
+		return str.substring(0, length).split("\n");
 	}
 
 	function updateScrollPos(editor) {
@@ -2261,7 +2141,7 @@
 	}
 
 	function isVisible(elem) {
-		var style = elem.currentStyle || document.defaultView.getComputedStyle(elem, '');
+		var style = window.getComputedStyle(elem, '');
 		if (style.display == "none") {
 			return false;
 		}
@@ -2324,9 +2204,10 @@
 		if (!isResizing) return;
 		var clientX = e.clientX || (e.touches && e.touches[0].clientX);
 		if (!clientX) return;
-		var widthPercent = (clientX / window.innerWidth) * 100;
-		if (widthPercent < 20) widthPercent = 20;
-		if (widthPercent > 80) widthPercent = 80;
+		var rawPercent = (clientX / window.innerWidth) * 100;
+		var widthPercent = (window.KantanModules && window.KantanModules.SettingsUi)
+			? window.KantanModules.SettingsUi.clampPaneWidthPercent(rawPercent)
+			: Math.max(20, Math.min(80, rawPercent));
 		var widthStr = widthPercent + "%";
 		document.documentElement.style.setProperty("--editor-width", widthStr);
 		setItem("editor-width", widthStr);
@@ -2444,7 +2325,14 @@
 	}
 
 	on("#btn-editor-zoom-in", "click", function() {
-		if (editorZoomIndex < editorZoomLevels.length - 1) {
+		if (window.KantanModules && window.KantanModules.SettingsUi) {
+			var nextZoom = window.KantanModules.SettingsUi.getNextEditorZoom(editorZoomLevels[editorZoomIndex]);
+			var nextIdx = editorZoomLevels.indexOf(nextZoom);
+			if (nextIdx !== -1) {
+				editorZoomIndex = nextIdx;
+			}
+			applyEditorZoom();
+		} else if (editorZoomIndex < editorZoomLevels.length - 1) {
 			editorZoomIndex++;
 			applyEditorZoom();
 		}
@@ -2463,7 +2351,12 @@
 		var sourceMax = source.scrollHeight - source.clientHeight;
 		var targetMax = target.scrollHeight - target.clientHeight;
 		if (sourceMax > 0 && targetMax > 0) {
-			var nextTop = (source.scrollTop / sourceMax) * targetMax;
+			var nextTop = (window.KantanModules && window.KantanModules.SettingsUi)
+				? window.KantanModules.SettingsUi.calculateSyncedScrollTop(
+					{ scrollTop: source.scrollTop, scrollHeight: source.scrollHeight, clientHeight: source.clientHeight },
+					{ scrollHeight: target.scrollHeight, clientHeight: target.clientHeight }
+				)
+				: (source.scrollTop / sourceMax) * targetMax;
 			if (Math.abs(target.scrollTop - nextTop) > 1) {
 				target.scrollTop = nextTop;
 			}
@@ -2655,19 +2548,15 @@
 		html += '</body>\n</html>';
 
 		var blob = new Blob([html], {type: "text/html;charset=utf-8"});
-		if (window.navigator.msSaveBlob) {
-			window.navigator.msSaveBlob(blob, title + "_export.html");
+		var exportFileName = title.replace(/^\* /, "") + "_export.html";
+		if (window.KantanModules && window.KantanModules.SaveExport) {
+			window.KantanModules.SaveExport.triggerBlobDownload(blob, exportFileName, document, window);
 		} else {
-			var url = window.URL || window.webkitURL;		
-			var blobURL = url.createObjectURL(blob);
+			var blobURL = window.URL.createObjectURL(blob);
 			var a = document.createElement('a');
-			a.download = title.replace(/^\* /, "") + "_export.html";
+			a.download = exportFileName;
 			a.href = blobURL;
-			
-			var ev = document.createEvent("MouseEvents");
-			ev.initMouseEvent("click", true, false, self, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-			a.dispatchEvent(ev);
-			delete a;
+			a.click();
 		}
 	}
 
@@ -2705,6 +2594,9 @@
 			return;
 		}
 		var pageHeight = pWidth * (297 / 210);
+		if (window.KantanModules && window.KantanModules.SettingsUi) {
+			pageHeight = window.KantanModules.SettingsUi.calculateA4PageHeight(pWidth);
+		}
 		var pTop = p.offsetTop;
 		var currentPage = 1;
 		var nextBreak = pageHeight;
@@ -2712,15 +2604,17 @@
 			var el = children[k];
 			var elTop = el.offsetTop - pTop;
 			var elBottom = elTop + el.offsetHeight;
-			var isHeading = /^H[1-6]$/i.test(el.tagName);
-			var shouldBreak = false;
-			if (isHeading && elTop > nextBreak - 120 && elTop <= nextBreak + 120) {
-				shouldBreak = true;
-			} else if (elTop >= nextBreak) {
-				shouldBreak = true;
-			} else if (elTop < nextBreak && elBottom > nextBreak && el.offsetHeight < pageHeight * 0.75) {
-				shouldBreak = true;
-			}
+			var shouldBreak = (window.KantanModules && window.KantanModules.SettingsUi)
+				? window.KantanModules.SettingsUi.shouldInsertPageBreak({
+					elTop: elTop,
+					elBottom: elBottom,
+					elHeight: el.offsetHeight,
+					tagName: el.tagName,
+					nextBreak: nextBreak,
+					pageHeight: pageHeight,
+					index: k
+				})
+				: false;
 			if (shouldBreak && k > 0) {
 				currentPage++;
 				var ind = document.createElement("div");

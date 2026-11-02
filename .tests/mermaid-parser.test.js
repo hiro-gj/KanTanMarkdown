@@ -137,14 +137,16 @@ function runTests() {
         assert(outputSvg && outputSvg.includes('aria-roledescription="mindmap"'), 'mindmap SVG must be produced');
     });
 
-    // Extract helper functions from src/js/kantanMarkdown.js for unit testing
+    // Extract helper functions from src/js/kantanMarkdown.js and test with PreviewMermaid module
     const kantanMdPath = path.join(rootDir, 'src', 'js', 'kantanMarkdown.js');
     const kantanMdCode = fs.readFileSync(kantanMdPath, 'utf-8');
     const normalizeMatch = kantanMdCode.match(/function isMermaidErrorSvg[\s\S]*?function normalizeMermaidText\(rawText\)\s*\{[\s\S]*?\n\t\}/);
     assert(normalizeMatch, 'kantanMarkdown.js must define isMermaidErrorSvg, cleanupMermaidTempDom, and normalizeMermaidText');
 
+    const PreviewMermaid = require('../src/js/modules/preview-mermaid');
     const helperSandbox = {
         previewer: null,
+        window: { KantanModules: { PreviewMermaid: PreviewMermaid } },
         document: { getElementById: function() { return null; } }
     };
     vm.createContext(helperSandbox);

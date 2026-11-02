@@ -15,6 +15,13 @@ on:
       - 'dist/preview/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: "ci-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Run Checks, Build and Tests
@@ -27,12 +34,27 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (reproducible via lockfile)
+        run: npm ci
 
-      - name: Run Grunt Build Integrity Check
-        run: npx grunt build
+      - name: Run Build (esbuild + Node.js build pipeline)
+        run: npm run build
 
       - name: Run Automated Test Suite
         run: npm test
+
+      # 昇格対象（検証済み dist/preview 5ファイル + build-manifest.json）のみを保存する。
+      # 本番 dist/・ktm-new.html・src/kantanVersion.txt は含めず、deploy-pages.yml 側で
+      # 作業ツリーのファイルがアーティファクト展開で上書き（巻き戻し）されないようにする
+      - name: Upload verified build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kantan-markdown-dist-${{ github.sha }}
+          path: |
+            dist/preview/ktm-*.html
+            dist/preview/kantanUpdate.js
+            dist/preview/build-manifest.json
+          if-no-files-found: error
+          retention-days: 7
