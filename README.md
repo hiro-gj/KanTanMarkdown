@@ -3,6 +3,9 @@
 ### かんたんMarkdown新規作成： https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html
 
 ---
+- 「[かんたんMarkdown](https://github.com/tatesuke/KanTanMarkdown)」の「v1.201604012.01」からフォークして「v2」としました。
+- UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
+---
 
 ## 🛠️ 最新のビルド手順（Windows / OneDrive環境対応）
 
