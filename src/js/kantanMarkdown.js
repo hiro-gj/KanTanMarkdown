@@ -1587,6 +1587,20 @@
 		}
 		
 		document.querySelector("#previewer").className = "full-width";
+		var saveUpdateBtn = document.getElementById("updateButton");
+		if (saveUpdateBtn) {
+			var saveHref = saveUpdateBtn.getAttribute("href") || "";
+			var isPrev = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) || saveHref.indexOf("/dist/preview/") !== -1;
+			saveUpdateBtn.setAttribute("href", isPrev ? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js" : "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js");
+		}
+		var newDocLinks = document.querySelectorAll('a[href*="ktm-new.html"]');
+		for (var n = 0; n < newDocLinks.length; n++) {
+			newDocLinks[n].setAttribute("href", "https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html");
+		}
+		var tabLinks = document.querySelectorAll("#markdownTab, #cssTab");
+		for (var t = 0; t < tabLinks.length; t++) {
+			tabLinks[t].setAttribute("href", "javascript:void(0)");
+		}
 		
 		// HTML生成
 		var html = "<!doctype html>\n<html>\n";
