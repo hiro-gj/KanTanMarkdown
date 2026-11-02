@@ -1560,7 +1560,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 	<p style="font-weight: bold; margin-bottom: 5px;">メニュー</p>
 	<a href="https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">新規作成</a>
 	<a href="http://tatesuke.github.io/KanTanMarkdown/syntax.html" id="helpButton" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">Markdown記法ヘルプ(F1)</a>
-	<a href="#" id="updateButton" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">最新版にアップデート</a>
+	<a href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">最新版にアップデート</a>
 	<a href="https://github.com/hiro-gj/KanTanMarkdown" target="_blank" style="display:block; margin: 5px 0; color: var(--text-muted); text-decoration: none; font-size: 11px;">かんたんMarkdown <span class="version"></span></a>
 	
 	<button id="btn-settings-close" style="margin-top:10px; width:100%; border:1px solid var(--border); border-radius: var(--radius); padding:4px; cursor:pointer; background: var(--bg-surface); color: var(--text);">閉じる</button>
@@ -1648,7 +1648,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 </div>
 
 </div>
-<input type="hidden" id="kantanVersion" value="v2.20261101.10">
+<input type="hidden" id="kantanVersion" value="v2.20261102.1">
 <input type="hidden" id="kantanEdition" value="dev">
 <div id="updateScriptArea"></div>
 <script id="markedJs">
@@ -4711,6 +4711,17 @@ LetterModeStrategy.prototype = {
 		json.doUpdate();
 	}
 	
+	var updateBtnElem = document.getElementById("updateButton");
+	if (updateBtnElem) {
+		var isPreviewLoc = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var currentHrefAttr = updateBtnElem.getAttribute("href") || "";
+		if (isPreviewLoc || currentHrefAttr.indexOf("/dist/preview/") !== -1) {
+			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js";
+		} else {
+			updateBtnElem.href = "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		}
+	}
+
 	on("#updateButton", "click", function(event) {
 		event.preventDefault();
 		
@@ -4724,10 +4735,13 @@ LetterModeStrategy.prototype = {
 		}
 		
 		var script = document.createElement("script");
-		var isPreviewPath = window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1;
+		var currentHref = this.getAttribute("href") || "";
+		var isPreviewPath = (window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) ||
+			currentHref.indexOf("/dist/preview/") !== -1;
 		var updateBaseUrl = isPreviewPath
 			? "https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js"
 			: "https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js";
+		this.href = updateBaseUrl;
 		script.src = updateBaseUrl + "?t=" + Date.now();
 		script.class = "kantanUpdateScript";
 		script.onerror = function () {
