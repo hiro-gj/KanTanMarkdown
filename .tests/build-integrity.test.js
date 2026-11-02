@@ -289,6 +289,34 @@ function runTests() {
         const ktmHtml = fs.readFileSync(path.join(rootDir, 'src', 'ktm.html'), 'utf-8');
         assert(ktmHtml.includes('href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton"'),
             'src/ktm.html #updateButton must point to remote kantanUpdate.js URL instead of relative "#"');
+        assert(!ktmHtml.includes('href="#"'),
+            'src/ktm.html must not contain relative href="#" links that resolve to local file:/// paths');
+
+        const leakRegex = /file:\/\/\/|c:\/users|c:\\users|h\.matsumoto|ctd\.co\.jp/i;
+        const filesToCheckForLeaks = [
+            'ktm-new.html',
+            path.join('src', 'ktm.html'),
+            path.join('src', 'kantanUpdate.js'),
+            path.join('src', 'js', 'kantanMarkdown.js'),
+            path.join('src', 'css', 'kantan.css'),
+            path.join('dist', 'ktm-dev.html'),
+            path.join('dist', 'ktm-lite.html'),
+            path.join('dist', 'ktm-std.html'),
+            path.join('dist', 'ktm-full.html'),
+            path.join('dist', 'kantanUpdate.js'),
+            path.join('dist', 'preview', 'ktm-dev.html'),
+            path.join('dist', 'preview', 'ktm-lite.html'),
+            path.join('dist', 'preview', 'ktm-std.html'),
+            path.join('dist', 'preview', 'ktm-full.html'),
+            path.join('dist', 'preview', 'kantanUpdate.js')
+        ];
+        for (const rel of filesToCheckForLeaks) {
+            const p = path.join(rootDir, rel);
+            if (fs.existsSync(p)) {
+                const c = fs.readFileSync(p, 'utf-8');
+                assert(!leakRegex.test(c), `${rel} must not contain any local file:/// paths or user directory information`);
+            }
+        }
 
         const editions = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html'];
         for (const edition of editions) {
@@ -296,10 +324,12 @@ function runTests() {
             const previewPath = path.join(rootDir, 'dist', 'preview', edition);
             const distContent = fs.existsSync(distPath) ? fs.readFileSync(distPath, 'utf-8') : '';
             const previewContent = fs.existsSync(previewPath) ? fs.readFileSync(previewPath, 'utf-8') : '';
-            const hasInDist = distContent.includes('page-break-indicator') && distContent.includes('updatePageBreaks');
-            const hasInPreview = previewContent.includes('page-break-indicator') && previewContent.includes('updatePageBreaks');
+            const hasInDist = distContent.includes('page-break-indicator') && distContent.includes('updatePageBreaks') &&
+                distContent.includes('href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton"');
+            const hasInPreview = previewContent.includes('page-break-indicator') && previewContent.includes('updatePageBreaks') &&
+                previewContent.includes('href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton"');
             assert(hasInDist || hasInPreview,
-                `Built artifact for ${edition} (in dist/ or dist/preview/) must embed page-break-indicator style and updatePageBreaks logic`);
+                `Built artifact for ${edition} (in dist/ or dist/preview/) must embed page-break-indicator, updatePageBreaks, and remote #updateButton URL`);
         }
     });
 
