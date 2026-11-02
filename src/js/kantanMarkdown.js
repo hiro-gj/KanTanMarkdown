@@ -652,6 +652,136 @@
 		return clone.textContent;
 	}
 
+	function isMermaidErrorSvg(svgCode) {
+		if (!svgCode || typeof svgCode !== "string") return true;
+		return svgCode.indexOf('aria-roledescription="error"') !== -1 ||
+			svgCode.indexOf('class="error-text"') !== -1 ||
+			svgCode.indexOf('Syntax error in graph') !== -1;
+	}
+
+	function cleanupMermaidTempDom(id) {
+		if (!id || typeof document === "undefined") return;
+		var tempIds = ["d" + id, "i" + id, id];
+		for (var i = 0; i < tempIds.length; i++) {
+			var el = document.getElementById(tempIds[i]);
+			if (el && (!previewer || !previewer.contains(el))) {
+				if (el.parentNode) {
+					el.parentNode.removeChild(el);
+				}
+			}
+		}
+	}
+
+	function normalizeMermaidText(rawText) {
+		if (!rawText || typeof rawText !== "string") return rawText;
+		var headerCheck = rawText.replace(/^\s*(?:%%\{[\s\S]*?\}%%\s*|%%[^\r\n]*\r?\n\s*)*/, "");
+		if (!/^(?:flowchart(?:-elk)?|graph)\b/i.test(headerCheck)) {
+			return rawText;
+		}
+
+		var lines = rawText.split(/\r?\n/);
+		var inDirective = false;
+		var reservedWords = /^(?:subgraph|end|direction|classDef|class|style|linkStyle|click|flowchart|flowchart-elk|graph)$/i;
+
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i];
+			var trimmed = line.replace(/^\s+|\s+$/g, "");
+			if (!trimmed || /^%%/.test(trimmed)) {
+				if (/%%\{/.test(trimmed) && !/\}%%/.test(trimmed)) {
+					inDirective = true;
+				}
+				continue;
+			}
+			if (inDirective) {
+				if (/\}%%/.test(trimmed)) {
+					inDirective = false;
+				}
+				continue;
+			}
+			if (/^(?:flowchart(?:-elk)?|graph)\s+(?:TB|TD|BT|RL|LR)\s*;?\s*$/i.test(trimmed) ||
+				/^(?:end|direction\s+\S+|classDef\s+|class\s+|style\s+|linkStyle\s+|click\s+)/i.test(trimmed)) {
+				continue;
+			}
+
+			var tokens = [];
+			function saveToken(str) {
+				var idx = tokens.length;
+				tokens.push(str);
+				return "\x01" + idx + "\x02";
+			}
+			function restoreTokens(str) {
+				var res = str;
+				while (/\x01\d+\x02/.test(res)) {
+					res = res.replace(/\x01(\d+)\x02/g, function(_, idx) {
+						return tokens[parseInt(idx, 10)];
+					});
+				}
+				return res;
+			}
+			function wrapQuotes(label) {
+				var restored = restoreTokens(label).replace(/^\s+|\s+$/g, "");
+				if (!restored) return '""';
+				if ((restored.charAt(0) === '"' && restored.charAt(restored.length - 1) === '"') ||
+					(restored.charAt(0) === '`' && restored.charAt(restored.length - 1) === '`')) {
+					return restored;
+				}
+				return '"' + restored.replace(/"/g, "&quot;") + '"';
+			}
+
+			// 0. Protect already double-quoted strings
+			var work = line.replace(/"[^"\r\n]*"/g, function(m) {
+				return saveToken(m);
+			});
+
+			// 1. Subgraph header: subgraph ID[Label] -> subgraph ID["Label"]
+			if (/^\s*subgraph\b/i.test(work)) {
+				work = work.replace(/^(\s*subgraph\s+[A-Za-z0-9_\u0080-\uFFFF][A-Za-z0-9_.\-\u0080-\uFFFF]*\s*)\[([^\]\r\n]+)\](\s*;?\s*)$/i, function(_, prefix, label, suffix) {
+					return prefix + "[" + saveToken(wrapQuotes(label)) + "]" + suffix;
+				});
+				lines[i] = restoreTokens(work);
+				continue;
+			}
+
+			// 2. Dotted edge labels: -. Label .-> or -. Label .-
+			work = work.replace(/-\.\s+([^\r\n]+?)\s+\.(->|-(?![>-]))/g, function(_, label, arrowEnd) {
+				return "-. " + saveToken(wrapQuotes(label)) + " ." + arrowEnd;
+			});
+
+			// 3. Solid / thick edge labels: -- Label --> or == Label ==>
+			work = work.replace(/--\s+([^\r\n\-]+?)\s+(-->|---(?![>-])|--o|--x)/g, function(_, label, arrowEnd) {
+				return "-- " + saveToken(wrapQuotes(label)) + " " + arrowEnd;
+			});
+			work = work.replace(/==\s+([^\r\n=]+?)\s+(==>|===(?![>=])|==o|==x)/g, function(_, label, arrowEnd) {
+				return "== " + saveToken(wrapQuotes(label)) + " " + arrowEnd;
+			});
+
+			// 4. Pipe edge labels: -->|Label| etc.
+			work = work.replace(/(<-->|<-\.->|<==>|-->|---|-\.->|-\.-|==>|===|--o|--x|-\.o|-\.x|==o|==x)\|\s*([^|\r\n]+?)\s*\|/g, function(_, arrow, label) {
+				return arrow + "|" + saveToken(wrapQuotes(label)) + "|";
+			});
+
+			// 5. Node shapes (composite and single) in a single left-to-right pass
+			work = work.replace(/(^|[^A-Za-z0-9_.\-\u0080-\uFFFF\x01\x02])([A-Za-z0-9_\u0080-\uFFFF][A-Za-z0-9_.\-\u0080-\uFFFF]*)(\(\(\([\s\S]+?\)\)\)|\(\([^()\r\n]+?\)\)|\(\[[^\]\r\n]+?\]\)|\[\[[^\]\r\n]+?\]\]|\[\([^()\r\n]+?\)\]|\{\{[^{}\r\n]+?\}\}|\[\/[^\/\r\n]+?\/\]|\[\\[^\\\r\n]+?\\\]|\[\/[^\\\r\n]+?\\\]|\[\\[^\/\r\n]+?\/\]|\[[^\[\]\r\n]+?\]|\([^()\r\n]+?\)|\{[^{}\r\n]+?\}|>[^\[\]\r\n]+?\])/g, function(full, lead, id, shape) {
+				if (reservedWords.test(id)) return full;
+				var openLen = 1;
+				var closeLen = 1;
+				if (shape.slice(0, 3) === "(((" && shape.slice(-3) === ")))") {
+					openLen = 3; closeLen = 3;
+				} else if (/^(?:\(\(|\(\[|\[\[|\[\(|\{\{|\[\/|\[\\)/.test(shape)) {
+					openLen = 2; closeLen = 2;
+				}
+				var openDelim = shape.slice(0, openLen);
+				var closeDelim = shape.slice(shape.length - closeLen);
+				var inner = shape.slice(openLen, shape.length - closeLen);
+				return lead + id + openDelim + saveToken(wrapQuotes(inner)) + closeDelim;
+			});
+
+			lines[i] = restoreTokens(work);
+		}
+
+		return lines.join("\n");
+	}
+
 		// シーケンス図
 		if (typeof Diagram !== "undefined") {
 			var sequences = document.getElementsByClassName("sequence");
@@ -720,17 +850,25 @@
 						container = node.closest("pre") || node;
 					}
 					var mermaidSource = getDiagramSource(node);
+					var renderSource = normalizeMermaidText(mermaidSource);
 					var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
-					var cacheKey = mermaidTheme + "\n" + mermaidSource;
-					var isAsyncDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(mermaidSource);
+					var cacheKey = mermaidTheme + "\n" + renderSource;
+					var isAsyncDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(renderSource);
 
-					if (window.__kantanMermaidCache[cacheKey]) {
+					if (window.__kantanMermaidCache[cacheKey] && !isMermaidErrorSvg(window.__kantanMermaidCache[cacheKey])) {
 						container.innerHTML = window.__kantanMermaidCache[cacheKey];
 						container.classList.add("mermaid-rendered");
 						container.classList.remove("mermaid-error");
 					} else if ((isAsyncDiagram || typeof mermaid.render !== "function") && typeof mermaid.renderAsync === "function") {
 						try {
-							mermaid.renderAsync(diagramId, mermaidSource, function (svgCode, bindFunctions) {
+							mermaid.renderAsync(diagramId, renderSource, function (svgCode, bindFunctions) {
+								if (isMermaidErrorSvg(svgCode)) {
+									cleanupMermaidTempDom(diagramId);
+									container.textContent = mermaidSource;
+									container.classList.add("mermaid-error");
+									container.classList.remove("mermaid-rendered");
+									return;
+								}
 								window.__kantanMermaidCache[cacheKey] = svgCode;
 								container.innerHTML = svgCode;
 								container.classList.add("mermaid-rendered");
@@ -739,6 +877,7 @@
 									bindFunctions(container);
 								}
 							}, container)["catch"](function (mErr) {
+								cleanupMermaidTempDom(diagramId);
 								container.textContent = mermaidSource;
 								container.classList.add("mermaid-error");
 								container.classList.remove("mermaid-rendered");
@@ -747,6 +886,7 @@
 								}
 							});
 						} catch (mErr) {
+							cleanupMermaidTempDom(diagramId);
 							container.textContent = mermaidSource;
 							container.classList.add("mermaid-error");
 							container.classList.remove("mermaid-rendered");
@@ -756,7 +896,14 @@
 						}
 					} else {
 						try {
-							mermaid.render(diagramId, mermaidSource, function (svgCode, bindFunctions) {
+							mermaid.render(diagramId, renderSource, function (svgCode, bindFunctions) {
+								if (isMermaidErrorSvg(svgCode)) {
+									cleanupMermaidTempDom(diagramId);
+									container.textContent = mermaidSource;
+									container.classList.add("mermaid-error");
+									container.classList.remove("mermaid-rendered");
+									return;
+								}
 								window.__kantanMermaidCache[cacheKey] = svgCode;
 								container.innerHTML = svgCode;
 								container.classList.add("mermaid-rendered");
@@ -766,6 +913,7 @@
 								}
 							}, container);
 						} catch (mErr) {
+							cleanupMermaidTempDom(diagramId);
 							container.textContent = mermaidSource;
 							container.classList.add("mermaid-error");
 							container.classList.remove("mermaid-rendered");
@@ -1574,6 +1722,12 @@
 		document.getElementById("previewer").innerHTML = "";
 		document.getElementById("message-area").innerHTML = "";
 		document.getElementById("previewerStyle").innerHTML="";
+		var strayMermaid = document.querySelectorAll('div[id^="dkantan-mermaid-"], iframe[id^="ikantan-mermaid-"], body > svg[id^="kantan-mermaid-"]');
+		for (var sm = 0; sm < strayMermaid.length; sm++) {
+			if (strayMermaid[sm].parentNode) {
+				strayMermaid[sm].parentNode.removeChild(strayMermaid[sm]);
+			}
+		}
 		
 		// 不要なdiffの原因となるスタイルなどを削除
 		if (document.title.match(/^\* .*/)) {
