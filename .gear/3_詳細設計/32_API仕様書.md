@@ -16,9 +16,18 @@
 | save() / exportHTML() | なし | Blobダウンロード要求。後者はtitle_export.html |
 | buildToc() / updateTocActive() | 現在DOM | 目次再生成 / activeクラス更新 |
 | applyEditorZoom() | なし | CSS変数 `--editor-zoom` に現在の編集画面ズーム倍率（0.67〜2）を反映 |
+| updatePageBreaks() | 現在のpreviewer DOMと表示幅 | 既存の画面用改ページ目安を削除して再算出・挿入。編集モードでは一時的に幅300mmで計測 |
+| checkAndClearVersionCache() | 起動URL | バージョン情報とHTTP/HTTPS元URLを取得。表示・hidden値を更新し、通信失敗を捕捉 |
 | syncEditorPreviewScroll(source,target,sourceName) | スクロール元・同期先DOM・識別子 | 編集モード時にエディタとプレビューのスクロール位置を比率同期（循環防止ロック付き） |
 | getItem(name,defaultValue) / setItem(name,value) | 設定名・値 | 接頭辞付きLocalStorage。例外捕捉 |
 | kantanUpdate(json) | {newVersion,ktmString,doUpdate,rewirteHtml} | json.doUpdate実行。rewirteHtmlは実装の綴り通り |
 
 ## 外部リソース
-更新scriptは http://tatesuke.github.io/KanTanMarkdown/kantanUpdate.js を動的挿入。取得失敗はonerrorで警告。同版判定は文字列一致で署名検証・バージョン順序比較なし。HTTPSページではMixed Content制約を受け得る。新規作成とヘルプは外部リンク。本文中の外部画像/CSS/リンクも通常のブラウザ通信に従う。
+| リソース | URL・条件 | 取得方法・失敗時 |
+| --- | --- | --- |
+| リリース更新script | https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js | 時刻クエリ付きscript挿入。onerrorで警告 |
+| プレビュー更新script | https://hiro-gj.github.io/KanTanMarkdown/dist/preview/kantanUpdate.js | 起動パスに /dist/preview/ を含む場合に使用 |
+| バージョン情報 | https://hiro-gj.github.io/KanTanMarkdown/src/kantanVersion.txt | 時刻クエリ付きfetch、cache=no-store。非OK応答・空値は反映せず、通信例外は捕捉 |
+| 起動元HTML | 現在URLのクエリ・フラグメントを除いたURL | HTTP/HTTPS時のみfetch、cache=reload。レスポンスを現在画面へ適用しない |
+
+更新の同版判定は文字列一致で、署名検証・バージョン順序比較は行わない。バージョン情報取得は表示とhidden値を更新する処理であり、本体コードの版を保証する処理ではない。新規作成とヘルプは外部リンク。本文中の外部画像/CSS/リンクも通常のブラウザ通信に従う。

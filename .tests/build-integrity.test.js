@@ -261,6 +261,44 @@ function runTests() {
             'kantanMarkdown.js must support mermaid.renderAsync for mindmap diagrams');
     });
 
+    // Test 9: Multi-page print preview layout and page-break indicator logic
+    test('Multi-page print preview layout and page-break indicator are defined and functional', () => {
+        const kantanCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'kantan.css'), 'utf-8');
+        const kantanMdJs = fs.readFileSync(path.join(rootDir, 'src', 'js', 'kantanMarkdown.js'), 'utf-8');
+
+        assert(kantanCss.includes('--page-aspect-ratio: 210 / 297;'),
+            'kantan.css must maintain A4 ratio reference via --page-aspect-ratio: 210 / 297;');
+        assert(kantanCss.includes('.page-break-indicator {') && kantanCss.includes('margin: 28px -40px 20px;'),
+            'kantan.css must define .page-break-indicator styling');
+        assert(kantanCss.includes('.page-break-indicator::after') && kantanCss.includes('attr(data-page)'),
+            'kantan.css must display page indicator badge with data-page attribute');
+        assert(kantanCss.includes('@media print') && kantanCss.includes('.page-break-indicator') &&
+            kantanCss.includes('display: none !important;'),
+            'kantan.css must hide .page-break-indicator during printing');
+
+        assert(kantanMdJs.includes('function updatePageBreaks()'),
+            'kantanMarkdown.js must implement updatePageBreaks function');
+        assert(kantanMdJs.includes('pageHeight = pWidth * (297 / 210);'),
+            'kantanMarkdown.js must calculate pageHeight based on A4 210/297 ratio');
+        assert(kantanMdJs.includes('ind.className = "page-break-indicator";') &&
+            kantanMdJs.includes('ind.setAttribute("data-page", "Page " + currentPage);'),
+            'kantanMarkdown.js must insert page-break-indicator element with Page N label');
+        assert(kantanMdJs.includes('updatePageBreaks();'),
+            'kantanMarkdown.js must hook updatePageBreaks on previewed and resize events');
+
+        const builtHtmlFiles = [
+            path.join('dist', 'ktm-dev.html'),
+            path.join('dist', 'ktm-lite.html'),
+            path.join('dist', 'ktm-std.html'),
+            path.join('dist', 'ktm-full.html')
+        ];
+        for (const relPath of builtHtmlFiles) {
+            const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
+            assert(content.includes('page-break-indicator') && content.includes('updatePageBreaks'),
+                `${relPath} must embed page-break-indicator style and updatePageBreaks logic`);
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);
