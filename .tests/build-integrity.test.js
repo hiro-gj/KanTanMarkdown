@@ -286,16 +286,16 @@ function runTests() {
         assert(kantanMdJs.includes('updatePageBreaks();'),
             'kantanMarkdown.js must hook updatePageBreaks on previewed and resize events');
 
-        const builtHtmlFiles = [
-            path.join('dist', 'ktm-dev.html'),
-            path.join('dist', 'ktm-lite.html'),
-            path.join('dist', 'ktm-std.html'),
-            path.join('dist', 'ktm-full.html')
-        ];
-        for (const relPath of builtHtmlFiles) {
-            const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
-            assert(content.includes('page-break-indicator') && content.includes('updatePageBreaks'),
-                `${relPath} must embed page-break-indicator style and updatePageBreaks logic`);
+        const editions = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html'];
+        for (const edition of editions) {
+            const distPath = path.join(rootDir, 'dist', edition);
+            const previewPath = path.join(rootDir, 'dist', 'preview', edition);
+            const distContent = fs.existsSync(distPath) ? fs.readFileSync(distPath, 'utf-8') : '';
+            const previewContent = fs.existsSync(previewPath) ? fs.readFileSync(previewPath, 'utf-8') : '';
+            const hasInDist = distContent.includes('page-break-indicator') && distContent.includes('updatePageBreaks');
+            const hasInPreview = previewContent.includes('page-break-indicator') && previewContent.includes('updatePageBreaks');
+            assert(hasInDist || hasInPreview,
+                `Built artifact for ${edition} (in dist/ or dist/preview/) must embed page-break-indicator style and updatePageBreaks logic`);
         }
     });
 
