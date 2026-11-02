@@ -286,6 +286,10 @@ function runTests() {
         assert(kantanMdJs.includes('updatePageBreaks();'),
             'kantanMarkdown.js must hook updatePageBreaks on previewed and resize events');
 
+        const ktmHtml = fs.readFileSync(path.join(rootDir, 'src', 'ktm.html'), 'utf-8');
+        assert(ktmHtml.includes('href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton"'),
+            'src/ktm.html #updateButton must point to remote kantanUpdate.js URL instead of relative "#"');
+
         const editions = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html'];
         for (const edition of editions) {
             const distPath = path.join(rootDir, 'dist', edition);
