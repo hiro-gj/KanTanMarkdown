@@ -8,14 +8,22 @@ on:
       - master
     paths:
       - 'src/**'
-      - 'Gruntfile.js'
+      - 'scripts/**'
       - 'package.json'
+      - 'package-lock.json'
       - 'ktm-new.html'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: '昇格・公開するリリースタグ（省略時は最新タグ。ロールバック時は安定タグを指定）'
+        required: false
+        default: ''
 
-# GITHUB_TOKEN に GitHub Pages へのデプロイ権限およびバージョン同期コミット権限を設定
+# GitHub Pages デプロイ、プレビュー・リリース成果物同期、および検証済みCIアーティファクト取得用の最小権限
+# actions: read は gh run list / gh run download による test.yml アーティファクトの検索・取得に必須
 permissions:
+  actions: read
   contents: write
   pages: write
   id-token: write
@@ -31,125 +39,168 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    env:
+      # リリース時に取得する検証済みアーティファクトと origin/master 同期用 worktree はリポジトリ外に置く
+      VERIFIED_ARTIFACT_ROOT: ${{ runner.temp }}/verified-artifacts
+      MASTER_SYNC_DIR: ${{ runner.temp }}/master-sync
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Build and prepare distribution artifacts
+      - name: Resolve verification commit and check out exactly that commit
+        id: target
         env:
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          EVENT_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           git fetch origin master --tags
-          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
 
+          TARGET_TAG=""
+          TAG_COMMIT=""
           if [ "$EVENT_NAME" = "push" ]; then
-            # masterマージ時: リリース公開中の dist/ 直下および ktm-new.html を保護しつつ dist/preview/ のみを更新
-            mkdir -p /tmp/release-backup
-            cp -p src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html /tmp/release-backup/
-
-            npm install --no-package-lock
-            npx grunt build
-            mkdir -p dist/preview
-            cp -p dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html dist/preview/
-
-            # dist/ 直下のリリース公開中ファイルを最新リリース版（または退避ファイル）から復元し、ktm-new.html はビルド前の状態を維持
-            if [ -n "$LATEST_TAG" ] && git cat-file -e "${LATEST_TAG}:dist/ktm-lite.html" 2>/dev/null; then
-              git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html
-            else
-              cp -p /tmp/release-backup/kantanVersion.txt src/kantanVersion.txt
-              cp -p /tmp/release-backup/kantanUpdate.js /tmp/release-backup/ktm-dev.html /tmp/release-backup/ktm-lite.html /tmp/release-backup/ktm-std.html /tmp/release-backup/ktm-full.html dist/
-            fi
-            cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html
-            rm -rf /tmp/release-backup
-
-            # リリース版の容量表記は維持しつつ、プレビュー版テーブルのファイルサイズ表記を dist/preview/ の実サイズで更新
-            node scripts/update-new-sizes.js
-
-            npm test
-            rm -rf dist/temp node_modules package-lock.json
+            # master push時: push されたコミットそのもの（test.yml が検証する同一コミット）を使用
+            VERIFY_COMMIT="$EVENT_SHA"
           else
-            # リリース公開時 / workflow_dispatch 時: dist/preview/ktm-*.html および kantanUpdate.js を dist/ 直下 にコピーして更新
-            git checkout -B master origin/master
-
-            TARGET_TAG=""
+            # リリース公開時 / workflow_dispatch 時: 対象タグとそのコミットSHAを確定し、origin/master 履歴に含まれることを検証
             if [ -n "$RELEASE_TAG" ]; then
               TARGET_TAG="$RELEASE_TAG"
-            elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
-              TARGET_TAG="$REF_NAME"
-            elif [ -n "$LATEST_TAG" ]; then
-              TARGET_TAG="$LATEST_TAG"
-            fi
-
-            cp -p dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html dist/
-
-            if [ -n "$TARGET_TAG" ]; then
-              printf '%s' "$TARGET_TAG" > src/kantanVersion.txt
-              node -e '
-                const fs = require("fs");
-                const ver = process.argv[1];
-                for (const f of ["dist/ktm-dev.html", "dist/ktm-lite.html", "dist/ktm-std.html", "dist/ktm-full.html"]) {
-                  fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace(/id="kantanVersion" value="[^"]*"/g, `id="kantanVersion" value="${ver}"`));
-                }
-                const u = "dist/kantanUpdate.js";
-                fs.writeFileSync(u, fs.readFileSync(u, "utf8")
-                  .replace(/"newVersion":\s*"[^"]*"/, `"newVersion": "${ver}"`)
-                  .replace(/id=\\"kantanVersion\\" value=\\"[^\\"]*\\"/g, `id=\\"kantanVersion\\" value=\\"${ver}\\"`));
-              ' "$TARGET_TAG"
-            fi
-
-            node scripts/update-new-sizes.js
-            npm test
-          fi
-
-      - name: Commit synced artifacts back to master
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if [ "$EVENT_NAME" = "push" ]; then
-            git add dist/preview/ src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
-            if ! git diff --cached --quiet; then
-              git commit -m "chore(preview): update dist/preview from master [skip ci]"
-              git pull --rebase origin master
-              git push origin HEAD:refs/heads/master
-            fi
-          else
-            TARGET_TAG=""
-            if [ -n "$RELEASE_TAG" ]; then
-              TARGET_TAG="$RELEASE_TAG"
+            elif [ -n "$INPUT_TAG" ]; then
+              TARGET_TAG="$INPUT_TAG"
             elif [ "$REF_TYPE" = "tag" ] && [ -n "$REF_NAME" ]; then
               TARGET_TAG="$REF_NAME"
             else
               TARGET_TAG=$(git tag --sort=-v:refname | head -n 1)
             fi
 
-            git add src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
-            if [ -n "$TARGET_TAG" ] && ! git diff --cached --quiet; then
-              git commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
-              git pull --rebase origin master
-              git push origin HEAD:refs/heads/master
-              git tag -f "$TARGET_TAG" HEAD
-              git push -f origin "refs/tags/$TARGET_TAG"
+            if [ -z "$TARGET_TAG" ]; then
+              echo "Error: Could not determine target release tag for promotion" >&2
+              exit 1
             fi
 
-            # actions/deploy-pages が最新コミットSHAを pages_build_version として使用し直前の push デプロイと衝突しないよう DEPLOY_SHA を注入
-            echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-            sed -i 's/process\.env\.GITHUB_SHA/(process.env.DEPLOY_SHA || process.env.GITHUB_SHA)/g' /home/runner/work/_actions/actions/deploy-pages/*/dist/index.js 2>/dev/null || true
+            TAG_COMMIT=$(git rev-parse "${TARGET_TAG}^{commit}")
+            git merge-base --is-ancestor "$TAG_COMMIT" origin/master
+            VERIFY_COMMIT="$TAG_COMMIT"
+          fi
+
+          # 依存関係導入（package-lock.json）・ビルド・昇格・テストの全工程を検証対象コミットそのもので実行する。
+          # 以降、この作業ツリーのコミットは切り替えない（origin/master への同期は別 worktree で行う）
+          git checkout --detach "$VERIFY_COMMIT"
+          echo "Verification commit: $(git rev-parse HEAD)"
+
+          echo "target_tag=${TARGET_TAG}" >> "$GITHUB_OUTPUT"
+          echo "tag_commit=${TAG_COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "verify_commit=${VERIFY_COMMIT}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies (lockfile of the verification commit)
+        run: npm ci
+
+      - name: Build preview or promote verified release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET_TAG: ${{ steps.target.outputs.target_tag }}
+          TAG_COMMIT: ${{ steps.target.outputs.tag_commit }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "push" ]; then
+            # master push時: dist/ 直下の本番成果物を維持したまま dist/preview/ のみをビルド・検証し、同一ツリーから公開
+            npm run build
+            npm test
+            node scripts/build.js --prepare-pages
+          else
+            if [ -z "$TARGET_TAG" ] || [ -z "$TAG_COMMIT" ]; then
+              echo "Error: Target tag or commit was not resolved for promotion" >&2
+              exit 1
+            fi
+
+            # 1. 対象コミットの成功済み test.yml 実行から検証済みアーティファクト（dist/preview 5ファイル + build-manifest.json）を
+            #    リポジトリ外の専用ディレクトリへ必須取得（失敗時は即座に昇格中止）。作業ツリーのファイルは一切上書きしない
+            VERIFY_RUN_ID=$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow "test.yml" --commit "$TAG_COMMIT" --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -z "$VERIFY_RUN_ID" ] || [ "$VERIFY_RUN_ID" = "null" ]; then
+              echo "Error: No successful test.yml workflow run found for tag ${TARGET_TAG} (${TAG_COMMIT})" >&2
+              exit 1
+            fi
+            rm -rf "$VERIFIED_ARTIFACT_ROOT"
+            gh run download "$VERIFY_RUN_ID" --repo "${GITHUB_REPOSITORY}" --name "kantan-markdown-dist-${TAG_COMMIT}" --dir "$VERIFIED_ARTIFACT_ROOT"
+            ARTIFACT_DIR="$VERIFIED_ARTIFACT_ROOT"
+            if [ -f "$VERIFIED_ARTIFACT_ROOT/dist/preview/build-manifest.json" ]; then
+              ARTIFACT_DIR="$VERIFIED_ARTIFACT_ROOT/dist/preview"
+            fi
+
+            # 2. タグのコミットのソースから dist/preview/ を再ビルドし、検証済みアーティファクトとバイト単位で一致することを照合する
+            npm run build
+
+            # 3. origin/master 同期用の worktree をリポジトリ外に作成（検証ツリーのコミットは切り替えない）
+            rm -rf "$MASTER_SYNC_DIR"
+            git worktree add --detach "$MASTER_SYNC_DIR" origin/master
+
+            # 4. 埋め込み版番号・マニフェスト・ソースコミットSHA・全5ファイルのSHA-256・再ビルド結果を厳密照合し、
+            #    検証済みアーティファクトを無改変で検証ツリーの dist/ と master worktree の dist/ へ昇格
+            node scripts/promote-release.js --version "$TARGET_TAG" --source-sha "$TAG_COMMIT" --require-manifest --artifact-dir "$ARTIFACT_DIR" --cross-check-dir dist/preview --sync-root "$MASTER_SYNC_DIR"
+
+            # 5. タグのコミットのテストスイートで昇格後の成果物を検証
+            npm test
+
+            # 6. 公開用 _site は master worktree（最新プレビュー + 昇格済み本番成果物）から作成し、
+            #    リリース操作でプレビューがタグ時点へ巻き戻らないようにする
+            node scripts/build.js --prepare-pages --root-dir "$MASTER_SYNC_DIR" --site-dir "$GITHUB_WORKSPACE/_site"
+          fi
+
+      - name: Commit synced artifacts back to master
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET_TAG: ${{ steps.target.outputs.target_tag }}
+          VERIFY_COMMIT: ${{ steps.target.outputs.verify_commit }}
+        run: |
+          set -euo pipefail
+
+          # 同期先の master が実行中に進んでいた場合は、後続の実行が最新コミットで再同期するため警告のみで終了する
+          push_to_master() {
+            local repo_dir="$1"
+            local base_commit="$2"
+            if git -C "$repo_dir" push origin HEAD:refs/heads/master; then
+              return 0
+            fi
+            git -C "$repo_dir" fetch origin master
+            if git -C "$repo_dir" merge-base --is-ancestor "$base_commit" origin/master && [ "$(git -C "$repo_dir" rev-parse origin/master)" != "$base_commit" ]; then
+              echo "::warning::origin/master advanced during this run; skipping artifact sync push (a newer run will re-sync)."
+              return 0
+            fi
+            echo "Error: failed to push synced artifacts to master" >&2
+            return 1
+          }
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html ktm-new.html
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(preview): update dist/preview from master [skip ci]"
+              push_to_master "$GITHUB_WORKSPACE" "$VERIFY_COMMIT"
+            fi
+          else
+            # 検証ツリー（タグのコミット）には一切コミットせず、master worktree 側の昇格結果のみを同期
+            MASTER_BASE=$(git -C "$MASTER_SYNC_DIR" rev-parse HEAD)
+            git -C "$MASTER_SYNC_DIR" config user.name "github-actions[bot]"
+            git -C "$MASTER_SYNC_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$MASTER_SYNC_DIR" add dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
+            if [ -n "$TARGET_TAG" ] && ! git -C "$MASTER_SYNC_DIR" diff --cached --quiet; then
+              git -C "$MASTER_SYNC_DIR" commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
+              push_to_master "$MASTER_SYNC_DIR" "$MASTER_BASE"
+            fi
           fi
 
       - name: Setup GitHub Pages
@@ -158,8 +209,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          # リポジトリ全体（ktm-new.html、リリース版 dist/ 直下、および dist/preview/ 配下を含む）を公開対象とする
-          path: '.'
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

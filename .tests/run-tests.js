@@ -11,6 +11,7 @@ const testSuites = [
     { name: 'GitHub Alerts Parser', file: 'alerts-parser.test.js' },
     { name: 'Editor Logic', file: 'editor-logic.test.js' },
     { name: 'Mermaid Parser', file: 'mermaid-parser.test.js' },
+    { name: 'Modules & Save/Update Logic', file: 'modules-unit.test.js' },
     { name: 'Build & Artifacts Integrity', file: 'build-integrity.test.js' }
 ];
 

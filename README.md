@@ -4,37 +4,43 @@
 
 ---
 - 「[かんたんMarkdown](https://github.com/tatesuke/KanTanMarkdown)」の「v1.201604012.01」からフォークして「v2」としました。
+  - 「v3」より `Grunt` を撤去し、`npm scripts` ＋ Node.js ビルドスクリプト（`scripts/build.js`）＋ `esbuild` によるインメモリ高速ビルド構成へ移行しました。
 - UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
 ---
 
-## 🛠️ 最新のビルド手順（Windows / OneDrive環境対応）
+## 🛠️ 最新のビルド・公開手順（Node.js + esbuild / Windows・OneDrive環境対応）
 
-本リポジトリ（ローカル）でのビルド手順、ならびに今回導入された最新のビルド検証済みコマンドは以下の通りです。
+「v3」より `Grunt` を撤去し、`npm scripts` ＋ Node.js ビルドスクリプト（`scripts/build.js`）＋ `esbuild` によるインメモリ高速ビルド構成へ移行しました。配布物は引き続きオフラインで動作する単一HTMLツールです。
 
 ### 1. 依存パッケージのインストール
-Node.js依存プラグインのバージョン競合を回避するため、必ず `--legacy-peer-deps` を付加してパッケージをインストールしてください。
+ロックファイル（`package-lock.json`）に基づき再現可能な依存導入を行います。
 ```bash
-# ルートフォルダから直接インストールする場合
-npm --prefix "1_repocopy\KanTanMarkdown" install --legacy-peer-deps
+# CI環境・クリーン導入時
+npm --prefix "1_repocopy\KanTanMarkdown" ci
+
+# ローカル開発環境
+npm --prefix "1_repocopy\KanTanMarkdown" install
 ```
 
-### 2. ビルドコマンドの実行（ディレクトリ移動なし）
-カレントディレクトリを移動せずに、ルートフォルダから直接ビルドタスク（Grunt）を実行する場合は、以下のコマンドを実行します：
-```bash
-npx grunt --gruntfile "1_repocopy\KanTanMarkdown\Gruntfile.js" build
-```
-これにより、以下の成果物が `1_repocopy/KanTanMarkdown/dist/` 配下に正しくクリーンビルドされます：
-* `ktm-dev.html`
-* `ktm-lite.html`
-* `ktm-std.html`
-* `ktm-full.html`
-* `kantanUpdate.js`
+### 2. ビルド・監視・テストコマンド
+| コマンド | 用途 |
+| --- | --- |
+| `npm run build` | 全配布物（`ktm-dev.html`, `ktm-lite.html`, `ktm-std.html`, `ktm-full.html`, `kantanUpdate.js`）を `dist/preview/` へ生成し、`ktm-new.html` のプレビュー容量表記を更新（`dist/` 直下の本番成果物は維持） |
+| `npm run build:dev` | 開発用非圧縮HTML（`dist/preview/ktm-dev.html`）のみを高速生成 |
+| `npm run watch` | `src/` 配下の変更を監視し、開発用HTMLを自動再生成 |
+| `npm run promote:release` | テスト・動作確認済みの `dist/preview/` 成果物一式（または `--artifact-dir` で指定した検証済み成果物）を版番号・`build-manifest.json`・SHA-256 照合のうえ無改変で `dist/` 直下へ昇格し、`ktm-new.html` の本番容量表記のみを更新 |
+| `npm test` | 自動テストスイート（構文・Alerts・エディタ・Mermaid・モジュール単体・成果物整合性）の実行 |
 
-（※通常のディレクトリ移動後にビルドする場合：）
+ルートフォルダからディレクトリ移動なしで実行する場合：
 ```bash
-cd 1_repocopy/KanTanMarkdown
-npx grunt build
+npm --prefix "1_repocopy\KanTanMarkdown" run build
+npm --prefix "1_repocopy\KanTanMarkdown" test
 ```
+
+### 3. 公開フローとロールバック手順
+- **プレビュー公開（`master` ブランチ push）**: `dist/preview/` のみを更新し、本番公開中の `dist/` 直下と本番容量表示は保護します。Pages 公開時は `node scripts/build.js --prepare-pages` により公開対象ファイルのみを `_site/` に抽出してデプロイします。
+- **本番リリース昇格（GitHub Release 公開）**: ワークフローはリリースタグのコミットそのものをチェックアウトし（`origin/master` の最新ではない）、そのコミットの `package-lock.json` で `npm ci` を行います。対象コミットの成功済み `test.yml` が保存した検証済み成果物（`dist/preview/` 5ファイル＋`build-manifest.json`）をリポジトリ外の専用ディレクトリへ取得し、`node scripts/promote-release.js --version <tag> --source-sha <commit> --require-manifest --artifact-dir <取得先> --cross-check-dir dist/preview --sync-root <masterのworktree>` により、版番号・ソースコミットSHA・マニフェスト・SHA-256・同コミットからの再ビルド結果をすべて照合したうえで無改変で `dist/` 直下へ昇格します。`origin/master` への同期は別の `git worktree` で行い、公開用 `_site` はその worktree（最新プレビュー＋昇格済み本番成果物）から作成するため、リリース操作でプレビューがタグ時点へ巻き戻ることはありません（公開済みリリースタグの強制移動も行いません）。
+- **ロールバック手順**: 本番リリースに問題が判明した場合は、GitHub Actions の `Deploy KanTanMarkdown to GitHub Pages` ワークフローを `workflow_dispatch` で実行し、入力 `tag` に直前の安定リリースタグを指定してください（そのタグのコミットで検証済みの成果物が同じ照合を経て再昇格されます）。手動で復元する場合は `git checkout <prev-tag> -- dist/ktm-*.html dist/kantanUpdate.js ktm-new.html` で本番成果物のみを復元してコミット・再デプロイします（`dist/preview/` と `src/kantanVersion.txt` は巻き戻しません）。
 
 <div align="center">
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

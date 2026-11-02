@@ -95,19 +95,23 @@ function runTests() {
         }
     });
 
-    // Test 4: Repository link and release version alignment in built artifacts
+    // Test 4: Repository link and release/preview version alignment in built artifacts
     test('Generated HTML and update files contain updated repository link and match kantanVersion.txt', () => {
         const expectedVersion = fs.readFileSync(path.join(rootDir, 'src', 'kantanVersion.txt'), 'utf-8').trim();
+        const pkgVersion = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8')).version;
+        const majorVersion = String(pkgVersion).split('.')[0];
         assert(expectedVersion.length > 0, 'src/kantanVersion.txt must not be empty');
+        assert(new RegExp('^v' + majorVersion + '\\.\\d{8}\\.\\d+$').test(expectedVersion),
+            'src/kantanVersion.txt (' + expectedVersion + ') must align with package.json major version and follow v' + majorVersion + '.YYYYMMDD.N format');
 
-        const htmlFiles = [
-            path.join('dist', 'ktm-dev.html'),
-            path.join('dist', 'ktm-lite.html'),
-            path.join('dist', 'ktm-std.html'),
-            path.join('dist', 'ktm-full.html')
+        const previewHtmlFiles = [
+            path.join('dist', 'preview', 'ktm-dev.html'),
+            path.join('dist', 'preview', 'ktm-lite.html'),
+            path.join('dist', 'preview', 'ktm-std.html'),
+            path.join('dist', 'preview', 'ktm-full.html')
         ];
 
-        for (const relPath of htmlFiles) {
+        for (const relPath of previewHtmlFiles) {
             const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
             assert(content.includes('href="https://github.com/hiro-gj/KanTanMarkdown"'),
                 `${relPath} must link to https://github.com/hiro-gj/KanTanMarkdown`);
@@ -115,9 +119,28 @@ function runTests() {
                 `${relPath} must embed version ${expectedVersion}`);
         }
 
-        const updateJsContent = fs.readFileSync(path.join(rootDir, 'dist', 'kantanUpdate.js'), 'utf-8');
-        assert(updateJsContent.includes(`"newVersion": "${expectedVersion}"`),
-            `dist/kantanUpdate.js must embed newVersion ${expectedVersion}`);
+        const previewUpdateJsContent = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'kantanUpdate.js'), 'utf-8');
+        assert(previewUpdateJsContent.includes(`"newVersion": "${expectedVersion}"`),
+            `dist/preview/kantanUpdate.js must embed newVersion ${expectedVersion}`);
+
+        const releaseHtmlFiles = [
+            path.join('dist', 'ktm-dev.html'),
+            path.join('dist', 'ktm-lite.html'),
+            path.join('dist', 'ktm-std.html'),
+            path.join('dist', 'ktm-full.html')
+        ];
+
+        for (const relPath of releaseHtmlFiles) {
+            const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
+            assert(content.includes('href="https://github.com/hiro-gj/KanTanMarkdown"'),
+                `${relPath} must link to https://github.com/hiro-gj/KanTanMarkdown`);
+            assert(/id="kantanVersion" value="v\d+/.test(content),
+                `${relPath} must embed a valid release version string`);
+        }
+
+        const releaseUpdateJsContent = fs.readFileSync(path.join(rootDir, 'dist', 'kantanUpdate.js'), 'utf-8');
+        assert(/"newVersion":\s*"v\d+/.test(releaseUpdateJsContent),
+            'dist/kantanUpdate.js must embed a valid release newVersion string');
     });
 
     // Test 5: Updated license header, A4 layout CSS, 2-pane zoom, zoom buttons, and scroll sync
@@ -185,8 +208,8 @@ function runTests() {
         }
     });
 
-    // Test 7: GitHub Actions workflows configuration for release (dist/) and master push (dist/preview/)
-    test('GitHub Actions workflows configure dist/preview deployment on master push while protecting release dist/', () => {
+    // Test 7: GitHub Actions workflows and esbuild build pipeline configuration
+    test('GitHub Actions workflows configure dist/preview deployment, release promotion, and reproducible npm ci', () => {
         const deployWorkflowPath = path.join(rootDir, '.github', 'workflows', 'deploy-pages.yml');
         assert(fs.existsSync(deployWorkflowPath), '.github/workflows/deploy-pages.yml must exist');
         const deployYaml = fs.readFileSync(deployWorkflowPath, 'utf-8');
@@ -196,33 +219,78 @@ function runTests() {
             'deploy-pages.yml must trigger on release published');
         assert(deployYaml.includes('push:') && deployYaml.includes('- master') && deployYaml.includes('paths:'),
             'deploy-pages.yml must trigger on master push with paths filter');
-        assert(deployYaml.includes("'src/**'") && deployYaml.includes("'Gruntfile.js'") && deployYaml.includes("'package.json'"),
-            'deploy-pages.yml push paths must include functional build targets');
+        assert(deployYaml.includes("'src/**'") && deployYaml.includes("'scripts/**'") && deployYaml.includes("'package.json'") && deployYaml.includes("'package-lock.json'"),
+            'deploy-pages.yml push paths must include functional build targets and lockfile');
         assert(!deployYaml.includes("'README.md'") && !deployYaml.includes("'.gear/**'"),
             'deploy-pages.yml push paths must not trigger on non-functional documentation files');
 
-        // Preview subfolder deployment and release dist/ restoration on push
-        assert(deployYaml.includes('mkdir -p dist/preview') && deployYaml.includes('dist/preview/'),
-            'deploy-pages.yml must populate dist/preview/');
-        assert(deployYaml.includes('git checkout "$LATEST_TAG" -- src/kantanVersion.txt dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html'),
-            'deploy-pages.yml must restore root dist/ files from LATEST_TAG during push preview deployment');
-        assert(deployYaml.includes('cp -p /tmp/release-backup/ktm-new.html ./ktm-new.html'),
-            'deploy-pages.yml must preserve ktm-new.html pre-build state during push preview deployment');
-        assert(deployYaml.includes('cp -p dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html dist/'),
-            'deploy-pages.yml must copy artifacts from dist/preview/ to root dist/ on release publish');
+        assert(deployYaml.includes('npm ci'),
+            'deploy-pages.yml must install dependencies reproducibly via npm ci');
+        assert(deployYaml.includes('npm run build'),
+            'deploy-pages.yml must run npm run build on master push to update dist/preview/ while preserving dist/');
+        const promoteCmd = deployYaml.match(/node scripts\/promote-release\.js[^\r\n]*/);
+        assert(promoteCmd, 'deploy-pages.yml must invoke scripts/promote-release.js on release');
+        for (const flag of ['--version "$TARGET_TAG"', '--source-sha "$TAG_COMMIT"', '--require-manifest', '--artifact-dir "$ARTIFACT_DIR"', '--cross-check-dir dist/preview', '--sync-root "$MASTER_SYNC_DIR"']) {
+            assert(promoteCmd[0].includes(flag),
+                `deploy-pages.yml promote-release invocation must include ${flag}`);
+        }
+        assert(!deployYaml.includes('gh run download') || !deployYaml.includes('|| true'),
+            'deploy-pages.yml must not ignore verified artifact download failures with || true');
+        assert(/gh run download[^\n]*--dir "\$VERIFIED_ARTIFACT_ROOT"/.test(deployYaml) && !/gh run download[^\n]*--dir \.(\s|$)/m.test(deployYaml),
+            'deploy-pages.yml must download verified artifacts into a dedicated directory outside the working tree, never into the repository root');
+        assert(deployYaml.includes('${{ runner.temp }}/verified-artifacts') && deployYaml.includes('${{ runner.temp }}/master-sync'),
+            'deploy-pages.yml must keep verified artifacts and the master sync worktree outside the repository checkout');
+        assert(!deployYaml.includes('git pull --rebase'),
+            'deploy-pages.yml must not mutate the verified working tree via git pull --rebase after verification');
+        assert(/^\s+actions:\s*read\s*$/m.test(deployYaml),
+            'deploy-pages.yml must grant actions: read so gh run list / gh run download can fetch verified CI artifacts');
+
+        // R2: the verification tree must be the tag commit itself (not the moving origin/master head),
+        // checked out exactly once before npm ci so lockfile, build, promote, and tests share one commit.
+        assert(!deployYaml.includes('git checkout -B master origin/master'),
+            'deploy-pages.yml must not verify or promote on the moving origin/master head instead of the tag commit');
+        const alignIdx = deployYaml.indexOf('git checkout --detach "$VERIFY_COMMIT"');
+        const npmCiIdx = deployYaml.indexOf('run: npm ci');
+        const buildIdx = deployYaml.indexOf('npm run build');
+        assert(alignIdx !== -1 && npmCiIdx !== -1 && alignIdx < npmCiIdx && npmCiIdx < buildIdx,
+            'deploy-pages.yml must check out the verification commit before npm ci and all build/promote/test steps');
+        assert((deployYaml.match(/git checkout /g) || []).length === 1,
+            'deploy-pages.yml must switch commits exactly once, before dependency installation');
+        assert(deployYaml.includes('VERIFY_COMMIT="$TAG_COMMIT"') && deployYaml.includes('VERIFY_COMMIT="$EVENT_SHA"'),
+            'deploy-pages.yml must verify the tag commit on release and the pushed commit on master push');
+        assert(deployYaml.includes('git merge-base --is-ancestor "$TAG_COMMIT" origin/master'),
+            'deploy-pages.yml must require the release tag commit to be part of origin/master history');
+        assert(deployYaml.includes('git worktree add --detach "$MASTER_SYNC_DIR" origin/master'),
+            'deploy-pages.yml must sync promoted artifacts to origin/master via a separate worktree');
+        assert(deployYaml.includes('--prepare-pages --root-dir "$MASTER_SYNC_DIR"'),
+            'deploy-pages.yml must publish _site from the master worktree so release promotion never rolls preview back to the tag state');
         assert(deployYaml.includes('chore(preview): update dist/preview from master [skip ci]'),
             'deploy-pages.yml must commit dist/preview updates with [skip ci]');
         assert(deployYaml.includes('ktm-new.html') && deployYaml.includes('chore(release): sync version to ${TARGET_TAG} [skip ci]'),
             'deploy-pages.yml must commit ktm-new.html on release publish');
-        assert(deployYaml.indexOf('Commit synced artifacts back to master') < deployYaml.indexOf('Deploy to GitHub Pages') &&
-            deployYaml.includes('echo "DEPLOY_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"'),
-            'deploy-pages.yml must commit synced release artifacts and set DEPLOY_SHA before deploying to GitHub Pages');
+        assert(!deployYaml.includes('git tag -f') && !deployYaml.includes('/home/runner/work/_actions/actions/deploy-pages'),
+            'deploy-pages.yml must not force-move published tags or patch internal Actions JS');
+        assert(deployYaml.includes('node scripts/build.js --prepare-pages') && deployYaml.includes("path: '_site'"),
+            'deploy-pages.yml must stage only public files into _site for GitHub Pages deployment');
 
         const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
         assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
         const testYaml = fs.readFileSync(testWorkflowPath, 'utf-8');
+        assert(testYaml.includes('npm ci') && testYaml.includes('npm run build') && testYaml.includes('npm test'),
+            'test.yml must run npm ci, npm run build, and npm test');
         assert(testYaml.includes('paths-ignore:') && testYaml.includes("'README.md'") && testYaml.includes("'.gear/**'") && testYaml.includes("'dist/preview/**'"),
             'test.yml must ignore non-functional and preview artifact paths');
+        const uploadBlock = testYaml.slice(testYaml.indexOf('upload-artifact'));
+        assert(uploadBlock.includes('dist/preview/ktm-*.html') && uploadBlock.includes('dist/preview/kantanUpdate.js') && uploadBlock.includes('dist/preview/build-manifest.json'),
+            'test.yml must upload the verified dist/preview artifacts and build-manifest.json');
+        assert(!/^\s+(ktm-new\.html|src\/kantanVersion\.txt|dist\/ktm-\*\.html|dist\/kantanUpdate\.js)\s*$/m.test(uploadBlock),
+            'test.yml artifact must contain only dist/preview artifacts so release promotion cannot overwrite dist/, ktm-new.html, or src/kantanVersion.txt');
+        assert(uploadBlock.includes('if-no-files-found: error'),
+            'test.yml must fail when verified artifacts are missing');
+        assert(fs.existsSync(path.join(rootDir, 'package-lock.json')),
+            'package-lock.json must be tracked in the repository');
+        assert(!fs.existsSync(path.join(rootDir, 'Gruntfile.js')) && !fs.existsSync(path.join(rootDir, '.npmrc')),
+            'Legacy Gruntfile.js and .npmrc must be removed');
     });
 
     // Test 8: Mermaid inclusion in full edition and exclusion from lite / std editions

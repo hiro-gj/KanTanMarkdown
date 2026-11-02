@@ -1,18 +1,18 @@
 {
   "name": "KanTanMarkdown",
-  "version": "2.0.0",
+  "version": "3.0.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
+    "build": "node scripts/build.js",
+    "build:dev": "node scripts/build.js --dev-only",
+    "build:release": "node scripts/build.js --target release",
+    "promote:release": "node scripts/promote-release.js",
+    "watch": "node scripts/watch.js",
     "test": "node .tests/run-tests.js"
   },
   "devDependencies": {
-    "grunt": "^1.6.2",
-    "grunt-contrib-clean": "^1.0.0",
-    "grunt-contrib-concat": "^1.0.0",
-    "grunt-contrib-copy": "^0.8.2",
-    "grunt-contrib-cssmin": "^0.14.0",
-    "grunt-contrib-uglify": "^0.11.1",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-inline": "^0.3.6",
-    "grunt-text-replace": "^0.4.0"
+    "esbuild": "^0.25.0"
   }
 }
