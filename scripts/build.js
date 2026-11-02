@@ -25,14 +25,18 @@ function computeSha256(bufferOrString) {
 }
 
 function resolveSourceSha(rootDir) {
+    try {
+        const sha = cp.execFileSync('git', ['-C', rootDir, 'rev-parse', 'HEAD'], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        if (sha) {
+            return sha;
+        }
+    } catch (_) {
+        // Fallback to environment variable when git is unavailable
+    }
     if (process.env.GITHUB_SHA) {
         return process.env.GITHUB_SHA.trim();
     }
-    try {
-        return cp.execFileSync('git', ['-C', rootDir, 'rev-parse', 'HEAD'], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    } catch (_) {
-        return 'unknown';
-    }
+    return 'unknown';
 }
 
 const EDITION_CONFIGS = {
@@ -212,6 +216,7 @@ function assembleEditionHtml(config, assets) {
 
     if (config.edition && config.edition !== '__KANTAN_EDITION__') {
         html = html.replace(/__KANTAN_EDITION__/g, () => config.edition);
+        html = html.replace(/<span class="version"><\/span>/g, () => `<span class="version">${assets.kantanVersion}_${config.edition}</span>`);
     }
 
     return html;

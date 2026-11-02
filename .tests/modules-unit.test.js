@@ -132,6 +132,16 @@ function runTests() {
         registry.removeAll();
         assert.strictEqual(registry.count(), 0);
         assert.strictEqual(removed, 1);
+
+        // Version comparison and downgrade prevention
+        assert(UpdateInit.compareVersions('v3.20261102.1', 'v2.20261102.3') > 0);
+        assert(UpdateInit.compareVersions('v2.20261102.3', 'v3.20261102.1') < 0);
+        assert.strictEqual(UpdateInit.compareVersions('v3.20261102.1', 'v3.20261102.1'), 0);
+        assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v3.20261102.1', 'v2.20261102.3'), false,
+            'shouldUpdateDisplayedVersion must not downgrade v3.20261102.1 with stale v2.20261102.3');
+        assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v2.20261102.3', 'v3.20261102.1'), true);
+        assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v3.20261102.1', 'v3.20261102.1'), true);
+        assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v3.20261102.1', ''), false);
     });
 
     // 6. Phase 5 verification: Legacy IE browser branches removed from custom JS

@@ -81,8 +81,13 @@
 	}
 
 	function updateKantanVersion (version) {
-		document.getElementById("kantanVersion").value = version;
-		var edition = document.getElementById("kantanEdition").value;
+		var versionElem = document.getElementById("kantanVersion");
+		if (versionElem) {
+			versionElem.value = version;
+			versionElem.setAttribute("value", version);
+		}
+		var editionElem = document.getElementById("kantanEdition");
+		var edition = editionElem ? editionElem.value : "";
 		var versionLabel = (window.KantanModules && window.KantanModules.UpdateInit)
 			? window.KantanModules.UpdateInit.formatVersionEditionLabel(version, edition)
 			: (version + "_" + edition);
@@ -93,7 +98,11 @@
 	}
 	
 	function updateKantanEdition (edition) {
-		document.getElementById("kantanEdition").value = edition;
+		var editionElem = document.getElementById("kantanEdition");
+		if (editionElem) {
+			editionElem.value = edition;
+			editionElem.setAttribute("value", edition);
+		}
 	}
 	
 	function kantanUpdate(json) {
@@ -337,7 +346,14 @@
 			if (!verText) return;
 			var latestVer = verText.trim();
 			if (latestVer) {
-				updateKantanVersion(latestVer);
+				var currentVerElem = document.getElementById("kantanVersion");
+				var currentVer = currentVerElem ? currentVerElem.value : "";
+				var shouldUpdate = (window.KantanModules && window.KantanModules.UpdateInit && typeof window.KantanModules.UpdateInit.shouldUpdateDisplayedVersion === "function")
+					? window.KantanModules.UpdateInit.shouldUpdateDisplayedVersion(currentVer, latestVer)
+					: true;
+				if (shouldUpdate) {
+					updateKantanVersion(latestVer);
+				}
 			}
 		}).catch(function() {});
 
