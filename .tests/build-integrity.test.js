@@ -134,13 +134,18 @@ function runTests() {
             const content = fs.readFileSync(path.join(rootDir, relPath), 'utf-8');
             assert(content.includes('href="https://github.com/hiro-gj/KanTanMarkdown"'),
                 `${relPath} must link to https://github.com/hiro-gj/KanTanMarkdown`);
-            assert(/id="kantanVersion" value="v\d+/.test(content),
-                `${relPath} must embed a valid release version string`);
+            assert(content.includes(`id="kantanVersion" value="${expectedVersion}"`),
+                `${relPath} must embed release version ${expectedVersion}`);
+            const editionMatch = path.basename(relPath).match(/^ktm-(.+)\.html$/);
+            if (editionMatch) {
+                assert(content.includes(`<span class="version">${expectedVersion}_${editionMatch[1]}</span>`),
+                    `${relPath} must embed version label ${expectedVersion}_${editionMatch[1]} in .version span`);
+            }
         }
 
         const releaseUpdateJsContent = fs.readFileSync(path.join(rootDir, 'dist', 'kantanUpdate.js'), 'utf-8');
-        assert(/"newVersion":\s*"v\d+/.test(releaseUpdateJsContent),
-            'dist/kantanUpdate.js must embed a valid release newVersion string');
+        assert(releaseUpdateJsContent.includes(`"newVersion": "${expectedVersion}"`),
+            `dist/kantanUpdate.js must embed release newVersion ${expectedVersion}`);
     });
 
     // Test 5: Updated license header, A4 layout CSS, 2-pane zoom, zoom buttons, and scroll sync
@@ -240,6 +245,9 @@ function runTests() {
             'deploy-pages.yml must download verified artifacts into a dedicated directory outside the working tree, never into the repository root');
         assert(deployYaml.includes('${{ runner.temp }}/verified-artifacts') && deployYaml.includes('${{ runner.temp }}/master-sync'),
             'deploy-pages.yml must keep verified artifacts and the master sync worktree outside the repository checkout');
+        const beforeStepsYaml = deployYaml.slice(0, deployYaml.indexOf('steps:'));
+        assert(!beforeStepsYaml.includes('runner.'),
+            'deploy-pages.yml must not reference the runner context in job-level env (GitHub Actions only allows runner.* inside steps)');
         assert(!deployYaml.includes('git pull --rebase'),
             'deploy-pages.yml must not mutate the verified working tree via git pull --rebase after verification');
         assert(/^\s+actions:\s*read\s*$/m.test(deployYaml),

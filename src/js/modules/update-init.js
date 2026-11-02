@@ -37,6 +37,56 @@
     }
 
     /**
+     * Parses a KanTanMarkdown version string (e.g. "v3.20261102.1") into numeric tuple [major, date, seq].
+     * @param {string} version
+     * @returns {number[]|null}
+     */
+    function parseVersionTuple(version) {
+        if (typeof version !== 'string') return null;
+        var m = version.trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);
+        if (!m) return null;
+        return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+    }
+
+    /**
+     * Compares two KanTanMarkdown version strings.
+     * Returns > 0 if verA > verB, < 0 if verA < verB, 0 if equal.
+     * @param {string} verA
+     * @param {string} verB
+     * @returns {number}
+     */
+    function compareVersions(verA, verB) {
+        var a = parseVersionTuple(verA);
+        var b = parseVersionTuple(verB);
+        if (a && b) {
+            for (var i = 0; i < 3; i++) {
+                if (a[i] !== b[i]) return a[i] - b[i];
+            }
+            return 0;
+        }
+        var strA = String(verA || '').trim();
+        var strB = String(verB || '').trim();
+        if (strA === strB) return 0;
+        return strA > strB ? 1 : -1;
+    }
+
+    /**
+     * Determines whether the displayed/hidden version should be updated with fetchedVersion.
+     * Prevents downgrading a newer embedded document version (e.g. v3.20261102.1) with a stale
+     * remote version (e.g. v2.20261102.3).
+     * @param {string} currentVersion
+     * @param {string} fetchedVersion
+     * @returns {boolean}
+     */
+    function shouldUpdateDisplayedVersion(currentVersion, fetchedVersion) {
+        var fetched = String(fetchedVersion || '').trim();
+        if (!fetched) return false;
+        var current = String(currentVersion || '').trim();
+        if (!current) return true;
+        return compareVersions(fetched, current) >= 0;
+    }
+
+    /**
      * Creates an event listener registry that tracks registered handlers, avoids exact duplicate
      * registration on the same element/event/callback, and supports clean bulk removal during updates.
      * @param {Document} [defaultDoc]
@@ -113,6 +163,9 @@
         PREVIEW_UPDATE_URL: PREVIEW_UPDATE_URL,
         resolveUpdateScriptUrl: resolveUpdateScriptUrl,
         formatVersionEditionLabel: formatVersionEditionLabel,
+        parseVersionTuple: parseVersionTuple,
+        compareVersions: compareVersions,
+        shouldUpdateDisplayedVersion: shouldUpdateDisplayedVersion,
         createEventRegistry: createEventRegistry
     };
 

@@ -39,10 +39,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    env:
-      # リリース時に取得する検証済みアーティファクトと origin/master 同期用 worktree はリポジトリ外に置く
-      VERIFIED_ARTIFACT_ROOT: ${{ runner.temp }}/verified-artifacts
-      MASTER_SYNC_DIR: ${{ runner.temp }}/master-sync
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -52,6 +48,7 @@ jobs:
       - name: Resolve verification commit and check out exactly that commit
         id: target
         env:
+          GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           INPUT_TAG: ${{ github.event.inputs.tag }}
@@ -113,6 +110,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           TARGET_TAG: ${{ steps.target.outputs.target_tag }}
           TAG_COMMIT: ${{ steps.target.outputs.tag_commit }}
+          # リリース時に取得する検証済みアーティファクトと origin/master 同期用 worktree はリポジトリ外に置く
+          VERIFIED_ARTIFACT_ROOT: ${{ runner.temp }}/verified-artifacts
+          MASTER_SYNC_DIR: ${{ runner.temp }}/master-sync
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "push" ]; then
@@ -164,6 +164,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           TARGET_TAG: ${{ steps.target.outputs.target_tag }}
           VERIFY_COMMIT: ${{ steps.target.outputs.verify_commit }}
+          MASTER_SYNC_DIR: ${{ runner.temp }}/master-sync
         run: |
           set -euo pipefail
 

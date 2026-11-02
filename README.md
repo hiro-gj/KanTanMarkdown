@@ -6,6 +6,7 @@
 - 「[かんたんMarkdown](https://github.com/tatesuke/KanTanMarkdown)」の「v1.201604012.01」からフォークして「v2」としました。
   - 「v3」より `Grunt` を撤去し、`npm scripts` ＋ Node.js ビルドスクリプト（`scripts/build.js`）＋ `esbuild` によるインメモリ高速ビルド構成へ移行しました。
 - UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
+- 「[GEAR.indigoBiz](https://github.com/hiro-gj/KanTanMarkdown/tree/master/.gear)」のコードベースのリバースエンジニアリングを起点とした仕様書生成。
 ---
 
 ## 🛠️ 最新のビルド・公開手順（Node.js + esbuild / Windows・OneDrive環境対応）
