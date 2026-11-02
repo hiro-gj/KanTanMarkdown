@@ -383,7 +383,7 @@ body.view-mode #previewer.full-width {
 	width: min(300mm, calc(100% - 32px));
 	max-width: 300mm;
 	min-height: 424mm;
-	aspect-ratio: 210 / 297;
+	--page-aspect-ratio: 210 / 297;
 	box-shadow: var(--shadow-button);
 	border-radius: 4px;
 	flex: none;
@@ -391,6 +391,31 @@ body.view-mode #previewer.full-width {
 	overflow-y: visible;
 	height: auto;
 	display: flow-root;
+}
+
+.page-break-indicator {
+	position: relative;
+	margin: 28px -40px 20px;
+	border-top: 2px dashed var(--border);
+	text-align: right;
+	user-select: none;
+	-webkit-user-select: none;
+	pointer-events: none;
+	clear: both;
+}
+
+.page-break-indicator::after {
+	content: attr(data-page);
+	display: inline-block;
+	padding: 2px 10px;
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-muted);
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	margin-right: 16px;
+	transform: translateY(-50%);
 }
 
 body.dark #previewer.full-width {
@@ -692,6 +717,10 @@ body.dark #previewer {
   }
   #toolbar, #toolbar-toggle, #attach, #attach-section, #settings-panel, #editorTabWrapper, #resize-handle {
     display: none;
+  }
+
+  .page-break-indicator {
+    display: none !important;
   }
 
   body:not(.toc-visible) #toc {

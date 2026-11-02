@@ -399,6 +399,8 @@
 	}
 
 	function toggleMode() {
+		setTimeout(updatePageBreaks, 50);
+		setTimeout(updatePageBreaks, 300);
 		var attach = document.getElementById("attach");
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var editor = document.getElementById("editor");
@@ -2187,7 +2189,13 @@
 		doLayout();
 	}
 
-	on("#previewer", "previewed", buildToc);
+	on("#previewer", "previewed", function() {
+		buildToc();
+		updatePageBreaks();
+		setTimeout(updatePageBreaks, 50);
+		setTimeout(updatePageBreaks, 300);
+		setTimeout(updatePageBreaks, 1000);
+	});
 
 	function buildToc() {
 		var toc = document.getElementById("toc");
@@ -2391,7 +2399,8 @@
 		html += '    width: 100%;\n';
 		html += '    max-width: 300mm;\n';
 		html += '    min-height: 424mm;\n';
-		html += '    aspect-ratio: 210 / 297;\n';
+		html += '    --page-aspect-ratio: 210 / 297;\n';
+		html += '    height: auto;\n';
 		html += '    border-radius: 4px;\n';
 		html += '    padding: 32px 40px;\n';
 		html += '    box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n';
@@ -2479,5 +2488,78 @@
 			delete a;
 		}
 	}
+
+	function updatePageBreaks() {
+		var p = document.getElementById("previewer");
+		if (!p) return;
+		var savedScroll = p.scrollTop;
+		var inds = p.querySelectorAll(".page-break-indicator");
+		for (var i = 0; i < inds.length; i++) {
+			if (inds[i].parentNode) inds[i].parentNode.removeChild(inds[i]);
+		}
+		var children = [];
+		for (var j = 0; j < p.children.length; j++) {
+			var c = p.children[j];
+			if (!c.classList.contains("page-break-indicator")) children.push(c);
+		}
+		if (children.length === 0) return;
+		var isEdit = document.body.classList.contains("editMode");
+		var origWidth = p.style.width;
+		var origMaxWidth = p.style.maxWidth;
+		var origFlex = p.style.flex;
+		if (isEdit) {
+			p.style.flex = "none";
+			p.style.width = "300mm";
+			p.style.maxWidth = "300mm";
+		}
+		var pWidth = p.offsetWidth;
+		if (pWidth <= 0) {
+			if (isEdit) {
+				p.style.flex = origFlex;
+				p.style.width = origWidth;
+				p.style.maxWidth = origMaxWidth;
+				p.scrollTop = savedScroll;
+			}
+			return;
+		}
+		var pageHeight = pWidth * (297 / 210);
+		var pTop = p.offsetTop;
+		var currentPage = 1;
+		var nextBreak = pageHeight;
+		for (var k = 0; k < children.length; k++) {
+			var el = children[k];
+			var elTop = el.offsetTop - pTop;
+			var elBottom = elTop + el.offsetHeight;
+			var isHeading = /^H[1-6]$/i.test(el.tagName);
+			var shouldBreak = false;
+			if (isHeading && elTop > nextBreak - 120 && elTop <= nextBreak + 120) {
+				shouldBreak = true;
+			} else if (elTop >= nextBreak) {
+				shouldBreak = true;
+			} else if (elTop < nextBreak && elBottom > nextBreak && el.offsetHeight < pageHeight * 0.75) {
+				shouldBreak = true;
+			}
+			if (shouldBreak && k > 0) {
+				currentPage++;
+				var ind = document.createElement("div");
+				ind.className = "page-break-indicator";
+				ind.setAttribute("data-page", "Page " + currentPage);
+				p.insertBefore(ind, el);
+				nextBreak = (ind.offsetTop - pTop) + pageHeight;
+			}
+		}
+		if (isEdit) {
+			p.style.flex = origFlex;
+			p.style.width = origWidth;
+			p.style.maxWidth = origMaxWidth;
+			p.scrollTop = savedScroll;
+		}
+	}
+
+	window.addEventListener("resize", function() {
+		updatePageBreaks();
+	});
+	setTimeout(updatePageBreaks, 100);
+	setTimeout(updatePageBreaks, 500);
 
 
