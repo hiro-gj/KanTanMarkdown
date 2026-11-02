@@ -83,6 +83,17 @@ jobs:
 
             TAG_COMMIT=$(git rev-parse "${TARGET_TAG}^{commit}")
             git merge-base --is-ancestor "$TAG_COMMIT" origin/master
+            if command -v gh >/dev/null 2>&1 && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+              for CANDIDATE in $(git rev-list --max-count=10 "$TAG_COMMIT"); do
+                if ! git diff --quiet "$CANDIDATE" "$TAG_COMMIT" -- src/js src/css src/ktm.html src/kantanDrawer.html src/kantanUpdate.js scripts package.json package-lock.json .tests; then
+                  break
+                fi
+                if RUN_ID=$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow "test.yml" --commit "$CANDIDATE" --status success --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null) && [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+                  TAG_COMMIT="$CANDIDATE"
+                  break
+                fi
+              done
+            fi
             VERIFY_COMMIT="$TAG_COMMIT"
           fi
 
@@ -147,6 +158,30 @@ jobs:
             rm -rf "$MASTER_SYNC_DIR"
             git worktree add --detach "$MASTER_SYNC_DIR" origin/master
 
+            # リリースタグがコミット時点の src/kantanVersion.txt と異なる新バージョンの場合、
+            # まずCI検証済みアーティファクトと再ビルドのSHA-256完全一致を検証したうえで新バージョン番号を反映する
+            SOURCE_VER=$(tr -d '\r\n' < src/kantanVersion.txt)
+            if [ "$TARGET_TAG" != "$SOURCE_VER" ]; then
+              node -e '
+                const { verifyPreviewArtifacts, verifyDirMatchesHashes } = require("./scripts/promote-release");
+                const hashes = verifyPreviewArtifacts(process.argv[1], process.argv[2], { requireManifest: true, expectedSourceSha: process.argv[3] });
+                verifyDirMatchesHashes("dist/preview", hashes, "Pre-version-bump cross-check failure");
+              ' "$ARTIFACT_DIR" "$SOURCE_VER" "$TAG_COMMIT"
+              printf '%s\n' "$TARGET_TAG" > src/kantanVersion.txt
+              npm run build
+              node scripts/build.js --out-dir "$ARTIFACT_DIR"
+            fi
+            if node -e '
+              const fs = require("fs");
+              const { compareVersions } = require("./src/js/modules/update-init");
+              const cur = fs.readFileSync(process.argv[1] + "/src/kantanVersion.txt", "utf8").trim();
+              process.exit(compareVersions(process.argv[2], cur) > 0 ? 0 : 1);
+            ' "$MASTER_SYNC_DIR" "$TARGET_TAG"; then
+              printf '%s\n' "$TARGET_TAG" > "$MASTER_SYNC_DIR/src/kantanVersion.txt"
+              cp -p "$ARTIFACT_DIR/kantanUpdate.js" "$ARTIFACT_DIR/ktm-dev.html" "$ARTIFACT_DIR/ktm-lite.html" "$ARTIFACT_DIR/ktm-std.html" "$ARTIFACT_DIR/ktm-full.html" "$MASTER_SYNC_DIR/dist/preview/"
+              node -e 'require("./scripts/update-new-sizes").updateKtmNewSizes(process.argv[1], { mode: "preview" })' "$MASTER_SYNC_DIR"
+            fi
+
             # 4. 埋め込み版番号・マニフェスト・ソースコミットSHA・全5ファイルのSHA-256・再ビルド結果を厳密照合し、
             #    検証済みアーティファクトを無改変で検証ツリーの dist/ と master worktree の dist/ へ昇格
             node scripts/promote-release.js --version "$TARGET_TAG" --source-sha "$TAG_COMMIT" --require-manifest --artifact-dir "$ARTIFACT_DIR" --cross-check-dir dist/preview --sync-root "$MASTER_SYNC_DIR"
@@ -197,7 +232,7 @@ jobs:
             MASTER_BASE=$(git -C "$MASTER_SYNC_DIR" rev-parse HEAD)
             git -C "$MASTER_SYNC_DIR" config user.name "github-actions[bot]"
             git -C "$MASTER_SYNC_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C "$MASTER_SYNC_DIR" add dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
+            git -C "$MASTER_SYNC_DIR" add src/kantanVersion.txt dist/preview/kantanUpdate.js dist/preview/ktm-dev.html dist/preview/ktm-lite.html dist/preview/ktm-std.html dist/preview/ktm-full.html dist/kantanUpdate.js dist/ktm-dev.html dist/ktm-lite.html dist/ktm-std.html dist/ktm-full.html ktm-new.html
             if [ -n "$TARGET_TAG" ] && ! git -C "$MASTER_SYNC_DIR" diff --cached --quiet; then
               git -C "$MASTER_SYNC_DIR" commit -m "chore(release): sync version to ${TARGET_TAG} [skip ci]"
               push_to_master "$MASTER_SYNC_DIR" "$MASTER_BASE"
