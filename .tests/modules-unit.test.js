@@ -88,6 +88,54 @@ function runTests() {
         assert.strictEqual(AttachmentManager.buildAttachmentInsertTag('doc.pdf', 'data:application/pdf;base64,JVBERi0=', 'markdown'), '<a href="attach:doc.pdf">doc.pdf</a>');
     });
 
+    test('AttachmentManager.isVideoAttachment, buildAttachmentInsertTag, and extractAttachName handle video MIME, fallback extensions, empty data, malformed URLs, and special characters', () => {
+        const mp4DataUrl = 'data:video/mp4;base64,AAAAIGZ0eXBpc29t';
+        const webmDataUrl = 'data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC';
+        const octetDataUrl = 'data:application/octet-stream;base64,AAAAIGZ0eXBpc29t';
+        const emptyMimeDataUrl = 'data:;base64,AAAAIGZ0eXBpc29t';
+        const pngDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        const pdfDataUrl = 'data:application/pdf;base64,JVBERi0=';
+
+        // Video MIME detection
+        assert.strictEqual(AttachmentManager.isVideoAttachment('_autounattend.xml_.mp4', mp4DataUrl), true);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('clip.bin', webmDataUrl), true);
+
+        // Extension fallback only when MIME is application/octet-stream or empty
+        assert.strictEqual(AttachmentManager.isVideoAttachment('movie.mp4', octetDataUrl), true);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('movie.webm', emptyMimeDataUrl), true);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('movie.mov', octetDataUrl), true);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('readme.txt', octetDataUrl), false);
+
+        // Explicit non-video MIME must not be treated as video even with .mp4 extension
+        assert.strictEqual(AttachmentManager.isVideoAttachment('fake.mp4', pngDataUrl), false);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('fake.mp4', pdfDataUrl), false);
+
+        // Empty data or missing attachment must return false
+        assert.strictEqual(AttachmentManager.isVideoAttachment('empty.mp4', ''), false);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('empty.mp4', 'data:video/mp4;base64,'), false);
+        assert.strictEqual(AttachmentManager.isVideoAttachment('empty.mp4', null), false);
+
+        // Video insert tag generation for markdown and css tabs
+        assert.strictEqual(
+            AttachmentManager.buildAttachmentInsertTag('_autounattend.xml_.mp4', mp4DataUrl, 'markdown'),
+            '<a href="attach:_autounattend.xml_.mp4">_autounattend.xml_.mp4</a><br>\n<video controls preload="metadata" playsinline src="attach:_autounattend.xml_.mp4"></video>'
+        );
+        assert.strictEqual(AttachmentManager.buildAttachmentInsertTag('_autounattend.xml_.mp4', mp4DataUrl, 'css'), '');
+
+        // Special characters (Japanese, spaces, quotes, ampersand) in filename
+        const specialName = '日本語 動画 "1" & 2.mp4';
+        const tagWithSpecial = AttachmentManager.buildAttachmentInsertTag(specialName, mp4DataUrl, 'markdown');
+        assert(tagWithSpecial.includes('href="attach:日本語 動画 &quot;1&quot; &amp; 2.mp4"'));
+        assert(tagWithSpecial.includes('>日本語 動画 "1" &amp; 2.mp4</a><br>\n<video controls preload="metadata" playsinline src="attach:日本語 動画 &quot;1&quot; &amp; 2.mp4"></video>'));
+
+        // Safe attach: target extraction and malformed percent-encoding handling
+        assert.strictEqual(AttachmentManager.extractAttachName('attach:_autounattend.xml_.mp4'), '_autounattend.xml_.mp4');
+        assert.strictEqual(AttachmentManager.extractAttachName('attach:%E6%97%A5%E6%9C%AC%E8%AA%9E%20%E5%8B%95%E7%94%BB.mp4'), '日本語 動画.mp4');
+        assert.strictEqual(AttachmentManager.extractAttachName('attach:%E0%A4%A'), '%E0%A4%A');
+        assert.strictEqual(AttachmentManager.extractAttachName('https://example.com/video.mp4'), null);
+        assert.strictEqual(AttachmentManager.extractAttachName(''), null);
+    });
+
     // 4. SettingsUi module tests
     test('SettingsUi handles storage keys, zoom steps, A4 page breaks, and scroll ratio sync', () => {
         const mem = {};

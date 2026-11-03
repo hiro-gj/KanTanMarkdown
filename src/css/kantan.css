@@ -827,3 +827,30 @@ body.dark #previewer {
     zoom: 0.5;
   }
 }
+
+#previewer video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin-top: 8px;
+}
+
+#previewer img.kantan-video-print-thumb {
+    display: none;
+    max-width: 100%;
+    height: auto;
+    margin-top: 8px;
+}
+
+@media print {
+    #previewer video {
+        display: none !important;
+    }
+    #previewer img.kantan-video-print-thumb {
+        display: block !important;
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+}

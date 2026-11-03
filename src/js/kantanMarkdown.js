@@ -273,9 +273,49 @@
 	function uncacheImageUrl(name) {
 		var imageUrl = imageUrlMap[name];
 		if (window.URL && imageUrl) {
-			window.URL.revokeObjectURL(imageUrl);
+			window.URL.revokeObjectURL(imageUrl.blobOrBase64 || imageUrl);
 		} 
 		delete imageUrlMap[name];
+	}
+
+	var videoUrlMap = {};
+	function isAttachVideo(name, base64) {
+		if (window.KantanModules && window.KantanModules.AttachmentManager &&
+			typeof window.KantanModules.AttachmentManager.isVideoAttachment === "function") {
+			return window.KantanModules.AttachmentManager.isVideoAttachment(name, base64);
+		}
+		return Boolean(base64 && /^\s*data:video\/[^;]+;base64,/i.test(base64));
+	}
+
+	function getCachedVideoBlobUrl(name, createOnNoCached) {
+		var cached = videoUrlMap[name];
+		if ((cached == null) && createOnNoCached) {
+			var element = document.getElementById("attach-" + name);
+			if (element != null) {
+				var base64 = element.innerHTML;
+				if (!isAttachVideo(name, base64)) {
+					return null;
+				}
+				var blob = base64ToBlob(base64);
+				var blobUrl = window.URL ? window.URL.createObjectURL(blob) : base64;
+				videoUrlMap[name] = {
+					blobUrl: blobUrl,
+					base64: base64
+				};
+				return videoUrlMap[name];
+			} else {
+				return null;
+			}
+		}
+		return cached;
+	}
+
+	function uncacheVideoUrl(name) {
+		var cached = videoUrlMap[name];
+		if (window.URL && cached && cached.blobUrl) {
+			window.URL.revokeObjectURL(cached.blobUrl);
+		}
+		delete videoUrlMap[name];
 	}
 	
 	/* 起動時にコンテンツ読み込み */
@@ -631,7 +671,7 @@
 		});
 
 		// マークダウンレンダリング
-		previewer.innerHTML = marked(editor.value);
+		previewer.innerHTML = marked(editor.value.replace(/<video\b([^>\n]*?\bsrc=["']attach:[^"']+["'][^>\n]*?)<\/video>/gi, "<video$1></video>"));
 		
 		// GitHub Alerts のレンダリング適用
 		if (typeof GithubAlerts !== 'undefined') {
@@ -666,23 +706,239 @@
 			loadImage(elem);
 		}
 		
+		function decodeAttachName(raw) {
+			if (window.KantanModules && window.KantanModules.AttachmentManager &&
+				typeof window.KantanModules.AttachmentManager.decodeAttachName === "function") {
+				return window.KantanModules.AttachmentManager.decodeAttachName(raw);
+			}
+			try {
+				return decodeURIComponent(raw);
+			} catch (_) {
+				return raw;
+			}
+		}
+
+		function extractAttachTarget(val) {
+			if (window.KantanModules && window.KantanModules.AttachmentManager &&
+				typeof window.KantanModules.AttachmentManager.extractAttachName === "function") {
+				return window.KantanModules.AttachmentManager.extractAttachName(val);
+			}
+			if (!val) return null;
+			var m = val.trim().match(/^attach:(.+)/);
+			return m ? decodeAttachName(m[1]) : null;
+		}
+
+		function findAdjacentVideoForAnchor(anchor, attachName) {
+			var node = anchor.nextSibling;
+			while (node) {
+				if (node.nodeType === 3 && node.nodeValue.trim() === "") {
+					node = node.nextSibling;
+					continue;
+				}
+				if (node.nodeType === 1 && node.tagName === "BR") {
+					node = node.nextSibling;
+					continue;
+				}
+				if (node.nodeType === 1 && node.tagName === "VIDEO") {
+					var vTarget = node.getAttribute("data-kantan-attach") || extractAttachTarget(node.getAttribute("src") || "");
+					if (!vTarget || vTarget === attachName) {
+						return node;
+					}
+				}
+				break;
+			}
+			var parent = anchor.parentNode;
+			if (parent && parent.tagName === "P") {
+				var hasTrailing = false;
+				var pNode = anchor.nextSibling;
+				while (pNode) {
+					if (pNode.nodeType === 3 && pNode.nodeValue.trim() === "") {
+						pNode = pNode.nextSibling;
+						continue;
+					}
+					if (pNode.nodeType === 1 && pNode.tagName === "BR") {
+						pNode = pNode.nextSibling;
+						continue;
+					}
+					hasTrailing = true;
+					break;
+				}
+				if (!hasTrailing && parent.nextElementSibling && parent.nextElementSibling.tagName === "VIDEO") {
+					var nextVideo = parent.nextElementSibling;
+					var nvTarget = nextVideo.getAttribute("data-kantan-attach") || extractAttachTarget(nextVideo.getAttribute("src") || "");
+					if (!nvTarget || nvTarget === attachName) {
+						return nextVideo;
+					}
+				}
+			}
+			return null;
+		}
+
+		function generateVideoPosterIfNeeded(attachName, cachedEntry) {
+			if (!cachedEntry || cachedEntry.posterUrl || cachedEntry.posterGenerating || typeof document === "undefined") {
+				return;
+			}
+			cachedEntry.posterGenerating = true;
+			var tempVideo = document.createElement("video");
+			tempVideo.muted = true;
+			tempVideo.playsInline = true;
+			tempVideo.preload = "auto";
+			var cleaned = false;
+			var cleanup = function() {
+				if (cleaned) return;
+				cleaned = true;
+				cachedEntry.posterGenerating = false;
+				try {
+					tempVideo.pause();
+					tempVideo.removeAttribute("src");
+					tempVideo.load();
+				} catch (_) {}
+			};
+			var captureFrame = function() {
+				if (cleaned) return;
+				try {
+					var w = tempVideo.videoWidth || 640;
+					var h = tempVideo.videoHeight || 360;
+					if (w > 0 && h > 0) {
+						var canvas = document.createElement("canvas");
+						canvas.width = w;
+						canvas.height = h;
+						canvas.getContext("2d").drawImage(tempVideo, 0, 0, w, h);
+						var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+						if (dataUrl && dataUrl.indexOf("data:image/") === 0) {
+							cachedEntry.posterUrl = dataUrl;
+							var vList = document.querySelectorAll("#previewer video");
+							for (var idx = 0; idx < vList.length; idx++) {
+								if (vList[idx].getAttribute("data-kantan-attach") === attachName) {
+									syncVideoPrintThumb(vList[idx], attachName, dataUrl);
+								}
+							}
+							if (typeof updatePageBreaks === "function") {
+								updatePageBreaks();
+							}
+						}
+					}
+				} catch (_) {}
+				cleanup();
+			};
+			tempVideo.addEventListener("loadeddata", function() {
+				try {
+					var targetTime = (tempVideo.duration && tempVideo.duration > 0.2) ? 0.1 : 0;
+					if (targetTime > 0) {
+						tempVideo.currentTime = targetTime;
+						return;
+					}
+				} catch (_) {}
+				captureFrame();
+			}, { once: true });
+			tempVideo.addEventListener("seeked", captureFrame, { once: true });
+			tempVideo.addEventListener("error", cleanup, { once: true });
+			setTimeout(cleanup, 6000);
+			tempVideo.src = cachedEntry.blobUrl;
+		}
+		
+		function syncVideoPrintThumb(videoElem, attachName, posterDataUrl) {
+			if (!videoElem || !posterDataUrl) return;
+			videoElem.poster = posterDataUrl;
+			var nextEl = videoElem.nextElementSibling;
+			if (!nextEl || !nextEl.classList || !nextEl.classList.contains("kantan-video-print-thumb")) {
+				nextEl = document.createElement("img");
+				nextEl.className = "kantan-video-print-thumb";
+				nextEl.alt = attachName;
+				if (videoElem.parentNode) {
+					videoElem.parentNode.insertBefore(nextEl, videoElem.nextSibling);
+				}
+			}
+			nextEl.setAttribute("data-kantan-attach", attachName);
+			if (nextEl.src !== posterDataUrl) {
+				nextEl.src = posterDataUrl;
+			}
+		}
+
+		function ensureVideoPlayerAttrs(videoElem, attachName, blobUrl) {
+			var cachedEntry = videoUrlMap[attachName];
+			videoElem.controls = true;
+			videoElem.setAttribute("controls", "");
+			videoElem.setAttribute("preload", "auto");
+			videoElem.setAttribute("playsinline", "");
+			videoElem.setAttribute("data-kantan-attach", attachName);
+			if (cachedEntry && cachedEntry.posterUrl) {
+				syncVideoPrintThumb(videoElem, attachName, cachedEntry.posterUrl);
+			}
+			if (videoElem.src !== blobUrl) {
+				videoElem.src = blobUrl;
+			}
+			if (cachedEntry && !cachedEntry.posterUrl) {
+				generateVideoPosterIfNeeded(attachName, cachedEntry);
+			}
+			if (videoElem.dataset && !videoElem.dataset.kantanMetadataBound) {
+				videoElem.dataset.kantanMetadataBound = "true";
+				videoElem.addEventListener("loadedmetadata", function() {
+					if (typeof updatePageBreaks === "function") {
+						updatePageBreaks();
+					}
+				});
+			}
+		}
+
 		// リンク
 		var anchors = document.querySelectorAll("#previewer a");
 		for(var aIdx = 0; aIdx < anchors.length; aIdx++) {
-			var anchor = anchors[aIdx];
-			var href = anchor.href;
-			if (href) {
-				var matchs = href.trim().match(/^attach:(.+)/);
-				if (matchs) {
-					var name = decodeURIComponent(matchs[1]);
-					getFileBlog(name, function(blob){
-						if (!(blob instanceof Blob)) {
-							return;
+			(function(anchor) {
+				var rawHref = anchor.getAttribute("href") || anchor.href;
+				var name = extractAttachTarget(rawHref);
+				if (name) {
+					var attachElem = document.getElementById("attach-" + name);
+					if (attachElem && isAttachVideo(name, attachElem.innerHTML)) {
+						var cachedVideo = getCachedVideoBlobUrl(name, true);
+						if (cachedVideo) {
+							anchor.href = cachedVideo.blobUrl;
+							anchor.download = name;
+							var adjVideo = findAdjacentVideoForAnchor(anchor, name);
+							if (!adjVideo) {
+								var nextNode = anchor.nextSibling;
+								while (nextNode && nextNode.nodeType === 3 && nextNode.nodeValue.trim() === "") {
+									nextNode = nextNode.nextSibling;
+								}
+								var brElem = (nextNode && nextNode.nodeType === 1 && nextNode.tagName === "BR") ? nextNode : null;
+								if (!brElem) {
+									brElem = document.createElement("br");
+									anchor.parentNode.insertBefore(brElem, anchor.nextSibling);
+								}
+								adjVideo = document.createElement("video");
+								brElem.parentNode.insertBefore(adjVideo, brElem.nextSibling);
+							}
+							ensureVideoPlayerAttrs(adjVideo, name, cachedVideo.blobUrl);
 						}
-						var blobUrl = window.URL.createObjectURL(blob);
-						anchor.href = blobUrl;
-						anchor.download = name;
-					});
+					} else {
+						getFileBlog(name, function(blob){
+							if (!(blob instanceof Blob)) {
+								return;
+							}
+							var blobUrl = window.URL.createObjectURL(blob);
+							anchor.href = blobUrl;
+							anchor.download = name;
+						});
+					}
+				}
+			})(anchors[aIdx]);
+		}
+
+		// 明示的な video タグの解決
+		var videos = document.querySelectorAll("#previewer video");
+		for (var vIdx = 0; vIdx < videos.length; vIdx++) {
+			var videoElem = videos[vIdx];
+			var vName = extractAttachTarget(videoElem.getAttribute("src") || "") || videoElem.getAttribute("data-kantan-attach");
+			if (!vName) {
+				var sourceElem = videoElem.querySelector("source[src]");
+				if (sourceElem) {
+					vName = extractAttachTarget(sourceElem.getAttribute("src") || "");
+				}
+			}
+			if (vName) {
+				var cachedV = getCachedVideoBlobUrl(vName, true);
+				if (cachedV) {
+					ensureVideoPlayerAttrs(videoElem, vName, cachedV.blobUrl);
 				}
 			}
 		}
@@ -1380,8 +1636,10 @@
 		// 削除ボタンが押されたら親要素(li)ごと削除
 		if(window.confirm('削除していいですか?')){
 			var parent = e.target.parentNode;
-			var name = parent.querySelector("script").name;
+			var sc = parent.querySelector("script");
+			var name = sc.title || sc.name;
 			uncacheImageUrl(name);
+			uncacheVideoUrl(name);
 			parent.parentNode.removeChild(parent);
 			saved = false;
 		}
@@ -1425,6 +1683,7 @@
 		} 
 		var scriptTag = target.parentNode.querySelector("script");
 		uncacheImageUrl(scriptTag.title);
+		uncacheVideoUrl(scriptTag.title);
 		scriptTag.id =  "attach-" + name;
 		scriptTag.title = name;
 		saved = false;
@@ -1444,7 +1703,11 @@
 		if (isVisible(editor)) {
 			var insertText = (window.KantanModules && window.KantanModules.AttachmentManager)
 				? window.KantanModules.AttachmentManager.buildAttachmentInsertTag(fileName, script.innerHTML, "markdown")
-				: (isImage ? ('<img src="attach:' + fileName  + '">') : ('<a href="attach:' + fileName +'">' + fileName + '</a>'));
+				: (isImage
+					? ('<img src="attach:' + fileName  + '">')
+					: (isAttachVideo(fileName, script.innerHTML)
+						? ('<a href="attach:' + fileName + '">' + fileName + '</a><br>\n<video controls preload="metadata" playsinline src="attach:' + fileName + '"></video>')
+						: ('<a href="attach:' + fileName +'">' + fileName + '</a>')));
 			insertToEditor(editor, insertText);
 		}
 		var cssEditor = document.getElementById("cssEditor");

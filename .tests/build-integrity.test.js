@@ -450,6 +450,27 @@ function runTests() {
         }
     });
 
+    // Test 11: Video attachment player, print thumbnail, and responsive CSS embedded across all preview editions
+    test('All preview editions and kantanUpdate.js embed video attachment handling and responsive/print CSS', () => {
+        const kantanCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'kantan.css'), 'utf-8');
+        assert(kantanCss.includes('#previewer video') && kantanCss.includes('max-width: 100%'),
+            'kantan.css must define responsive #previewer video rule');
+        assert(kantanCss.includes('#previewer img.kantan-video-print-thumb'),
+            'kantan.css must define #previewer img.kantan-video-print-thumb rule for print thumbnail');
+
+        const previewTargets = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html', 'kantanUpdate.js'];
+        for (const target of previewTargets) {
+            const targetPath = path.join(rootDir, 'dist', 'preview', target);
+            const content = fs.readFileSync(targetPath, 'utf-8');
+            assert(content.includes('isVideoAttachment'), `dist/preview/${target} must embed isVideoAttachment`);
+            assert(content.includes('getCachedVideoBlobUrl'), `dist/preview/${target} must embed getCachedVideoBlobUrl`);
+            assert(content.includes('uncacheVideoUrl'), `dist/preview/${target} must embed uncacheVideoUrl`);
+            assert(content.includes('ensureVideoPlayerAttrs'), `dist/preview/${target} must embed ensureVideoPlayerAttrs`);
+            assert(content.includes('kantan-video-print-thumb'), `dist/preview/${target} must embed kantan-video-print-thumb support`);
+            assert(content.includes('#previewer video'), `dist/preview/${target} must embed #previewer video CSS`);
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);
