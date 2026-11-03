@@ -367,8 +367,10 @@ span.float-right > span {
 code,
 tt {
     margin: 0 2px;
-    padding: 0 5px;
-    white-space: nowrap;
+    padding: 2px 5px;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     border: 1px solid #eaeaea;
     background-color: #f8f8f8;
     border-radius: 3px;
@@ -400,6 +402,9 @@ pre {
 }
 pre code,
 pre tt {
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
     background-color: transparent;
     border: none;
 }
