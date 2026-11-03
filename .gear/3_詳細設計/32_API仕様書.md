@@ -23,7 +23,7 @@
 | kantanUpdate(json) | {newVersion,ktmString,doUpdate,rewirteHtml} | json.doUpdate実行。rewirteHtmlは実装の綴り通り |
 | KantanModules.SaveExport.* | DOMまたは保存状態・Blob | 4段階保存処理（collectDocumentSaveState、prepareSavePayload、serializeSingleHtmlDocument、triggerBlobDownload） |
 | KantanModules.PreviewMermaid.* | Mermaid文字列・CSS文字列・Markdown文字列 | normalizeMermaidText、isMermaidErrorSvg、cleanupMermaidTempDom、replaceAttachUrlInCss、parseLinesForHeadingSync |
-| KantanModules.AttachmentManager.* | 添付名・Data URL・DOM | resolveUniqueAttachName、validateAttachmentRename、base64ToBlob、collectAttachmentsFromDom |
+| KantanModules.AttachmentManager.* | 添付名・Data URL・DOM | resolveUniqueAttachName、validateAttachmentRename、base64ToBlob、collectAttachmentsFromDom、decodeAttachName、extractAttachName、isVideoAttachment、buildAttachmentInsertTag |
 | KantanModules.SettingsUi.* | 設定名・ズーム・要素位置・スクロール量 | LocalStorage永続化、getNextEditorZoom、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop |
 | KantanModules.UpdateInit.* | 要素・イベント・パス・版番号 | createEventRegistry（重複登録防止付きregister / removeAll）、resolveUpdateScriptUrl、compareVersions、shouldUpdateDisplayedVersion |
 

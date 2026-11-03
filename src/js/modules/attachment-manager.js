@@ -103,6 +103,83 @@
     }
 
     /**
+     * Safely decodes a URI component without throwing on malformed percent-encoding.
+     * @param {string} raw
+     * @returns {string}
+     */
+    function decodeAttachName(raw) {
+        if (typeof raw !== 'string') return '';
+        try {
+            return decodeURIComponent(raw);
+        } catch (_) {
+            return raw;
+        }
+    }
+
+    /**
+     * Extracts and decodes the attachment filename from an "attach:..." reference string.
+     * Returns null for non-attach URLs or empty targets.
+     * @param {string} val
+     * @returns {string | null}
+     */
+    function extractAttachName(val) {
+        if (!val || typeof val !== 'string') return null;
+        var m = val.trim().match(/^attach:(.+)/);
+        if (!m) return null;
+        var decoded = decodeAttachName(m[1]);
+        return decoded ? decoded : null;
+    }
+
+    /**
+     * Escapes special characters for safe inclusion inside a double-quoted HTML attribute.
+     * @param {string} str
+     * @returns {string}
+     */
+    function escapeHtmlAttr(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Escapes special characters for safe inclusion in HTML text content.
+     * @param {string} str
+     * @returns {string}
+     */
+    function escapeHtmlText(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Determines whether an attachment is a video based on its Data URL MIME type or fallback extension.
+     * @param {string} fileName - Attachment filename
+     * @param {string} dataUrl - Attachment Data URL
+     * @returns {boolean}
+     */
+    function isVideoAttachment(fileName, dataUrl) {
+        if (!dataUrl || typeof dataUrl !== 'string') {
+            return false;
+        }
+        var m = dataUrl.match(/^\s*data:([^;]*);base64,([\s\S]*)$/i);
+        if (!m || !m[2] || m[2].trim() === '') {
+            return false;
+        }
+        var mime = (m[1] || '').trim().toLowerCase();
+        if (mime.indexOf('video/') === 0) {
+            return true;
+        }
+        if (mime !== '' && mime !== 'application/octet-stream') {
+            return false;
+        }
+        return Boolean(fileName && typeof fileName === 'string' && /\.(?:mp4|webm|ogv|ogg|mov|m4v)$/i.test(fileName.trim()));
+    }
+
+    /**
      * Builds the appropriate Markdown/HTML/CSS tag to insert for an attachment.
      * @param {string} fileName - Attachment filename
      * @param {string} dataUrl - Attachment Data URL
@@ -110,14 +187,20 @@
      * @returns {string} Tag string to insert
      */
     function buildAttachmentInsertTag(fileName, dataUrl, targetType) {
-        var isImage = Boolean(dataUrl && dataUrl.match('data:image/.+?;base64,'));
+        var isImage = Boolean(dataUrl && typeof dataUrl === 'string' && dataUrl.match(/^\s*data:image\/.+?;base64,\S/i));
+        var isVideo = !isImage && isVideoAttachment(fileName, dataUrl);
+        var safeAttr = escapeHtmlAttr(fileName);
+        var safeText = escapeHtmlText(fileName);
         if (targetType === 'css') {
-            return isImage ? 'url("attach:' + fileName + '")' : '';
+            return isImage ? 'url("attach:' + safeAttr + '")' : '';
         }
         if (isImage) {
-            return '<img src="attach:' + fileName + '">';
+            return '<img src="attach:' + safeAttr + '">';
         }
-        return '<a href="attach:' + fileName + '">' + fileName + '</a>';
+        if (isVideo) {
+            return '<a href="attach:' + safeAttr + '">' + safeText + '</a><br>\n<video controls preload="metadata" playsinline src="attach:' + safeAttr + '"></video>';
+        }
+        return '<a href="attach:' + safeAttr + '">' + safeText + '</a>';
     }
 
     var AttachmentManagerModule = {
@@ -125,6 +208,9 @@
         validateAttachmentRename: validateAttachmentRename,
         base64ToBlob: base64ToBlob,
         collectAttachmentsFromDom: collectAttachmentsFromDom,
+        decodeAttachName: decodeAttachName,
+        extractAttachName: extractAttachName,
+        isVideoAttachment: isVideoAttachment,
         buildAttachmentInsertTag: buildAttachmentInsertTag
     };
 
