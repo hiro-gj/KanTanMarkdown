@@ -409,6 +409,47 @@ function runTests() {
         }
     });
 
+    // Test 10: Inline code (code, tt) line-wrapping and underscore padding in previewer.css and built artifacts
+    test('Inline code (code, tt) enables line wrapping and vertical padding so long commands wrap and underscores do not collide with border', () => {
+        const previewerCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'previewer.css'), 'utf-8');
+        const ktmNewHtml = fs.readFileSync(path.join(rootDir, 'ktm-new.html'), 'utf-8');
+
+        const inlineCodeRuleRegex = /code,\s*tt\s*\{([^}]+)\}/;
+        const previewerMatch = previewerCss.match(inlineCodeRuleRegex);
+        assert(previewerMatch, 'previewer.css must define code, tt style block');
+        const previewerRuleBody = previewerMatch[1];
+        assert(!/white-space:\s*nowrap/.test(previewerRuleBody),
+            'previewer.css code, tt must not set white-space: nowrap');
+        assert(/white-space:\s*normal/.test(previewerRuleBody),
+            'previewer.css code, tt must set white-space: normal');
+        assert(/word-wrap:\s*break-word/.test(previewerRuleBody) && /overflow-wrap:\s*break-word/.test(previewerRuleBody),
+            'previewer.css code, tt must set word-wrap: break-word and overflow-wrap: break-word');
+        assert(/padding:\s*2px\s+5px/.test(previewerRuleBody),
+            'previewer.css code, tt must set padding: 2px 5px to prevent underscore border overlap');
+
+        const ktmNewMatch = ktmNewHtml.match(inlineCodeRuleRegex);
+        assert(ktmNewMatch, 'ktm-new.html must define code, tt style block');
+        const ktmNewRuleBody = ktmNewMatch[1];
+        assert(!/white-space:\s*nowrap/.test(ktmNewRuleBody) &&
+            /white-space:\s*normal/.test(ktmNewRuleBody) &&
+            /word-wrap:\s*break-word/.test(ktmNewRuleBody) &&
+            /overflow-wrap:\s*break-word/.test(ktmNewRuleBody) &&
+            /padding:\s*2px\s+5px/.test(ktmNewRuleBody),
+            'ktm-new.html code, tt must match previewer.css wrapping and padding rules');
+
+        const previewEditions = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html'];
+        for (const edition of previewEditions) {
+            const previewPath = path.join(rootDir, 'dist', 'preview', edition);
+            const content = fs.readFileSync(previewPath, 'utf-8');
+            const m = content.match(inlineCodeRuleRegex);
+            assert(m, `dist/preview/${edition} must contain code, tt style block`);
+            assert(!/white-space:\s*nowrap/.test(m[1]) &&
+                /white-space:\s*normal/.test(m[1]) &&
+                /padding:\s*2px\s+5px/.test(m[1]),
+                `dist/preview/${edition} must embed updated code, tt wrapping and padding rules`);
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);
