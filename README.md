@@ -6,6 +6,8 @@
 - 「[かんたんMarkdown](https://github.com/tatesuke/KanTanMarkdown)」の「v1.201604012.01」からフォークして「v2」としました。
   - 「v3」より `Grunt` を撤去し、`npm scripts` ＋ Node.js ビルドスクリプト（`scripts/build.js`）＋ `esbuild` によるインメモリ高速ビルド構成へ移行しました。
 - UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
+  - GFMのAlartやMermaid記法は利用できます。
+- QiitaのNote記法も利用できるようにしました。
 - 「[GEAR.indigoBiz](https://github.com/hiro-gj/KanTanMarkdown/tree/master/.gear)」のコードベースのリバースエンジニアリングを起点とした仕様書生成。
 ---
 
@@ -39,9 +41,21 @@ npm --prefix "1_repocopy\KanTanMarkdown" test
 ```
 
 ### 3. 公開フローとロールバック手順
-- **プレビュー公開（`master` ブランチ push）**: `dist/preview/` のみを更新し、本番公開中の `dist/` 直下と本番容量表示は保護します。Pages 公開時は `node scripts/build.js --prepare-pages` により公開対象ファイルのみを `_site/` に抽出してデプロイします。
-- **本番リリース昇格（GitHub Release 公開）**: ワークフローはリリースタグのコミットそのものをチェックアウトし（`origin/master` の最新ではない）、そのコミットの `package-lock.json` で `npm ci` を行います。対象コミットの成功済み `test.yml` が保存した検証済み成果物（`dist/preview/` 5ファイル＋`build-manifest.json`）をリポジトリ外の専用ディレクトリへ取得し、`node scripts/promote-release.js --version <tag> --source-sha <commit> --require-manifest --artifact-dir <取得先> --cross-check-dir dist/preview --sync-root <masterのworktree>` により、版番号・ソースコミットSHA・マニフェスト・SHA-256・同コミットからの再ビルド結果をすべて照合したうえで無改変で `dist/` 直下へ昇格します。`origin/master` への同期は別の `git worktree` で行い、公開用 `_site` はその worktree（最新プレビュー＋昇格済み本番成果物）から作成するため、リリース操作でプレビューがタグ時点へ巻き戻ることはありません（公開済みリリースタグの強制移動も行いません）。
-- **ロールバック手順**: 本番リリースに問題が判明した場合は、GitHub Actions の `Deploy KanTanMarkdown to GitHub Pages` ワークフローを `workflow_dispatch` で実行し、入力 `tag` に直前の安定リリースタグを指定してください（そのタグのコミットで検証済みの成果物が同じ照合を経て再昇格されます）。手動で復元する場合は `git checkout <prev-tag> -- dist/ktm-*.html dist/kantanUpdate.js ktm-new.html` で本番成果物のみを復元してコミット・再デプロイします（`dist/preview/` と `src/kantanVersion.txt` は巻き戻しません）。
+
+#### 公開フロー
+
+| 運用種別 | トリガー | 主な更新対象 | 保護対象 | デプロイ・昇格手順 |
+| --- | --- | --- | --- | --- |
+| **プレビュー公開** | `master` ブランチへの push | ・`dist/preview/` 配下（4エディション＋更新JS）<br>・`ktm-new.html` のプレビュー容量表記 | ・本番 `dist/` 直下の成果物<br>・本番容量表記 | `node scripts/build.js --prepare-pages` により公開対象ファイルのみを `_site/` に抽出してデプロイ |
+| **本番リリース昇格** | GitHub Release 公開（`release: published`）または `workflow_dispatch` | ・本番 `dist/` 直下（4エディション＋更新JS）<br>・`ktm-new.html` の本番容量表記 | ・プレビュー状態の巻き戻し防止（別 worktree 同期）<br>・`src/kantanVersion.txt` | 1. リリースタグのコミットを固定チェックアウトし `npm ci`<br>2. 成功済みCIの検証済み成果物（`build-manifest.json`、SHA-256）を照合<br>3. 無改変で `dist/` 直下へ昇格<br>4. 独立した master worktree 経由で `_site/` を生成・公開（公開済みタグの強制移動なし） |
+
+#### ロールバック手順
+
+| 方式 | 実行手順 | 詳細・留意事項 |
+| --- | --- | --- |
+| **ワークフロー実行（推奨）** | GitHub Actions の `Deploy KanTanMarkdown to GitHub Pages` ワークフローを `workflow_dispatch` で実行し、入力 `tag` に直前の安定リリースタグを指定 | ・対象タグのコミットで検証済みの成果物が同一の照合プロセスを経て再昇格される<br>・安全かつ迅速に安定版へ切り替え可能 |
+| **手動復元** | ```bash<br>git checkout <prev-tag> -- dist/ktm-*.html dist/kantanUpdate.js ktm-new.html<br>```<br>上記コマンドで本番成果物のみ復元しコミット・再デプロイ | ・`dist/preview/` および `src/kantanVersion.txt` は巻き戻さないこと |
+
 
 <div align="center">
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

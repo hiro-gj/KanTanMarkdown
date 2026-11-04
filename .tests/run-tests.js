@@ -9,6 +9,7 @@ const path = require('path');
 const testSuites = [
     { name: 'Syntax Check', file: 'syntax-check.js' },
     { name: 'GitHub Alerts Parser', file: 'alerts-parser.test.js' },
+    { name: 'Qiita Note Parser', file: 'qiita-note.test.js' },
     { name: 'Editor Logic', file: 'editor-logic.test.js' },
     { name: 'Mermaid Parser', file: 'mermaid-parser.test.js' },
     { name: 'Modules & Save/Update Logic', file: 'modules-unit.test.js' },

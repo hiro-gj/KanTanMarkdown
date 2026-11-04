@@ -471,6 +471,40 @@ function runTests() {
         }
     });
 
+    // Test 12: Qiita Note syntax plugin, scoped CSS, and third-party notices embedded across all preview editions
+    test('All preview editions and kantanUpdate.js embed Qiita Note syntax plugin, scoped CSS, and license notices', () => {
+        const noticesPath = path.join(rootDir, 'THIRD_PARTY_NOTICES.md');
+        assert(fs.existsSync(noticesPath), 'THIRD_PARTY_NOTICES.md must exist in repository root');
+        const noticesContent = fs.readFileSync(noticesPath, 'utf-8');
+        assert(noticesContent.includes('qiita_marker') && noticesContent.includes('qiita-markdown'),
+            'THIRD_PARTY_NOTICES.md must describe qiita_marker and qiita-markdown');
+        assert(noticesContent.includes('Copyright (c) 2015 Garen J. Torikian') &&
+            noticesContent.includes('Copyright (c) 2021 Qiita Inc.') &&
+            noticesContent.includes('Copyright (c) 2014 Ryo Nakamura'),
+            'THIRD_PARTY_NOTICES.md must include upstream copyrights');
+
+        const previewerCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'previewer.css'), 'utf-8');
+        assert(previewerCss.includes('.note.info') && previewerCss.includes('.note.warn') && previewerCss.includes('.note.alert'),
+            'src/css/previewer.css must define .note.info, .note.warn, and .note.alert');
+
+        const previewTargets = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html', 'kantanUpdate.js'];
+        for (const target of previewTargets) {
+            const targetPath = path.join(rootDir, 'dist', 'preview', target);
+            const content = fs.readFileSync(targetPath, 'utf-8');
+            assert(content.includes('QiitaMarker'), `dist/preview/${target} must embed QiitaMarker`);
+            assert(content.includes('Copyright (c) 2015 Garen J. Torikian'),
+                `dist/preview/${target} must embed qiita_marker copyright header`);
+            assert(content.includes('Copyright (c) 2021 Qiita Inc.'),
+                `dist/preview/${target} must embed Qiita Inc. copyright header`);
+            assert(content.includes('Copyright (c) 2014 Ryo Nakamura'),
+                `dist/preview/${target} must embed qiita-markdown copyright header`);
+            if (target.endsWith('.html')) {
+                assert(content.includes('id="qiitaMarkerJs"'), `dist/preview/${target} must embed script id="qiitaMarkerJs"`);
+                assert(content.includes('.note.info'), `dist/preview/${target} must embed .note.info CSS`);
+            }
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);
