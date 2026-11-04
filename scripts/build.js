@@ -121,6 +121,7 @@ function loadAndTransformAssets(rootDir, options = {}) {
 
     const vendorJs = {
         'js/marked.min.js': readText(path.join('js', 'marked.min.js')),
+        'js/qiita_marker.js': readText(path.join('js', 'qiita_marker.js')),
         'js/highlight.min.js': readText(path.join('js', 'highlight.min.js')),
         'js/raphael.min.js': readText(path.join('js', 'raphael.min.js')),
         'js/underscore.min.js': readText(path.join('js', 'underscore.min.js')),

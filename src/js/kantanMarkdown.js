@@ -220,6 +220,11 @@
 		return originalCodeRenderer(code, lang, escaped);
 	};
 
+	/* Qiita Note記法 プラグイン初期化（二重初期化防止） */
+	if (typeof QiitaMarker !== "undefined" && typeof marked !== "undefined" && !marked.__qiitaMarkerInstalled) {
+		QiitaMarker.install(marked);
+	}
+
 	/* シンタックスハイライト設定 */
 	if (typeof hljs !== "undefined") {
 		marked.setOptions({

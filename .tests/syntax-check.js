@@ -22,6 +22,7 @@ const filesToCheck = [
     path.join('src', 'js', 'kantanDrawer.js'),
     path.join('src', 'js', 'kantanEditor.js'),
     path.join('src', 'js', 'kantanMarkdown.js'),
+    path.join('src', 'js', 'qiita_marker.js'),
     path.join('src', 'js', 'modules', 'preview-mermaid.js'),
     path.join('src', 'js', 'modules', 'attachment-manager.js'),
     path.join('src', 'js', 'modules', 'save-export.js'),
