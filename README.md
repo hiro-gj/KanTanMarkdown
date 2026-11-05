@@ -6,7 +6,7 @@
 - 「[かんたんMarkdown](https://github.com/tatesuke/KanTanMarkdown)」の「v1.201604012.01」からフォークして「v2」としました。
   - 「v3」より `Grunt` を撤去し、`npm scripts` ＋ Node.js ビルドスクリプト（`scripts/build.js`）＋ `esbuild` によるインメモリ高速ビルド構成へ移行しました。
 - UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
-  - GFMのAlartやMermaid記法は利用できます。
+  - GFMのAlertやMermaid記法は利用できます。
 - QiitaのNote記法も利用できるようにしました。
 - 「[GEAR.indigoBiz](https://github.com/hiro-gj/KanTanMarkdown/tree/master/.gear)」のコードベースのリバースエンジニアリングを起点とした仕様書生成。
 ---
