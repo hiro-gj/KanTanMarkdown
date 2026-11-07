@@ -66,6 +66,9 @@
 	}
 
 	function removeAllEvents() {
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
 		if (eventRegistry) {
 			eventRegistry.removeAll();
 			eventListeners = eventRegistry.getListeners();
@@ -505,8 +508,9 @@
 	}
 
 	function toggleMode() {
-		setTimeout(updatePageBreaks, 50);
-		setTimeout(updatePageBreaks, 300);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("toggle-mode");
+		}
 		var attach = document.getElementById("attach");
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var editor = document.getElementById("editor");
@@ -705,9 +709,26 @@
 		}
 		
 		// 画像埋め込み
+		window.__kantanImageDimCache = window.__kantanImageDimCache || {};
 		var images = document.querySelectorAll("#previewer img");
 		for (var i = 0; i < images.length; i++) {
 			var elem = images[i];
+			if (elem.dataset && !elem.dataset.kantanImgBound) {
+				elem.dataset.kantanImgBound = "true";
+				elem.addEventListener("load", function() {
+					if (this.naturalWidth > 0 && this.naturalHeight > 0 && this.src) {
+						window.__kantanImageDimCache[this.src] = { w: this.naturalWidth, h: this.naturalHeight };
+					}
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("image-load");
+					}
+				});
+				elem.addEventListener("error", function() {
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("image-error");
+					}
+				});
+			}
 			loadImage(elem);
 		}
 		
@@ -850,6 +871,11 @@
 				nextEl = document.createElement("img");
 				nextEl.className = "kantan-video-print-thumb";
 				nextEl.alt = attachName;
+				nextEl.addEventListener("load", function() {
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("video-thumb-load");
+					}
+				});
 				if (videoElem.parentNode) {
 					videoElem.parentNode.insertBefore(nextEl, videoElem.nextSibling);
 				}
@@ -1085,6 +1111,9 @@
 								container.classList.remove("mermaid-error");
 								if (typeof bindFunctions === "function") {
 									bindFunctions(container);
+								}
+								if (typeof schedulePageBreakUpdate === "function") {
+									schedulePageBreakUpdate("mermaid-async");
 								}
 							}, container)["catch"](function (mErr) {
 								cleanupMermaidTempDom(diagramId);
@@ -1936,10 +1965,16 @@
 		addClass(document.querySelector("body"), "initialState");
 		
 		/* ファイルの肥大化を防ぐため中身を消去 */
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
+		if (hasSaveExport && typeof window.KantanModules.SaveExport.cleanupTemporaryDomForSave === "function") {
+			window.KantanModules.SaveExport.cleanupTemporaryDomForSave(document);
+		}
 		document.getElementById("previewer").innerHTML = "";
 		document.getElementById("message-area").innerHTML = "";
 		document.getElementById("previewerStyle").innerHTML="";
-		var strayMermaid = document.querySelectorAll('div[id^="dkantan-mermaid-"], iframe[id^="ikantan-mermaid-"], body > svg[id^="kantan-mermaid-"]');
+		var strayMermaid = document.querySelectorAll('#kantan-print-measure-frame, .kantan-print-measure-frame, #kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator, div[id^="dkantan-mermaid-"], iframe[id^="ikantan-mermaid-"], body > svg[id^="kantan-mermaid-"]');
 		for (var sm = 0; sm < strayMermaid.length; sm++) {
 			if (strayMermaid[sm].parentNode) {
 				strayMermaid[sm].parentNode.removeChild(strayMermaid[sm]);
@@ -1976,6 +2011,12 @@
 		}
 		
 		// Stage 3: Serialize into self-contained single-file HTML document
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
+		if (hasSaveExport && typeof window.KantanModules.SaveExport.cleanupTemporaryDomForSave === "function") {
+			window.KantanModules.SaveExport.cleanupTemporaryDomForSave(document);
+		}
 		var html;
 		if (hasSaveExport) {
 			html = window.KantanModules.SaveExport.serializeSingleHtmlDocument(document.getElementsByTagName("html")[0].innerHTML);
@@ -1988,15 +2029,15 @@
 		
 		contentAtSave = editor.value;
 		saved = true;
-		doPreview();
-		
 		removeClass(document.querySelector("body"), "initialState");
-		if (toggleFlag == true) {
-			toggleMode();
-		}
 		document.documentElement.style.setProperty("--editor-width", getItem("editor-width", "50%"));
 		if (typeof applyEditorZoom === "function") {
 			applyEditorZoom();
+		}
+		if (toggleFlag == true) {
+			toggleMode();
+		} else {
+			doPreview();
 		}
 		
 		document.getElementById("previewer").scrollTop = previewerScrollTop;
@@ -2507,6 +2548,9 @@
 		window.removeEventListener("touchmove", resize);
 		window.removeEventListener("mouseup", stopResize);
 		window.removeEventListener("touchend", stopResize);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("pane-resize");
+		}
 	}
 
 	// --- 2. 目次機能 ---
@@ -2534,14 +2578,18 @@
 		}
 		buildToc();
 		doLayout();
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("toggle-toc");
+		}
 	}
 
 	on("#previewer", "previewed", function() {
 		buildToc();
-		updatePageBreaks();
-		setTimeout(updatePageBreaks, 50);
-		setTimeout(updatePageBreaks, 300);
-		setTimeout(updatePageBreaks, 1000);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("previewed");
+		} else {
+			updatePageBreaks();
+		}
 	});
 
 	function buildToc() {
@@ -2705,7 +2753,14 @@
 		
 		var title = document.title.replace(/^\* /, "");
 		var previewerStyle = document.getElementById("previewerStyle").innerHTML;
-		var previewerContent = document.getElementById("previewer").innerHTML;
+		var previewerClone = document.getElementById("previewer").cloneNode(true);
+		var exportInds = previewerClone.querySelectorAll("#kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator");
+		for (var ei = 0; ei < exportInds.length; ei++) {
+			if (exportInds[ei].parentNode) {
+				exportInds[ei].parentNode.removeChild(exportInds[ei]);
+			}
+		}
+		var previewerContent = previewerClone.innerHTML;
 		
 		var tocHtml = "";
 		if (document.body.classList.contains("toc-visible")) {
@@ -2844,82 +2899,637 @@
 		}
 	}
 
-	function updatePageBreaks() {
-		var p = document.getElementById("previewer");
-		if (!p) return;
-		var savedScroll = p.scrollTop;
-		var inds = p.querySelectorAll(".page-break-indicator");
-		for (var i = 0; i < inds.length; i++) {
-			if (inds[i].parentNode) inds[i].parentNode.removeChild(inds[i]);
-		}
-		var children = [];
-		for (var j = 0; j < p.children.length; j++) {
-			var c = p.children[j];
-			if (!c.classList.contains("page-break-indicator")) children.push(c);
-		}
-		if (children.length === 0) return;
-		var isEdit = document.body.classList.contains("editMode");
-		var origWidth = p.style.width;
-		var origMaxWidth = p.style.maxWidth;
-		var origFlex = p.style.flex;
-		if (isEdit) {
-			p.style.flex = "none";
-			p.style.width = "300mm";
-			p.style.maxWidth = "300mm";
-		}
-		var pWidth = p.offsetWidth;
-		if (pWidth <= 0) {
-			if (isEdit) {
-				p.style.flex = origFlex;
-				p.style.width = origWidth;
-				p.style.maxWidth = origMaxWidth;
-				p.scrollTop = savedScroll;
-			}
-			return;
-		}
-		var pageHeight = pWidth * (297 / 210);
-		if (window.KantanModules && window.KantanModules.SettingsUi) {
-			pageHeight = window.KantanModules.SettingsUi.calculateA4PageHeight(pWidth);
-		}
-		var pTop = p.offsetTop;
-		var currentPage = 1;
-		var nextBreak = pageHeight;
-		for (var k = 0; k < children.length; k++) {
-			var el = children[k];
-			var elTop = el.offsetTop - pTop;
-			var elBottom = elTop + el.offsetHeight;
-			var shouldBreak = (window.KantanModules && window.KantanModules.SettingsUi)
-				? window.KantanModules.SettingsUi.shouldInsertPageBreak({
-					elTop: elTop,
-					elBottom: elBottom,
-					elHeight: el.offsetHeight,
-					tagName: el.tagName,
-					nextBreak: nextBreak,
-					pageHeight: pageHeight,
-					index: k
-				})
-				: false;
-			if (shouldBreak && k > 0) {
-				currentPage++;
-				var ind = document.createElement("div");
-				ind.className = "page-break-indicator";
-				ind.setAttribute("data-page", "Page " + currentPage);
-				p.insertBefore(ind, el);
-				nextBreak = (ind.offsetTop - pTop) + pageHeight;
+	var pageBreakGenerationId = 0;
+	var pageBreakRafId = null;
+	var pageBreakFollowupTimer = null;
+	var currentPrintProfileState = null;
+
+	function getSettingsUiModule() {
+		return (window.KantanModules && window.KantanModules.SettingsUi) ? window.KantanModules.SettingsUi : null;
+	}
+
+	function initPrintProfileState() {
+		var sui = getSettingsUiModule();
+		if (!sui) return;
+		var savedJson = getItem("print-profile-json", null);
+		if (savedJson) {
+			var validated = sui.validateAndNormalizePrintProfile(savedJson);
+			if (validated && validated.valid) {
+				currentPrintProfileState = validated;
+				syncPrintProfileUi();
+				return;
 			}
 		}
-		if (isEdit) {
-			p.style.flex = origFlex;
-			p.style.width = origWidth;
-			p.style.maxWidth = origMaxWidth;
-			p.scrollTop = savedScroll;
+		currentPrintProfileState = sui.validateAndNormalizePrintProfile(sui.ADOPTED_PRINT_PROFILE);
+		syncPrintProfileUi();
+	}
+
+	function syncPrintProfileUi() {
+		var sui = getSettingsUiModule();
+		var statusEl = document.getElementById("print-profile-status");
+		var condEl = document.getElementById("print-profile-condition");
+		var guideEl = document.getElementById("print-profile-guidance");
+		if (!sui || !currentPrintProfileState) return;
+		var texts = sui.formatPrintProfileStatusText(currentPrintProfileState);
+		if (statusEl) {
+			statusEl.innerText = texts.statusLabel;
+			statusEl.setAttribute("data-ready", currentPrintProfileState.measurementReady ? "true" : "false");
+		}
+		if (condEl) condEl.innerText = texts.conditionLabel;
+		if (guideEl) guideEl.innerText = texts.guidanceLabel;
+	}
+
+	on("#print-profile-file", "change", function(e) {
+		var input = e.target;
+		if (!input || !input.files || input.files.length === 0) return;
+		var file = input.files[0];
+		var reader = new FileReader();
+		reader.onload = function() {
+			var sui = getSettingsUiModule();
+			if (!sui) return;
+			var rawText = typeof reader.result === "string" ? reader.result : "";
+			var validated = sui.validateAndNormalizePrintProfile(rawText);
+			if (!validated || !validated.valid) {
+				var errSummary = sui ? sui.formatPrintProfileStatusText(validated) : null;
+				if (typeof window.alert === "function") {
+					window.alert("印刷プロファイルJSONの検証に失敗しました。既存設定を維持します。\n" + (errSummary ? errSummary.guidanceLabel : ""));
+				}
+				syncPrintProfileUi();
+				return;
+			}
+			var summary = sui.formatPrintProfileStatusText(validated);
+			var confirmMsg = "以下の印刷プロファイルを取り込みますか？\n\n" +
+				"状態: " + summary.statusLabel + "\n" +
+				"条件: " + summary.conditionLabel + "\n\n" +
+				summary.guidanceLabel;
+			if (typeof window.confirm === "function" && !window.confirm(confirmMsg)) {
+				return;
+			}
+			currentPrintProfileState = validated;
+			setItem("print-profile-json", JSON.stringify(validated.profile));
+			syncPrintProfileUi();
+			schedulePageBreakUpdate("profile-import");
+		};
+		reader.readAsText(file, "utf-8");
+		try { input.value = ""; } catch (_) {}
+	});
+
+	on("#btn-print-profile-reset", "click", function() {
+		var sui = getSettingsUiModule();
+		if (!sui) return;
+		currentPrintProfileState = sui.validateAndNormalizePrintProfile(sui.ADOPTED_PRINT_PROFILE);
+		setItem("print-profile-json", JSON.stringify(currentPrintProfileState.profile));
+		syncPrintProfileUi();
+		schedulePageBreakUpdate("profile-reset");
+	});
+
+	function schedulePageBreakUpdate(reason) {
+		var gen = ++pageBreakGenerationId;
+		if (pageBreakRafId != null && typeof cancelAnimationFrame === "function") {
+			cancelAnimationFrame(pageBreakRafId);
+			pageBreakRafId = null;
+		}
+		if (pageBreakFollowupTimer != null) {
+			clearTimeout(pageBreakFollowupTimer);
+			pageBreakFollowupTimer = null;
+		}
+		var runner = function() {
+			pageBreakRafId = null;
+			if (gen !== pageBreakGenerationId) return;
+			updatePageBreaks(gen, reason);
+		};
+		if (typeof requestAnimationFrame === "function") {
+			pageBreakRafId = requestAnimationFrame(runner);
+		} else {
+			pageBreakFollowupTimer = setTimeout(runner, 16);
 		}
 	}
 
-	window.addEventListener("resize", function() {
-		updatePageBreaks();
+	function destroyPageBreakMeasurement() {
+		pageBreakGenerationId++;
+		if (pageBreakRafId != null && typeof cancelAnimationFrame === "function") {
+			cancelAnimationFrame(pageBreakRafId);
+			pageBreakRafId = null;
+		}
+		if (pageBreakFollowupTimer != null) {
+			clearTimeout(pageBreakFollowupTimer);
+			pageBreakFollowupTimer = null;
+		}
+		var frame = document.getElementById("kantan-print-measure-frame");
+		if (frame && frame.parentNode) {
+			frame.parentNode.removeChild(frame);
+		}
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (overlay && overlay.parentNode) {
+			overlay.parentNode.removeChild(overlay);
+		}
+		var inds = document.querySelectorAll(".page-break-indicator");
+		for (var i = 0; i < inds.length; i++) {
+			if (inds[i].parentNode) inds[i].parentNode.removeChild(inds[i]);
+		}
+	}
+
+	function unwrapPrintMediaRules(cssText) {
+		if (!cssText) return "";
+		var out = [];
+		var re = /@media\s+print\s*\{/gi;
+		var match;
+		while ((match = re.exec(cssText)) !== null) {
+			var startIdx = re.lastIndex;
+			var depth = 1;
+			var pos = startIdx;
+			while (pos < cssText.length && depth > 0) {
+				var ch = cssText.charAt(pos);
+				if (ch === "{") depth++;
+				else if (ch === "}") depth--;
+				pos++;
+			}
+			if (depth === 0) {
+				out.push(cssText.substring(startIdx, pos - 1));
+			}
+		}
+		return out.join("\n");
+	}
+
+	function buildSharedPrintMeasurementCss() {
+		var isDark = document.body && document.body.classList.contains("dark");
+		var baseStyles = [
+			":root{--bg:" + (isDark ? "#0d1117" : "#f6f8fa") + ";--bg-surface:" + (isDark ? "#161b22" : "#fff") + ";--bg-preview:" + (isDark ? "#1c2128" : "#fff") + ";--border:" + (isDark ? "#30363d" : "#d1d9e0") + ";--text:" + (isDark ? "#c9d1d9" : "#1f2328") + ";--text-muted:" + (isDark ? "#8b949e" : "#59636e") + ";--accent:" + (isDark ? "#58a6ff" : "#0969da") + ";--danger:#cf222e;--radius:6px;--inline-code-bg:#818b981f;--font-sans:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"Noto Sans JP\",Roboto,sans-serif;--font-mono:\"Cascadia Code\",\"JetBrains Mono\",\"Noto Sans Mono\",Consolas,monospace}",
+			"html,body{margin:0;padding:0;width:100%;height:auto;overflow:visible;font-family:var(--font-sans);font-size:14px;color:var(--text);background:transparent}",
+			"#wrapper{margin:0;padding:0;display:flex;flex-direction:column;align-items:stretch;width:100%;height:auto;overflow:visible}",
+			"#toc{display:block;width:100%;max-height:none;overflow:visible;position:relative;border:none;box-shadow:none;padding:0;margin:0 0 24px 0;order:-1;font-size:13px;line-height:1.5}",
+			"#toc .toc-header,#toc .toc-title,#toc .toc-body,#toc .toc-link{display:block;flex:none;height:auto;max-height:none;overflow:visible}",
+			"#toc .toc-title{text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:8px;padding:0 6px 8px;font-size:12px;font-weight:600}",
+			"#toc .toc-link{color:var(--text-muted);word-break:break-word;border-radius:4px;padding:4px 6px 4px 14px;text-decoration:none}",
+			"#previewer{box-sizing:border-box;border:0;margin:0;padding:0;width:100%;max-width:none;min-height:0;box-shadow:none;display:block;zoom:1;word-wrap:break-word}",
+			"#previewer h1,#previewer h2,#previewer h3,#previewer h4,#previewer h5,#previewer h6{border-bottom:1px solid var(--border);padding-bottom:0.3em}",
+			"#previewer video{display:none!important}",
+			"#previewer img.kantan-video-print-thumb{display:block!important;max-width:100%!important;height:auto!important;margin-top:8px;page-break-inside:avoid;break-inside:avoid}",
+			".note.info,.note.warn,.note.alert{page-break-inside:avoid;break-inside:avoid}",
+			".mermaid,.mermaid-rendered{page-break-inside:avoid;break-inside:avoid;max-width:100%!important}",
+			".mermaid svg,.mermaid-rendered svg{max-width:100%;height:auto}",
+			".mermaid svg[aria-roledescription^=\"flowchart\"],.mermaid-rendered svg[aria-roledescription^=\"flowchart\"],.mermaid svg[aria-roledescription=\"sequence\"],.mermaid-rendered svg[aria-roledescription=\"sequence\"],.mermaid svg[aria-roledescription^=\"class\"],.mermaid-rendered svg[aria-roledescription^=\"class\"],.mermaid svg[aria-roledescription^=\"state\"],.mermaid-rendered svg[aria-roledescription^=\"state\"],.mermaid svg.statediagram,.mermaid-rendered svg.statediagram{zoom:0.5}"
+		].join("\n");
+		var previewerStyleEl = document.getElementById("previewerStyle");
+		var customCss = previewerStyleEl ? (previewerStyleEl.innerHTML || "") : "";
+		return baseStyles + "\n" + customCss + "\n" + unwrapPrintMediaRules(customCss);
+	}
+
+	function ensurePrintMeasureFrame(widthMm, heightMm) {
+		if (!document.body) return null;
+		var frame = document.getElementById("kantan-print-measure-frame");
+		if (!frame) {
+			frame = document.createElement("iframe");
+			frame.id = "kantan-print-measure-frame";
+			frame.className = "kantan-print-measure-frame";
+			frame.setAttribute("aria-hidden", "true");
+			frame.setAttribute("tabindex", "-1");
+			document.body.appendChild(frame);
+		}
+		frame.style.width = widthMm + "mm";
+		frame.style.height = heightMm + "mm";
+		return frame;
+	}
+
+	function isAvoidBreakElement(el, computedStyle) {
+		if (!el || !el.tagName) return false;
+		var tag = el.tagName.toUpperCase();
+		if (tag === "IMG" || tag === "SVG" || tag === "HR") return true;
+		if (el.classList) {
+			if (el.classList.contains("mermaid") ||
+				el.classList.contains("mermaid-rendered") ||
+				el.classList.contains("sequence") ||
+				el.classList.contains("flow") ||
+				el.classList.contains("kantan-video-print-thumb")) {
+				return true;
+			}
+			if (el.classList.contains("note") &&
+				(el.classList.contains("info") || el.classList.contains("warn") || el.classList.contains("alert"))) {
+				return true;
+			}
+		}
+		if (computedStyle) {
+			var bi = computedStyle.breakInside || computedStyle.pageBreakInside || "";
+			if (bi === "avoid" || bi === "avoid-page") return true;
+		}
+		return false;
+	}
+
+	function collectMeasuredSubItems(blockEl, mDoc, baseTop) {
+		var items = [];
+		if (!blockEl || !mDoc) return items;
+		var tag = (blockEl.tagName || "").toUpperCase();
+
+		if (tag === "TABLE") {
+			var rows = blockEl.querySelectorAll("tr");
+			for (var r = 0; r < rows.length; r++) {
+				var rRect = rows[r].getBoundingClientRect();
+				if (rRect.height > 0) {
+					items.push({
+						subIndex: r,
+						top: rRect.top - baseTop,
+						bottom: rRect.bottom - baseTop,
+						height: rRect.height,
+						charOffset: null
+					});
+				}
+			}
+			return items;
+		}
+
+		if (tag === "UL" || tag === "OL") {
+			var listItems = blockEl.children;
+			var liIdx = 0;
+			for (var l = 0; l < listItems.length; l++) {
+				if ((listItems[l].tagName || "").toUpperCase() !== "LI") continue;
+				var lRect = listItems[l].getBoundingClientRect();
+				if (lRect.height > 0) {
+					items.push({
+						subIndex: liIdx++,
+						top: lRect.top - baseTop,
+						bottom: lRect.bottom - baseTop,
+						height: lRect.height,
+						charOffset: null
+					});
+				}
+			}
+			return items;
+		}
+
+		// Collect embedded atomic images / video print thumbs inside paragraph or container
+		var innerImgs = blockEl.querySelectorAll("img");
+		var mediaIdx = 0;
+		for (var im = 0; im < innerImgs.length; im++) {
+			var imgEl = innerImgs[im];
+			var imgRect = imgEl.getBoundingClientRect();
+			if (imgRect.height > 0 && imgRect.width > 0) {
+				items.push({
+					subIndex: 0,
+					mediaIndex: mediaIdx++,
+					top: imgRect.top - baseTop,
+					bottom: imgRect.bottom - baseTop,
+					height: imgRect.height,
+					charOffset: null,
+					avoidBreakInside: true
+				});
+			}
+		}
+
+		// Collect text line boxes via Range with character offsets for accurate screen mapping
+		if (typeof mDoc.createRange === "function" && typeof mDoc.createTreeWalker === "function") {
+			var range = mDoc.createRange();
+			var walker = mDoc.createTreeWalker(blockEl, 4 /* NodeFilter.SHOW_TEXT */, null, false);
+			var textNode;
+			var runningCharOffset = 0;
+			var lastLineTop = null;
+			while ((textNode = walker.nextNode())) {
+				var val = textNode.nodeValue || "";
+				var len = val.length;
+				if (len === 0) continue;
+				if (!val.trim()) {
+					runningCharOffset += len;
+					continue;
+				}
+				var step = 1;
+				for (var c = 0; c < len; c += step) {
+					range.setStart(textNode, c);
+					range.setEnd(textNode, c + 1);
+					var rects = range.getClientRects();
+					if (rects && rects.length > 0) {
+						var rc = rects[0];
+						if (rc.height > 0) {
+							var relTop = rc.top - baseTop;
+							var relBottom = rc.bottom - baseTop;
+							if (lastLineTop === null || Math.abs(relTop - lastLineTop) > 3) {
+								items.push({
+									subIndex: items.length,
+									top: relTop,
+									bottom: relBottom,
+									height: rc.height,
+									charOffset: runningCharOffset + c
+								});
+								lastLineTop = relTop;
+							} else if (items.length > 0) {
+								var prevItem = items[items.length - 1];
+								if (relBottom > prevItem.bottom) {
+									prevItem.bottom = relBottom;
+									prevItem.height = prevItem.bottom - prevItem.top;
+								}
+							}
+						}
+					}
+				}
+				runningCharOffset += len;
+			}
+		}
+
+		items.sort(function(a, b) { return a.top - b.top; });
+		for (var si = 0; si < items.length; si++) {
+			items[si].subIndex = si;
+		}
+		return items;
+	}
+
+	function resolveCharOffsetTopInElement(blockEl, targetCharOffset, previewerEl) {
+		if (!blockEl || typeof document.createRange !== "function" || typeof document.createTreeWalker !== "function") {
+			return null;
+		}
+		var walker = document.createTreeWalker(blockEl, 4 /* NodeFilter.SHOW_TEXT */, null, false);
+		var node;
+		var running = 0;
+		while ((node = walker.nextNode())) {
+			var len = (node.nodeValue || "").length;
+			if (targetCharOffset < running + len) {
+				var localIdx = Math.max(0, Math.min(len - 1, targetCharOffset - running));
+				var range = document.createRange();
+				range.setStart(node, localIdx);
+				range.setEnd(node, Math.min(len, localIdx + 1));
+				var rects = range.getClientRects();
+				if (rects && rects.length > 0) {
+					var bRect = blockEl.getBoundingClientRect();
+					var bOffsetHeight = blockEl.offsetHeight || bRect.height;
+					var scaleFactor = (bRect.height > 0 && bOffsetHeight > 0) ? (bOffsetHeight / bRect.height) : 1;
+					var relInBlock = (rects[0].top - bRect.top) * scaleFactor;
+					return (blockEl.offsetTop - (previewerEl ? 0 : 0)) + relInBlock;
+				}
+				return null;
+			}
+			running += len;
+		}
+		return null;
+	}
+
+	function clearPageBreakOverlay(previewerEl) {
+		var p = previewerEl || document.getElementById("previewer");
+		if (!p) return;
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (overlay) {
+			overlay.innerHTML = "";
+		}
+		var legacyInds = p.querySelectorAll(".page-break-indicator");
+		for (var i = 0; i < legacyInds.length; i++) {
+			if (!overlay || !overlay.contains(legacyInds[i])) {
+				if (legacyInds[i].parentNode) legacyInds[i].parentNode.removeChild(legacyInds[i]);
+			}
+		}
+	}
+
+	function renderPageBreakOverlay(previewerEl, mappedBreaks) {
+		if (!previewerEl) return;
+		clearPageBreakOverlay(previewerEl);
+		if (!Array.isArray(mappedBreaks) || mappedBreaks.length === 0) return;
+
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (!overlay || overlay.parentNode !== previewerEl) {
+			if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+			overlay = document.createElement("div");
+			overlay.id = "kantan-page-break-overlay";
+			overlay.className = "kantan-page-break-overlay";
+			overlay.setAttribute("aria-hidden", "true");
+			previewerEl.appendChild(overlay);
+		}
+
+		for (var i = 0; i < mappedBreaks.length; i++) {
+			var brk = mappedBreaks[i];
+			if (!brk || brk.isToc) continue;
+			var ind = document.createElement("div");
+			ind.className = "page-break-indicator";
+			ind.setAttribute("data-page", "Page " + brk.pageNumber);
+			ind.setAttribute("data-break-reason", brk.reason || "page-overflow");
+			ind.setAttribute("data-anchor-type", brk.anchorType || "before-block");
+			ind.style.top = brk.screenY + "px";
+			overlay.appendChild(ind);
+		}
+	}
+
+	function collectScreenBlocks(previewerEl, bodyChildren) {
+		var screenBlocks = [];
+		for (var k = 0; k < bodyChildren.length; k++) {
+			(function(idx, el) {
+				var elTop = el.offsetTop;
+				var elHeight = el.offsetHeight;
+				var elBottom = elTop + elHeight;
+				var subItems = [];
+				var tag = (el.tagName || "").toUpperCase();
+				if (tag === "TABLE") {
+					var rows = el.querySelectorAll("tr");
+					for (var r = 0; r < rows.length; r++) {
+						var rTop = elTop + rows[r].offsetTop;
+						subItems.push({ subIndex: r, top: rTop, bottom: rTop + rows[r].offsetHeight });
+					}
+				} else if (tag === "UL" || tag === "OL") {
+					var liIdx = 0;
+					for (var l = 0; l < el.children.length; l++) {
+						if ((el.children[l].tagName || "").toUpperCase() !== "LI") continue;
+						var lEl = el.children[l];
+						var lTop = elTop + (lEl.offsetTop - el.offsetTop);
+						subItems.push({ subIndex: liIdx++, top: lTop, bottom: lTop + lEl.offsetHeight });
+					}
+				} else {
+					var mediaEls = el.querySelectorAll("img:not(.kantan-video-print-thumb), video");
+					for (var me = 0; me < mediaEls.length; me++) {
+						var mNode = mediaEls[me];
+						if (mNode.offsetHeight > 0) {
+							var mTop = elTop + (mNode.offsetTop - el.offsetTop);
+							subItems.push({ subIndex: me, mediaIndex: me, top: mTop, bottom: mTop + mNode.offsetHeight });
+						}
+					}
+				}
+				screenBlocks.push({
+					blockIndex: idx,
+					isToc: false,
+					top: elTop,
+					bottom: elBottom,
+					height: elHeight,
+					subItems: subItems,
+					resolveCharOffsetTop: function(charOffset) {
+						return resolveCharOffsetTopInElement(el, charOffset, previewerEl);
+					}
+				});
+			})(k, bodyChildren[k]);
+		}
+		return screenBlocks;
+	}
+
+	function measureDomInFrame(bodyChildren, widthMm, heightMm) {
+		var frame = ensurePrintMeasureFrame(widthMm, heightMm);
+		var mDoc = frame && (frame.contentDocument || (frame.contentWindow && frame.contentWindow.document));
+		if (!mDoc) return null;
+
+		if (!mDoc.body || !mDoc.head) {
+			mDoc.open();
+			mDoc.write("<!doctype html><html><head><meta charset='utf-8'></head><body></body></html>");
+			mDoc.close();
+		}
+
+		var mWin = frame.contentWindow || window;
+		mDoc.documentElement.style.width = widthMm + "mm";
+		mDoc.body.style.width = widthMm + "mm";
+		mDoc.body.className = document.body ? document.body.className : "";
+		var styleEl = mDoc.getElementById("kantan-measure-style");
+		if (!styleEl) {
+			styleEl = mDoc.createElement("style");
+			styleEl.id = "kantan-measure-style";
+			mDoc.head.appendChild(styleEl);
+		}
+		styleEl.textContent = buildSharedPrintMeasurementCss();
+
+		mDoc.body.innerHTML = '<div id="wrapper"><div id="previewer"></div></div>';
+		var mWrapper = mDoc.getElementById("wrapper");
+		var mPreviewer = mDoc.getElementById("previewer");
+
+		var mToc = null;
+		if (document.body && document.body.classList.contains("toc-visible")) {
+			var srcToc = document.getElementById("toc");
+			if (srcToc) {
+				mToc = srcToc.cloneNode(true);
+				mWrapper.insertBefore(mToc, mPreviewer);
+			}
+		}
+
+		var measuredNodeList = [];
+		for (var idx = 0; idx < bodyChildren.length; idx++) {
+			var srcChild = bodyChildren[idx];
+			var cloneChild = srcChild.cloneNode(true);
+			var srcImgs = srcChild.querySelectorAll("img");
+			var cloneImgs = cloneChild.querySelectorAll("img");
+			for (var imIdx = 0; imIdx < srcImgs.length && imIdx < cloneImgs.length; imIdx++) {
+				var sImg = srcImgs[imIdx];
+				var cachedDim = (window.__kantanImageDimCache && sImg.src) ? window.__kantanImageDimCache[sImg.src] : null;
+				var nw = sImg.naturalWidth || (cachedDim ? cachedDim.w : 0);
+				var nh = sImg.naturalHeight || (cachedDim ? cachedDim.h : 0);
+				if (nw > 0 && nh > 0) {
+					if (sImg.src && window.__kantanImageDimCache) {
+						window.__kantanImageDimCache[sImg.src] = { w: nw, h: nh };
+					}
+					if (!cloneImgs[imIdx].style.width) cloneImgs[imIdx].style.width = nw + "px";
+					cloneImgs[imIdx].style.aspectRatio = nw + " / " + nh;
+					cloneImgs[imIdx].style.maxWidth = "100%";
+					cloneImgs[imIdx].style.height = "auto";
+				}
+			}
+			var innerInds = cloneChild.querySelectorAll("#kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator");
+			for (var ii = 0; ii < innerInds.length; ii++) {
+				if (innerInds[ii].parentNode) innerInds[ii].parentNode.removeChild(innerInds[ii]);
+			}
+			mPreviewer.appendChild(cloneChild);
+			measuredNodeList.push({ blockIndex: idx, el: cloneChild });
+		}
+
+		var baseTop = mWrapper.getBoundingClientRect().top;
+		var measuredBlocks = [];
+
+		if (mToc) {
+			var tocRect = mToc.getBoundingClientRect();
+			if (tocRect.height > 0) {
+				var tocLinks = mToc.querySelectorAll(".toc-header, .toc-link");
+				var tocSubs = [];
+				for (var tl = 0; tl < tocLinks.length; tl++) {
+					var tlRect = tocLinks[tl].getBoundingClientRect();
+					if (tlRect.height > 0) {
+						tocSubs.push({ subIndex: tl, top: tlRect.top - baseTop, bottom: tlRect.bottom - baseTop, height: tlRect.height });
+					}
+				}
+				measuredBlocks.push({
+					blockIndex: -1, tagName: "ASIDE",
+					top: tocRect.top - baseTop, bottom: tocRect.bottom - baseTop, height: tocRect.height,
+					isToc: true, isHeading: false, forceBreakBefore: false, forceBreakAfter: false, avoidBreakInside: false, subItems: tocSubs
+				});
+			}
+		}
+
+		for (var m = 0; m < measuredNodeList.length; m++) {
+			var item = measuredNodeList[m];
+			var mEl = item.el;
+			var rect = mEl.getBoundingClientRect();
+			var cStyle = (mWin && typeof mWin.getComputedStyle === "function") ? mWin.getComputedStyle(mEl) : null;
+			if (cStyle && cStyle.display === "none") continue;
+			var mTop = rect.top - baseTop, mBottom = rect.bottom - baseTop, mHeight = rect.height;
+			var tagName = (mEl.tagName || "").toUpperCase();
+			var isHeading = /^H[1-6]$/.test(tagName);
+			var avoidInside = isAvoidBreakElement(mEl, cStyle);
+			var bb = cStyle ? (cStyle.breakBefore || cStyle.pageBreakBefore || "") : "";
+			var ba = cStyle ? (cStyle.breakAfter || cStyle.pageBreakAfter || "") : "";
+			var subItems = (!avoidInside && mHeight > 20) ? collectMeasuredSubItems(mEl, mDoc, baseTop) : [];
+
+			measuredBlocks.push({
+				blockIndex: item.blockIndex, tagName: tagName,
+				top: mTop, bottom: mBottom, height: mHeight,
+				isToc: false, isHeading: isHeading,
+				forceBreakBefore: (bb === "page" || bb === "always"),
+				forceBreakAfter: (ba === "page" || ba === "always"),
+				avoidBreakInside: avoidInside,
+				avoidBreakAfter: (ba === "avoid" || ba === "avoid-page"),
+				subItems: subItems
+			});
+		}
+		return measuredBlocks;
+	}
+
+	function updatePageBreaks(genId) {
+		var p = document.getElementById("previewer");
+		if (!p) return;
+		if (genId != null && genId !== pageBreakGenerationId) return;
+
+		var sui = getSettingsUiModule();
+		if (!currentPrintProfileState && sui) {
+			initPrintProfileState();
+		}
+		if (!sui || !currentPrintProfileState || !currentPrintProfileState.measurementReady || !currentPrintProfileState.contentAreaMm) {
+			clearPageBreakOverlay(p);
+			window.__kantanLastPageBreakModel = { measurementReady: false, totalPages: 1, breaks: [] };
+			return;
+		}
+
+		var bodyChildren = [];
+		for (var j = 0; j < p.children.length; j++) {
+			var c = p.children[j];
+			if (c.id === "kantan-page-break-overlay" ||
+				c.classList.contains("kantan-page-break-overlay") ||
+				c.classList.contains("page-break-indicator")) {
+				continue;
+			}
+			bodyChildren.push(c);
+		}
+		if (bodyChildren.length === 0) {
+			clearPageBreakOverlay(p);
+			window.__kantanLastPageBreakModel = { measurementReady: true, totalPages: 1, breaks: [] };
+			return;
+		}
+
+		var widthMm = currentPrintProfileState.contentAreaMm.width;
+		var heightMm = currentPrintProfileState.contentAreaMm.height;
+		var pageWidthPx = currentPrintProfileState.contentAreaPx ? currentPrintProfileState.contentAreaPx.width : sui.mmToCssPx(widthMm);
+		var pageHeightPx = currentPrintProfileState.contentAreaPx ? currentPrintProfileState.contentAreaPx.height : sui.mmToCssPx(heightMm);
+
+		var measuredBlocks = measureDomInFrame(bodyChildren, widthMm, heightMm);
+		if (!measuredBlocks) {
+			clearPageBreakOverlay(p);
+			return;
+		}
+
+		var model = sui.computePageBreakModel(measuredBlocks, { pageHeightPx: pageHeightPx, pageWidthPx: pageWidthPx });
+		window.__kantanLastPageBreakModel = model;
+
+		var screenBlocks = collectScreenBlocks(p, bodyChildren);
+		var mappedBreaks = sui.mapBreaksToScreenPositions(model.breaks, screenBlocks);
+		renderPageBreakOverlay(p, mappedBreaks);
+	}
+
+	initPrintProfileState();
+	on(window, "resize", function() {
+		schedulePageBreakUpdate("window-resize");
 	});
-	setTimeout(updatePageBreaks, 100);
-	setTimeout(updatePageBreaks, 500);
+	on(window, "beforeprint", function() {
+		if (!currentPrintProfileState || !currentPrintProfileState.measurementReady) {
+			clearPageBreakOverlay(document.getElementById("previewer"));
+		}
+	});
+	if (typeof document !== "undefined" && document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function") {
+		document.fonts.ready.then(function() {
+			schedulePageBreakUpdate("fonts-ready");
+		})["catch"](function() {});
+	}
+	schedulePageBreakUpdate("init");
 
 

@@ -16,15 +16,15 @@
 | save() / exportHTML() | なし | Blobダウンロード要求。後者はtitle_export.html |
 | buildToc() / updateTocActive() | 現在DOM | 目次再生成 / activeクラス更新 |
 | applyEditorZoom() | なし | CSS変数 `--editor-zoom` に現在の編集画面ズーム倍率（0.67〜2）を反映 |
-| updatePageBreaks() | 現在のpreviewer DOMと表示幅 | 既存の画面用改ページ目安を削除して再算出・挿入。編集モードでは一時的に幅300mmで計測 |
+| schedulePageBreakUpdate(reason) / updatePageBreaks(genId) / destroyPageBreakMeasurement() | 再計算理由 / 世代ID | 画面外計測iframe（`#kantan-print-measure-frame`、有効領域190×277mm）で独立計測し、境界モデル算出と画面座標対応付けを経てオーバーレイ（`#kantan-page-break-overlay`）へ描画。破棄時はタイマー・計測iframe・オーバーレイを除去 |
 | checkAndClearVersionCache() | 起動URL | バージョン情報とHTTP/HTTPS元URLを取得。表示・hidden値を更新し、通信失敗を捕捉 |
 | syncEditorPreviewScroll(source,target,sourceName) | スクロール元・同期先DOM・識別子 | 編集モード時にエディタとプレビューのスクロール位置を比率同期（循環防止ロック付き） |
 | getItem(name,defaultValue) / setItem(name,value) | 設定名・値 | 接頭辞付きLocalStorage。例外捕捉 |
 | kantanUpdate(json) | {newVersion,ktmString,doUpdate,rewirteHtml} | json.doUpdate実行。rewirteHtmlは実装の綴り通り |
-| KantanModules.SaveExport.* | DOMまたは保存状態・Blob | 4段階保存処理（collectDocumentSaveState、prepareSavePayload、serializeSingleHtmlDocument、triggerBlobDownload） |
+| KantanModules.SaveExport.* | DOMまたは保存状態・Blob | 4段階保存処理および一時DOM除外（collectDocumentSaveState、prepareSavePayload、cleanupTemporaryDomForSave、serializeSingleHtmlDocument、triggerBlobDownload） |
 | KantanModules.PreviewMermaid.* | Mermaid文字列・CSS文字列・Markdown文字列 | normalizeMermaidText、isMermaidErrorSvg、cleanupMermaidTempDom、replaceAttachUrlInCss、parseLinesForHeadingSync |
 | KantanModules.AttachmentManager.* | 添付名・Data URL・DOM | resolveUniqueAttachName、validateAttachmentRename、base64ToBlob、collectAttachmentsFromDom、decodeAttachName、extractAttachName、isVideoAttachment、buildAttachmentInsertTag |
-| KantanModules.SettingsUi.* | 設定名・ズーム・要素位置・スクロール量 | LocalStorage永続化、getNextEditorZoom、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop |
+| KantanModules.SettingsUi.* | 設定名・ズーム・プロファイルJSON・計測ブロック・画面ブロック・スクロール量 | LocalStorage永続化、getNextEditorZoom、mmToCssPx、cssPxToMm、validateAndNormalizePrintProfile、formatPrintProfileStatusText、computePageBreakModel、mapBreaksToScreenPositions、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop |
 | KantanModules.UpdateInit.* | 要素・イベント・パス・版番号 | createEventRegistry（重複登録防止付きregister / removeAll）、resolveUpdateScriptUrl、compareVersions、shouldUpdateDisplayedVersion |
 
 ## 外部リソース

@@ -375,6 +375,7 @@ body.dark #wrapper #editorTabWrapper #editorTabContents #cssEditor {
 	min-width: 240px;
 	padding: 32px 40px;
 	overflow-y: auto;
+	position: relative;
 }
 
 body.view-mode #previewer.full-width {
@@ -391,17 +392,51 @@ body.view-mode #previewer.full-width {
 	overflow-y: visible;
 	height: auto;
 	display: flow-root;
+	position: relative;
+}
+
+#kantan-page-break-overlay,
+.kantan-page-break-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 0;
+	overflow: visible;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-select: none;
+	z-index: 5;
 }
 
 .page-break-indicator {
-	position: relative;
-	margin: 28px -40px 20px;
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 0;
+	margin: 0;
 	border-top: 2px dashed var(--border);
 	text-align: right;
 	user-select: none;
 	-webkit-user-select: none;
 	pointer-events: none;
 	clear: both;
+	z-index: 5;
+}
+
+#kantan-print-measure-frame,
+.kantan-print-measure-frame {
+	position: fixed;
+	left: -10000px;
+	top: 0;
+	width: 190mm;
+	height: 277mm;
+	border: 0;
+	margin: 0;
+	padding: 0;
+	visibility: hidden;
+	pointer-events: none;
+	z-index: -1;
 }
 
 .page-break-indicator::after {
@@ -576,6 +611,56 @@ body.editMode #toolbar #btn-editor-zoom-reset {
 	cursor: pointer;
 }
 
+#settings-panel .settings-section-title {
+	font-weight: bold;
+	margin: 0 0 4px;
+}
+
+#settings-panel .print-profile-status {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--accent);
+	margin-bottom: 4px;
+}
+
+#settings-panel .print-profile-status[data-ready="false"] {
+	color: var(--danger);
+}
+
+#settings-panel .print-profile-meta {
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--text-muted);
+	margin-bottom: 4px;
+}
+
+#settings-panel .print-profile-actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+#settings-panel .print-profile-btn {
+	flex: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 11px;
+	padding: 4px 6px;
+	margin: 0;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-surface);
+	color: var(--text);
+	cursor: pointer;
+	text-align: center;
+}
+
+#settings-panel .print-profile-btn:hover {
+	background: var(--bg);
+	border-color: var(--accent);
+}
+
 body.dark #settings-panel {
     box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
@@ -691,6 +776,29 @@ body.toc-visible.view-mode #previewer.full-width {
 }
 
 /* markdown-previewer background styling */
+#previewer code,
+#previewer tt,
+#previewer pre,
+#previewer pre code,
+#previewer pre tt {
+	color: var(--text, #1f2328);
+	font-family: var(--font-mono);
+}
+
+body:not(.dark) #previewer code,
+body:not(.dark) #previewer tt,
+body:not(.dark) #previewer pre,
+body:not(.dark) #previewer pre code,
+body:not(.dark) #previewer pre tt,
+body:not(.dark) #previewer .hljs,
+body:not(.dark) #previewer .hljs-comment,
+body:not(.dark) #previewer .hljs-quote,
+body:not(.dark) #previewer .hljs-keyword,
+body:not(.dark) #previewer .hljs-selector-tag,
+body:not(.dark) #previewer .hljs-subst {
+	color: #1f2328;
+}
+
 #previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6 {
 	border-bottom: 1px solid var(--border);
 	padding-bottom: 0.3em;
@@ -701,8 +809,15 @@ body.dark #previewer {
 	background-color: var(--bg-preview);
 }
 
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
   html, body {
+    margin: 0;
+    padding: 0;
     background: transparent;
     background-color: transparent;
     height: auto;
@@ -719,6 +834,10 @@ body.dark #previewer {
     display: none;
   }
 
+  #kantan-print-measure-frame,
+  .kantan-print-measure-frame,
+  #kantan-page-break-overlay,
+  .kantan-page-break-overlay,
   .page-break-indicator {
     display: none !important;
   }

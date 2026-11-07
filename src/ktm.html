@@ -74,6 +74,19 @@
 	<label><input type="checkbox" id="setting-require-trailing-spaces"> 改行に末尾スペース2個を必須にする</label>
 	
 	<hr style="border-top:1px solid var(--border); margin: 10px 0;">
+	<div id="print-profile-section">
+		<p class="settings-section-title">印刷目安（Chrome）</p>
+		<div id="print-profile-status" class="print-profile-status" data-ready="true">準備完了（採用印刷条件・計測有効）</div>
+		<div id="print-profile-condition" class="print-profile-meta">Chrome / A4縦 210×297mm / 余白上下左右10mm / 倍率100% / ヘッダー・フッターOFF / 背景ON（有効本文領域 190×277mm）</div>
+		<div id="print-profile-guidance" class="print-profile-meta">ブラウザの印刷設定変更後は再取り込みが必要です。印刷画面でもA4縦・余白10mm・倍率100%・ヘッダー/フッターOFF・背景ONを確認してください。</div>
+		<div class="print-profile-actions">
+			<label for="print-profile-file" class="print-profile-btn" id="btn-print-profile-import">プロファイルJSON取込</label>
+			<input type="file" id="print-profile-file" accept=".json,application/json" hidden="">
+			<button type="button" id="btn-print-profile-reset" class="print-profile-btn">採用条件に戻す</button>
+		</div>
+	</div>
+	
+	<hr style="border-top:1px solid var(--border); margin: 10px 0;">
 	<p style="font-weight: bold; margin-bottom: 5px;">メニュー</p>
 	<a href="https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">新規作成</a>
 	<a href="http://tatesuke.github.io/KanTanMarkdown/syntax.html" id="helpButton" target="_blank" style="display:block; margin: 5px 0; color: var(--accent); text-decoration: none;">Markdown記法ヘルプ(F1)</a>
