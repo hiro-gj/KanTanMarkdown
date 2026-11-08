@@ -541,18 +541,18 @@ body.editMode #toolbar #btn-editor-zoom-reset {
 }
 
 #importDialog {
-	border : 1px solid gray;
-	position:absolute;
-	width:440px;
-}
-
-#importDialog {
-	border : 1px solid gray;
-	position:absolute;
-	width:440px;
-	padding:20px;
-	display:none;
-	background-color:white;
+	border: 1px solid var(--border, gray);
+	border-radius: var(--radius, 6px);
+	position: fixed;
+	top: 10px;
+	z-index: 2000;
+	width: 440px;
+	padding: 20px;
+	display: none;
+	background: var(--bg-surface, #fff);
+	background-color: var(--bg-surface, #fff);
+	color: var(--text, #1f2328);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 #importDialog  ul.buttonArea {
@@ -5705,6 +5705,10 @@ LetterModeStrategy.prototype = {
         if (showPbCb) {
             showPbCb.removeAttribute('checked');
         }
+        var kantanVerEl = doc.getElementById('kantanVersion');
+        if (kantanVerEl && typeof kantanVerEl.removeAttribute === 'function') {
+            kantanVerEl.removeAttribute('data-embedded-version');
+        }
         var profileInput = doc.getElementById('print-profile-file');
         if (profileInput) {
             try {
@@ -6584,6 +6588,55 @@ LetterModeStrategy.prototype = {
         };
     }
 
+    /**
+     * Hides the settings panel (#settings-panel) by setting the hidden attribute.
+     * Ensures the settings top menu closes immediately when starting an update or opening the import dialog.
+     * @param {Document} [docRef]
+     * @returns {boolean}
+     */
+    function hideSettingsPanel(docRef) {
+        var d = docRef || (typeof document !== 'undefined' ? document : null);
+        if (!d || typeof d.getElementById !== 'function') return false;
+        var panel = d.getElementById('settings-panel');
+        if (panel && typeof panel.setAttribute === 'function') {
+            panel.setAttribute('hidden', '');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Resolves the CSS value to apply in #cssEditor during kantanUpdate.rewirteHtml.
+     * - When overwriteWithLatestCss is true ("CSS(上書き)" checked): keeps the new template's default CSS
+     *   (newDefaultCss) so the document is updated to the latest standard CSS, and marks document unsaved.
+     * - When overwriteWithLatestCss is false ("CSS(上書き)" unchecked): preserves the user's pre-update CSS
+     *   (originalCss) if non-empty.
+     * @param {string} newDefaultCss
+     * @param {string} originalCss
+     * @param {boolean} overwriteWithLatestCss
+     * @returns {{ cssValue: string, markUnsaved: boolean }}
+     */
+    function resolveCssAfterUpdate(newDefaultCss, originalCss, overwriteWithLatestCss) {
+        var defaultCss = typeof newDefaultCss === 'string' ? newDefaultCss : '';
+        var prevCss = typeof originalCss === 'string' ? originalCss : '';
+        if (overwriteWithLatestCss) {
+            return {
+                cssValue: defaultCss,
+                markUnsaved: true
+            };
+        }
+        if (prevCss) {
+            return {
+                cssValue: prevCss,
+                markUnsaved: false
+            };
+        }
+        return {
+            cssValue: defaultCss,
+            markUnsaved: false
+        };
+    }
+
     var UpdateInitModule = {
         RELEASE_UPDATE_URL: RELEASE_UPDATE_URL,
         PREVIEW_UPDATE_URL: PREVIEW_UPDATE_URL,
@@ -6592,6 +6645,8 @@ LetterModeStrategy.prototype = {
         parseVersionTuple: parseVersionTuple,
         compareVersions: compareVersions,
         shouldUpdateDisplayedVersion: shouldUpdateDisplayedVersion,
+        hideSettingsPanel: hideSettingsPanel,
+        resolveCssAfterUpdate: resolveCssAfterUpdate,
         createEventRegistry: createEventRegistry
     };
 
@@ -6628,7 +6683,11 @@ LetterModeStrategy.prototype = {
 	}
 
 	/* アップデート */
-    updateKantanVersion(document.getElementById("kantanVersion").value);
+	var initialVersionElem = document.getElementById("kantanVersion");
+	if (initialVersionElem && !initialVersionElem.getAttribute("data-embedded-version")) {
+		initialVersionElem.setAttribute("data-embedded-version", initialVersionElem.value);
+	}
+    updateKantanVersion(initialVersionElem ? initialVersionElem.value : "");
 	
 	var eventRegistry = (window.KantanModules && window.KantanModules.UpdateInit)
 		? window.KantanModules.UpdateInit.createEventRegistry(document)
@@ -6737,6 +6796,15 @@ LetterModeStrategy.prototype = {
 
 	on("#updateButton", "click", function(event) {
 		event.preventDefault();
+		if (window.KantanModules && window.KantanModules.UpdateInit &&
+			typeof window.KantanModules.UpdateInit.hideSettingsPanel === "function") {
+			window.KantanModules.UpdateInit.hideSettingsPanel(document);
+		} else {
+			var sp = document.getElementById("settings-panel");
+			if (sp) {
+				sp.setAttribute("hidden", "");
+			}
+		}
 		
 		if(!window.confirm(
 				"最新版にアップデートします。\n" +
@@ -8065,6 +8133,15 @@ LetterModeStrategy.prototype = {
 	} 
 	
 	function showImportDialog(msg, callback) {
+		if (window.KantanModules && window.KantanModules.UpdateInit &&
+			typeof window.KantanModules.UpdateInit.hideSettingsPanel === "function") {
+			window.KantanModules.UpdateInit.hideSettingsPanel(document);
+		} else {
+			var sp = document.getElementById("settings-panel");
+			if (sp) {
+				sp.setAttribute("hidden", "");
+			}
+		}
 		document.getElementById("btn-save").disabled =  true;
 		document.getElementById("importDialogMessage").innerText = msg;
 		var dialogElement = document.getElementById("importDialog");

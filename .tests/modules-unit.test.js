@@ -237,6 +237,41 @@ function runTests() {
         assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v2.20261102.3', 'v3.20261102.1'), true);
         assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v3.20261102.1', 'v3.20261102.1'), true);
         assert.strictEqual(UpdateInit.shouldUpdateDisplayedVersion('v3.20261102.1', ''), false);
+
+        // Settings panel auto-hide on update / dialog open
+        const panelAttrs = {};
+        const mockDocWithPanel = {
+            getElementById(id) {
+                if (id === 'settings-panel') {
+                    return {
+                        setAttribute(k, v) { panelAttrs[k] = v; }
+                    };
+                }
+                return null;
+            }
+        };
+        assert.strictEqual(UpdateInit.hideSettingsPanel(mockDocWithPanel), true);
+        assert.strictEqual(panelAttrs.hidden, '', 'hideSettingsPanel must set hidden="" on #settings-panel');
+        assert.strictEqual(UpdateInit.hideSettingsPanel({ getElementById() { return null; } }), false);
+
+        // CSS update resolution ("CSS(上書き)" checked vs unchecked)
+        const latestDefaultCss = 'code, tt { color: var(--text, #1f2328); }';
+        const oldCustomCss = 'body { color: #333; }';
+        assert.deepStrictEqual(
+            UpdateInit.resolveCssAfterUpdate(latestDefaultCss, oldCustomCss, true),
+            { cssValue: latestDefaultCss, markUnsaved: true },
+            'When "CSS(上書き)" is checked (true), resolveCssAfterUpdate must apply the latest default CSS and mark unsaved'
+        );
+        assert.deepStrictEqual(
+            UpdateInit.resolveCssAfterUpdate(latestDefaultCss, oldCustomCss, false),
+            { cssValue: oldCustomCss, markUnsaved: false },
+            'When "CSS(上書き)" is unchecked (false), resolveCssAfterUpdate must preserve the existing CSS'
+        );
+        assert.deepStrictEqual(
+            UpdateInit.resolveCssAfterUpdate(latestDefaultCss, '', false),
+            { cssValue: latestDefaultCss, markUnsaved: false },
+            'When "CSS(上書き)" is unchecked and existing CSS is empty, resolveCssAfterUpdate must fall back to default CSS'
+        );
     });
 
     // 6. Phase 5 verification: Legacy IE browser branches removed from custom JS
@@ -480,8 +515,13 @@ function runTests() {
         assert(kantanMdCode.includes('SaveExport.cleanupTemporaryDomForSave(document)'),
             'getHTMLForSave must call SaveExport.cleanupTemporaryDomForSave');
         assert(kantanMdCode.includes('UpdateInit.createEventRegistry(') &&
-            kantanMdCode.includes('UpdateInit.resolveUpdateScriptUrl('),
-            'event registration and update URL resolution must delegate to UpdateInit');
+            kantanMdCode.includes('UpdateInit.resolveUpdateScriptUrl(') &&
+            kantanMdCode.includes('UpdateInit.hideSettingsPanel('),
+            'event registration, update URL resolution, and settings panel auto-close must delegate to UpdateInit');
+        const kantanUpdateCode = fs.readFileSync(path.join(rootDir, 'src', 'kantanUpdate.js'), 'utf-8');
+        assert(kantanUpdateCode.includes('UpdateInit.hideSettingsPanel(') &&
+            kantanUpdateCode.includes('UpdateInit.resolveCssAfterUpdate('),
+            'kantanUpdate.js must delegate settings panel hiding and CSS overwrite resolution to UpdateInit');
     });
 
     // 9. Release promotion immutability, manifest verification, and version mismatch rejection (R1, R2, R4)

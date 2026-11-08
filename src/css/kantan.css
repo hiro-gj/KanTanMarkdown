@@ -531,18 +531,18 @@ body.editMode #toolbar #btn-editor-zoom-reset {
 }
 
 #importDialog {
-	border : 1px solid gray;
-	position:absolute;
-	width:440px;
-}
-
-#importDialog {
-	border : 1px solid gray;
-	position:absolute;
-	width:440px;
-	padding:20px;
-	display:none;
-	background-color:white;
+	border: 1px solid var(--border, gray);
+	border-radius: var(--radius, 6px);
+	position: fixed;
+	top: 10px;
+	z-index: 2000;
+	width: 440px;
+	padding: 20px;
+	display: none;
+	background: var(--bg-surface, #fff);
+	background-color: var(--bg-surface, #fff);
+	color: var(--text, #1f2328);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 #importDialog  ul.buttonArea {

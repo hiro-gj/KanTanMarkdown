@@ -158,6 +158,55 @@
         };
     }
 
+    /**
+     * Hides the settings panel (#settings-panel) by setting the hidden attribute.
+     * Ensures the settings top menu closes immediately when starting an update or opening the import dialog.
+     * @param {Document} [docRef]
+     * @returns {boolean}
+     */
+    function hideSettingsPanel(docRef) {
+        var d = docRef || (typeof document !== 'undefined' ? document : null);
+        if (!d || typeof d.getElementById !== 'function') return false;
+        var panel = d.getElementById('settings-panel');
+        if (panel && typeof panel.setAttribute === 'function') {
+            panel.setAttribute('hidden', '');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Resolves the CSS value to apply in #cssEditor during kantanUpdate.rewirteHtml.
+     * - When overwriteWithLatestCss is true ("CSS(上書き)" checked): keeps the new template's default CSS
+     *   (newDefaultCss) so the document is updated to the latest standard CSS, and marks document unsaved.
+     * - When overwriteWithLatestCss is false ("CSS(上書き)" unchecked): preserves the user's pre-update CSS
+     *   (originalCss) if non-empty.
+     * @param {string} newDefaultCss
+     * @param {string} originalCss
+     * @param {boolean} overwriteWithLatestCss
+     * @returns {{ cssValue: string, markUnsaved: boolean }}
+     */
+    function resolveCssAfterUpdate(newDefaultCss, originalCss, overwriteWithLatestCss) {
+        var defaultCss = typeof newDefaultCss === 'string' ? newDefaultCss : '';
+        var prevCss = typeof originalCss === 'string' ? originalCss : '';
+        if (overwriteWithLatestCss) {
+            return {
+                cssValue: defaultCss,
+                markUnsaved: true
+            };
+        }
+        if (prevCss) {
+            return {
+                cssValue: prevCss,
+                markUnsaved: false
+            };
+        }
+        return {
+            cssValue: defaultCss,
+            markUnsaved: false
+        };
+    }
+
     var UpdateInitModule = {
         RELEASE_UPDATE_URL: RELEASE_UPDATE_URL,
         PREVIEW_UPDATE_URL: PREVIEW_UPDATE_URL,
@@ -166,6 +215,8 @@
         parseVersionTuple: parseVersionTuple,
         compareVersions: compareVersions,
         shouldUpdateDisplayedVersion: shouldUpdateDisplayedVersion,
+        hideSettingsPanel: hideSettingsPanel,
+        resolveCssAfterUpdate: resolveCssAfterUpdate,
         createEventRegistry: createEventRegistry
     };
 
