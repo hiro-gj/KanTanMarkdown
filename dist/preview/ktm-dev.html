@@ -385,6 +385,7 @@ body.dark #wrapper #editorTabWrapper #editorTabContents #cssEditor {
 	min-width: 240px;
 	padding: 32px 40px;
 	overflow-y: auto;
+	position: relative;
 }
 
 body.view-mode #previewer.full-width {
@@ -401,17 +402,51 @@ body.view-mode #previewer.full-width {
 	overflow-y: visible;
 	height: auto;
 	display: flow-root;
+	position: relative;
+}
+
+#kantan-page-break-overlay,
+.kantan-page-break-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 0;
+	overflow: visible;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-select: none;
+	z-index: 5;
 }
 
 .page-break-indicator {
-	position: relative;
-	margin: 28px -40px 20px;
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 0;
+	margin: 0;
 	border-top: 2px dashed var(--border);
 	text-align: right;
 	user-select: none;
 	-webkit-user-select: none;
 	pointer-events: none;
 	clear: both;
+	z-index: 5;
+}
+
+#kantan-print-measure-frame,
+.kantan-print-measure-frame {
+	position: fixed;
+	left: -10000px;
+	top: 0;
+	width: 190mm;
+	height: 277mm;
+	border: 0;
+	margin: 0;
+	padding: 0;
+	visibility: hidden;
+	pointer-events: none;
+	z-index: -1;
 }
 
 .page-break-indicator::after {
@@ -701,6 +736,29 @@ body.toc-visible.view-mode #previewer.full-width {
 }
 
 /* markdown-previewer background styling */
+#previewer code,
+#previewer tt,
+#previewer pre,
+#previewer pre code,
+#previewer pre tt {
+	color: var(--text, #1f2328);
+	font-family: var(--font-mono);
+}
+
+body:not(.dark) #previewer code,
+body:not(.dark) #previewer tt,
+body:not(.dark) #previewer pre,
+body:not(.dark) #previewer pre code,
+body:not(.dark) #previewer pre tt,
+body:not(.dark) #previewer .hljs,
+body:not(.dark) #previewer .hljs-comment,
+body:not(.dark) #previewer .hljs-quote,
+body:not(.dark) #previewer .hljs-keyword,
+body:not(.dark) #previewer .hljs-selector-tag,
+body:not(.dark) #previewer .hljs-subst {
+	color: #1f2328;
+}
+
 #previewer h1, #previewer h2, #previewer h3, #previewer h4, #previewer h5, #previewer h6 {
 	border-bottom: 1px solid var(--border);
 	padding-bottom: 0.3em;
@@ -711,8 +769,15 @@ body.dark #previewer {
 	background-color: var(--bg-preview);
 }
 
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
 @media print {
   html, body {
+    margin: 0;
+    padding: 0;
     background: transparent;
     background-color: transparent;
     height: auto;
@@ -729,6 +794,10 @@ body.dark #previewer {
     display: none;
   }
 
+  #kantan-print-measure-frame,
+  .kantan-print-measure-frame,
+  #kantan-page-break-overlay,
+  .kantan-page-break-overlay,
   .page-break-indicator {
     display: none !important;
   }
@@ -1323,6 +1392,8 @@ tt {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    color: var(--text, #1f2328);
+    font-family: var(--font-mono, "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace);
     border: 1px solid #eaeaea;
     background-color: #f8f8f8;
     border-radius: 3px;
@@ -1331,12 +1402,16 @@ pre code {
     margin: 0;
     padding: 0;
     white-space: pre-wrap;
+    color: var(--text, #1f2328);
+    font-family: var(--font-mono, "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace);
     border: none;
     background: transparent;
 }
 .highlight pre {
     background-color: #f8f8f8;
     border: 1px solid #cccccc;
+    color: var(--text, #1f2328);
+    font-family: var(--font-mono, "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace);
     font-size: 13px;
     line-height: 19px;
     overflow: auto;
@@ -1346,6 +1421,8 @@ pre code {
 pre {
     background-color: #f8f8f8;
     border: 1px solid #cccccc;
+    color: var(--text, #1f2328);
+    font-family: var(--font-mono, "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace);
     font-size: 13px;
     line-height: 19px;
     overflow: auto;
@@ -1357,6 +1434,8 @@ pre tt {
     margin: 0;
     padding: 0;
     white-space: pre-wrap;
+    color: var(--text, #1f2328);
+    font-family: var(--font-mono, "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace);
     background-color: transparent;
     border: none;
 }
@@ -1545,20 +1624,20 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
   display: block;
   overflow-x: auto;
   padding: 0.5em;
-  color: #333;
+  color: #1f2328;
   background: #f8f8f8;
 }
 
 .hljs-comment,
 .hljs-quote {
-  color: #998;
+  color: #1f2328;
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-subst {
-  color: #333;
+  color: #1f2328;
   font-weight: bold;
 }
 
@@ -1659,6 +1738,7 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
 	<label><input type="checkbox" id="setting-auto-close-tag"> 閉じタグを自動挿入</label>
 	<label><input type="checkbox" id="setting-insert-img-tag"> 画像添付時にタグを挿入</label>
 	<label><input type="checkbox" id="setting-require-trailing-spaces"> 改行に末尾スペース2個を必須にする</label>
+	<label><input type="checkbox" id="setting-show-page-break"> 改ページインジゲータを表示する</label>
 	
 	<hr style="border-top:1px solid var(--border); margin: 10px 0;">
 	<p style="font-weight: bold; margin-bottom: 5px;">メニュー</p>
@@ -5593,12 +5673,57 @@ LetterModeStrategy.prototype = {
     }
 
     /**
+     * Removes temporary measurement iframes, page-break overlays, stray Mermaid nodes,
+     * and temporary measurement attributes before serializing HTML for saving.
+     * @param {Document} doc
+     */
+    function cleanupTemporaryDomForSave(doc) {
+        if (!doc || typeof doc.querySelectorAll !== 'function') return;
+        var tempSelectors = [
+            '#kantan-print-measure-frame',
+            '.kantan-print-measure-frame',
+            '#kantan-page-break-overlay',
+            '.kantan-page-break-overlay',
+            '.page-break-indicator',
+            'div[id^="dkantan-mermaid-"]',
+            'iframe[id^="ikantan-mermaid-"]',
+            'body > svg[id^="kantan-mermaid-"]'
+        ].join(', ');
+        var tempNodes = doc.querySelectorAll(tempSelectors);
+        for (var i = 0; i < tempNodes.length; i++) {
+            var node = tempNodes[i];
+            if (node && node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+        }
+        var taggedNodes = doc.querySelectorAll('[data-kantan-block-id], [data-kantan-measure-id]');
+        for (var j = 0; j < taggedNodes.length; j++) {
+            taggedNodes[j].removeAttribute('data-kantan-block-id');
+            taggedNodes[j].removeAttribute('data-kantan-measure-id');
+        }
+        var showPbCb = doc.getElementById('setting-show-page-break');
+        if (showPbCb) {
+            showPbCb.removeAttribute('checked');
+        }
+        var profileInput = doc.getElementById('print-profile-file');
+        if (profileInput) {
+            try {
+                profileInput.value = '';
+            } catch (_) {}
+        }
+    }
+
+    /**
      * Stage 3: Serializes the inner HTML of the document root into a complete single-file HTML string.
+     * Strips any residual measurement iframe or page-break overlay markup if present.
      * @param {string} htmlInnerMarkup
      * @returns {string}
      */
     function serializeSingleHtmlDocument(htmlInnerMarkup) {
-        var html = '<!doctype html>\n<html>\n' + (htmlInnerMarkup || '');
+        var cleanedMarkup = (htmlInnerMarkup || '')
+            .replace(/<iframe[^>]*\bid=["']kantan-print-measure-frame["'][^>]*>[\s\S]*?<\/iframe>/gi, '')
+            .replace(/<div[^>]*\bid=["']kantan-page-break-overlay["'][^>]*>[\s\S]*?<\/div>/gi, '');
+        var html = '<!doctype html>\n<html>\n' + cleanedMarkup;
         var lastScriptCloseIdx = html.lastIndexOf('/script>');
         if (lastScriptCloseIdx !== -1) {
             html = html.substring(0, lastScriptCloseIdx) + '/script>\n</body>\n</html>';
@@ -5641,6 +5766,7 @@ LetterModeStrategy.prototype = {
         normalizeDocumentTitle: normalizeDocumentTitle,
         collectDocumentSaveState: collectDocumentSaveState,
         prepareSavePayload: prepareSavePayload,
+        cleanupTemporaryDomForSave: cleanupTemporaryDomForSave,
         serializeSingleHtmlDocument: serializeSingleHtmlDocument,
         triggerBlobDownload: triggerBlobDownload
     };
@@ -5665,6 +5791,60 @@ LetterModeStrategy.prototype = {
     var STORAGE_PREFIX = 'com.tatesuke.ktm.';
     var DEFAULT_EDITOR_ZOOM = 0.67;
     var EDITOR_ZOOM_STEPS = [0.67, 1, 1.2, 1.4, 1.6, 1.8, 2];
+    var MM_TO_PX_RATIO = 96 / 25.4;
+
+    var ADOPTED_PRINT_PROFILE = {
+        schemaVersion: 1,
+        status: 'adopted-for-planning',
+        source: {
+            browser: 'Chrome',
+            kind: 'saved-preferences',
+            liveValuesVerified: false,
+            overrides: {
+                margins: 'user-specified-10mm-each-side'
+            }
+        },
+        paper: {
+            widthMm: 210,
+            heightMm: 297,
+            landscape: false
+        },
+        margins: {
+            mode: 'custom',
+            effectiveMm: { top: 10, right: 10, bottom: 10, left: 10 }
+        },
+        scaling: {
+            mode: 'custom',
+            percent: 100
+        },
+        headerFooterEnabled: false,
+        backgroundsEnabled: true,
+        contentAreaMm: { width: 190, height: 277 },
+        measurementReady: true,
+        cssApplied: true,
+        warnings: [
+            'Margins are an explicit user override, not an observed Chrome preference.',
+            'Verify the print dialog and output PDF use A4 portrait, 10mm margins and 100 percent scaling.'
+        ]
+    };
+
+    function isFiniteNumber(val) {
+        return typeof val === 'number' && isFinite(val);
+    }
+
+    function cloneDefaultAdoptedProfile() {
+        return JSON.parse(JSON.stringify(ADOPTED_PRINT_PROFILE));
+    }
+
+    function mmToCssPx(mm) {
+        if (typeof mm !== 'number' || !isFinite(mm) || mm <= 0) return 0;
+        return mm * MM_TO_PX_RATIO;
+    }
+
+    function cssPxToMm(px) {
+        if (typeof px !== 'number' || !isFinite(px) || px <= 0) return 0;
+        return px / MM_TO_PX_RATIO;
+    }
 
     /**
      * Formats a setting key with the KanTanMarkdown localStorage prefix.
@@ -5765,6 +5945,358 @@ LetterModeStrategy.prototype = {
         return false;
     }
 
+    function parseProfileInput(raw, opts) {
+        if (typeof raw === 'string') {
+            var s = raw.trim();
+            if (!s) return { err: 'empty-input', msg: 'JSONが空です。' };
+            try { raw = JSON.parse(s); } catch (e) { return { err: 'invalid-json', msg: '無効なJSON形式です。' }; }
+        }
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { err: 'invalid-object', msg: '形式不正' };
+        if (raw.schemaVersion !== 1) return { err: 'unsupported-schema-version', msg: '未対応schemaVersion' };
+        if (Array.isArray(raw.browsers) && raw.browsers.length > 0) {
+            var bName = (opts && opts.browser) ? String(opts.browser) : 'Chrome';
+            var m = raw.browsers[0];
+            for (var i = 0; i < raw.browsers.length; i++) {
+                if (raw.browsers[i] && raw.browsers[i].browser === bName) { m = raw.browsers[i]; break; }
+            }
+            return {
+                obj: {
+                    schemaVersion: 1, status: 'observed-preferences',
+                    source: { browser: m.browser || null, browserVersion: m.browserVersion || null, kind: m.sourceKind || 'saved-preferences', capturedAt: m.capturedAt || null, liveValuesVerified: Boolean(m.liveValuesVerified) },
+                    paper: m.paper || null, margins: m.margins || null, scaling: m.scaling || null,
+                    headerFooterEnabled: m.headerFooterEnabled, backgroundsEnabled: m.backgroundsEnabled,
+                    warnings: Array.isArray(m.warnings) ? m.warnings.slice() : []
+                }
+            };
+        }
+        return { obj: raw };
+    }
+
+    function validateAndNormalizePrintProfile(rawInput, options) {
+        var pre = parseProfileInput(rawInput, options);
+        if (pre.err) {
+            return { valid: false, measurementReady: false, supported: false, status: 'invalid', reasons: [pre.err], warnings: [pre.msg], profile: null, contentAreaMm: null, contentAreaPx: null };
+        }
+        var t = pre.obj, r = [], w = [];
+        if (Array.isArray(t.warnings)) {
+            for (var i = 0; i < t.warnings.length; i++) if (typeof t.warnings[i] === 'string') w.push(t.warnings[i]);
+        }
+        var src = (t.source && typeof t.source === 'object') ? t.source : {};
+        var bName = typeof src.browser === 'string' ? src.browser : (typeof t.browser === 'string' ? t.browser : 'Chrome');
+        if (bName !== 'Chrome') r.push('unsupported-browser');
+
+        var p = (t.paper && typeof t.paper === 'object') ? t.paper : {};
+        var wMm = isFiniteNumber(p.widthMm) && p.widthMm > 0 ? Number(p.widthMm) : null;
+        var hMm = isFiniteNumber(p.heightMm) && p.heightMm > 0 ? Number(p.heightMm) : null;
+        var land = typeof p.landscape === 'boolean' ? p.landscape : null;
+        if (wMm == null || hMm == null) r.push('missing-paper-size');
+        else if (Math.abs(wMm - 210) > 0.5 || Math.abs(hMm - 297) > 0.5) r.push('unsupported-paper-size');
+        if (land === null) r.push('missing-orientation');
+        else if (land === true) r.push('landscape-orientation');
+
+        var mg = (t.margins && typeof t.margins === 'object') ? t.margins : {};
+        var mMode = typeof mg.mode === 'string' ? mg.mode : 'unknown';
+        var effMm = null;
+        if (!(mg.storedCustomMarginsActive === false && mMode !== 'custom') && mg.effectiveMm && typeof mg.effectiveMm === 'object') {
+            var em = mg.effectiveMm;
+            if (isFiniteNumber(em.top) && em.top >= 0 && isFiniteNumber(em.right) && em.right >= 0 &&
+                isFiniteNumber(em.bottom) && em.bottom >= 0 && isFiniteNumber(em.left) && em.left >= 0) {
+                effMm = { top: Number(em.top), right: Number(em.right), bottom: Number(em.bottom), left: Number(em.left) };
+            }
+        }
+        if (mMode !== 'custom' && mMode !== 'none') r.push('unsupported-margin-mode');
+        if (!effMm) r.push('missing-effective-margins');
+        else if (Math.abs(effMm.top - 10) > 0.5 || Math.abs(effMm.right - 10) > 0.5 || Math.abs(effMm.bottom - 10) > 0.5 || Math.abs(effMm.left - 10) > 0.5) r.push('non-adopted-margins');
+
+        return finalizePrintProfileValidation(t, bName, wMm, hMm, land, mMode, effMm, r, w);
+    }
+
+    function finalizePrintProfileValidation(t, bName, wMm, hMm, land, mMode, effMm, r, w) {
+        var sc = (t.scaling && typeof t.scaling === 'object') ? t.scaling : {};
+        var sMode = typeof sc.mode === 'string' ? sc.mode : 'unknown';
+        var pct = isFiniteNumber(sc.percent) ? Number(sc.percent) : (isFiniteNumber(sc.effectivePercent) ? Number(sc.effectivePercent) : null);
+        if (sMode !== 'custom' && sMode !== 'default') r.push('unsupported-scaling-mode');
+        if (pct == null) r.push('missing-scaling-percent');
+        else if (Math.abs(pct - 100) > 0.01) r.push('unsupported-scaling-percent');
+
+        var hf = typeof t.headerFooterEnabled === 'boolean' ? t.headerFooterEnabled : null;
+        if (hf === null) r.push('missing-header-footer-setting');
+        else if (hf === true) r.push('header-footer-enabled');
+
+        var bg = typeof t.backgroundsEnabled === 'boolean' ? t.backgroundsEnabled : null;
+        if (bg === null) r.push('missing-backgrounds-setting');
+        else if (bg === false) r.push('backgrounds-disabled');
+
+        var cMm = null, cPx = null;
+        if (wMm != null && hMm != null && effMm != null && land !== null) {
+            var cw = (land ? hMm : wMm) - effMm.left - effMm.right;
+            var ch = (land ? wMm : hMm) - effMm.top - effMm.bottom;
+            if (cw > 0 && ch > 0) {
+                cMm = { width: Math.round(cw * 1000) / 1000, height: Math.round(ch * 1000) / 1000 };
+                cPx = { width: mmToCssPx(cMm.width), height: mmToCssPx(cMm.height) };
+            } else r.push('invalid-content-area');
+        }
+        var ok = r.length === 0 && cMm !== null && cPx !== null;
+        var src = (t.source && typeof t.source === 'object') ? t.source : {};
+        return {
+            valid: true, measurementReady: ok, supported: ok, status: ok ? 'ready' : 'unready',
+            reasons: r, warnings: w,
+            profile: {
+                schemaVersion: 1, status: typeof t.status === 'string' ? t.status : (ok ? 'ready' : 'unready'),
+                source: { browser: bName, browserVersion: typeof src.browserVersion === 'string' ? src.browserVersion : null, kind: typeof src.kind === 'string' ? src.kind : 'saved-preferences', capturedAt: typeof src.capturedAt === 'string' ? src.capturedAt : null, liveValuesVerified: Boolean(src.liveValuesVerified), overrides: (src.overrides && typeof src.overrides === 'object') ? src.overrides : {} },
+                paper: { widthMm: wMm, heightMm: hMm, landscape: land },
+                margins: { mode: mMode, effectiveMm: effMm },
+                scaling: { mode: sMode, percent: pct },
+                headerFooterEnabled: hf, backgroundsEnabled: bg,
+                contentAreaMm: cMm, measurementReady: ok, cssApplied: ok, warnings: w
+            },
+            contentAreaMm: cMm, contentAreaPx: cPx
+        };
+    }
+
+    function formatPrintProfileStatusText(vr) {
+        if (!vr || !vr.valid || !vr.profile) {
+            return {
+                statusLabel: '未準備（無効なプロファイルJSON）',
+                conditionLabel: '有効なプロファイルが読み込まれていません。既存設定を維持します。',
+                guidanceLabel: 'Chromeの印刷設定を A4縦・余白10mm・倍率100%・ヘッダー／フッターOFF・背景ON に合わせ、プロファイルJSONを再選択してください。'
+            };
+        }
+        var p = vr.profile;
+        var paperStr = (p.paper.widthMm && p.paper.heightMm) ? (p.paper.widthMm + '×' + p.paper.heightMm + 'mm ' + (p.paper.landscape ? '横' : '縦')) : '用紙不明';
+        var marginStr = p.margins.effectiveMm ? ('余白' + p.margins.effectiveMm.top + 'mm') : ('余白未確定(' + p.margins.mode + ')');
+        var scaleStr = p.scaling.percent != null ? (p.scaling.percent + '%') : '倍率不明';
+        var hfStr = p.headerFooterEnabled === false ? 'ヘッダー/フッターOFF' : 'ヘッダー/フッターON/不明';
+        var bgStr = p.backgroundsEnabled === true ? '背景ON' : '背景OFF/不明';
+        var baseCond = p.source.browser + ' / ' + paperStr + ' / ' + marginStr + ' / 倍率' + scaleStr + ' / ' + hfStr + ' / ' + bgStr;
+        if (vr.measurementReady && vr.contentAreaMm) {
+            return {
+                statusLabel: '準備完了（採用印刷条件・計測有効）',
+                conditionLabel: baseCond + '（有効本文領域 ' + vr.contentAreaMm.width + '×' + vr.contentAreaMm.height + 'mm）',
+                guidanceLabel: 'ブラウザの印刷設定変更後は再取り込みが必要です。印刷画面でもA4縦・余白10mm・倍率100%・ヘッダー/フッターOFF・背景ONを確認してください。'
+            };
+        }
+        return {
+            statusLabel: '未準備・目安対象外（' + ((vr.reasons && vr.reasons.join(', ')) || '条件不一致') + '）',
+            conditionLabel: baseCond,
+            guidanceLabel: '改ページ目安は対象外です（横向きや他用紙での実印刷は妨げません）。目安を表示するにはChromeの印刷設定を採用条件に合わせて再取り込みしてください。'
+        };
+    }
+
+    function computePageBreakModel(blocks, options) {
+        var opts = options || {};
+        var pageHeightPx = isFiniteNumber(opts.pageHeightPx) && opts.pageHeightPx > 0
+            ? Number(opts.pageHeightPx)
+            : mmToCssPx(277);
+        var pageWidthPx = isFiniteNumber(opts.pageWidthPx) && opts.pageWidthPx > 0
+            ? Number(opts.pageWidthPx)
+            : mmToCssPx(190);
+
+        if (!Array.isArray(blocks) || blocks.length === 0 || pageHeightPx <= 0) {
+            return {
+                measurementReady: pageHeightPx > 0,
+                pageWidthPx: pageWidthPx,
+                pageHeightPx: pageHeightPx,
+                totalPages: 1,
+                breaks: [],
+                blockPages: []
+            };
+        }
+
+        var EPS = 0.5;
+        var state = { currentPage: 1, pageStartY: 0, breaks: [], blockPages: [], pendingForceBreak: false };
+
+        function pushBreak(params) {
+            state.currentPage++;
+            state.breaks.push({
+                pageNumber: state.currentPage,
+                breakIndex: state.breaks.length,
+                blockIndex: params.blockIndex,
+                isToc: Boolean(params.isToc),
+                anchorType: params.anchorType || 'before-block',
+                reason: params.reason || 'page-overflow',
+                subIndex: params.subIndex != null ? params.subIndex : null,
+                mediaIndex: params.mediaIndex != null ? params.mediaIndex : null,
+                charOffset: params.charOffset != null ? params.charOffset : null,
+                offsetRatio: isFiniteNumber(params.offsetRatio) ? Math.max(0, Math.min(1, params.offsetRatio)) : 0,
+                printY: params.printY
+            });
+            state.pageStartY = params.printY;
+        }
+
+        for (var i = 0; i < blocks.length; i++) {
+            processBlockForPageBreak(blocks, i, pageHeightPx, EPS, state, pushBreak);
+        }
+
+        return {
+            measurementReady: true,
+            pageWidthPx: pageWidthPx,
+            pageHeightPx: pageHeightPx,
+            totalPages: state.currentPage,
+            breaks: state.breaks,
+            blockPages: state.blockPages
+        };
+    }
+
+    function processBlockForPageBreak(blocks, i, pageHeightPx, EPS, state, pushBreak) {
+        var b = blocks[i];
+        if (!b || !isFiniteNumber(b.top) || !isFiniteNumber(b.bottom)) return;
+        var bTop = Number(b.top);
+        var bBottom = Number(b.bottom);
+        var bHeight = isFiniteNumber(b.height) ? Number(b.height) : Math.max(0, bBottom - bTop);
+        if (bBottom < bTop) bBottom = bTop + Math.max(0, bHeight);
+        var bIndex = b.blockIndex != null ? b.blockIndex : i;
+        var isHeading = Boolean(b.isHeading || /^H[1-6]$/i.test(b.tagName || ''));
+        var limitY = state.pageStartY + pageHeightPx;
+
+        if ((b.forceBreakBefore || state.pendingForceBreak) && (i > 0 || bTop > state.pageStartY + EPS)) {
+            pushBreak({
+                blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                reason: state.pendingForceBreak ? 'explicit-break-after' : 'explicit-break-before',
+                offsetRatio: 0, printY: bTop
+            });
+            state.pendingForceBreak = false;
+            limitY = state.pageStartY + pageHeightPx;
+        }
+        state.pendingForceBreak = false;
+
+        if (bTop >= limitY - EPS && bTop > state.pageStartY + EPS) {
+            while (bTop >= state.pageStartY + pageHeightPx * 2 - EPS) {
+                pushBreak({
+                    blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                    reason: 'page-overflow', offsetRatio: 0, printY: state.pageStartY + pageHeightPx
+                });
+            }
+            pushBreak({
+                blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                reason: 'page-overflow', offsetRatio: 0, printY: bTop
+            });
+            limitY = state.pageStartY + pageHeightPx;
+        }
+
+        if (isHeading && b.avoidBreakAfter && bBottom <= limitY + EPS && bTop > state.pageStartY + EPS && i + 1 < blocks.length) {
+            var nextB = blocks[i + 1];
+            if (nextB && isFiniteNumber(nextB.top) && isFiniteNumber(nextB.bottom)) {
+                var nextMinBottom = nextB.bottom;
+                if (!nextB.avoidBreakInside && Array.isArray(nextB.subItems) && nextB.subItems.length > 0) {
+                    nextMinBottom = nextB.subItems[0].bottom;
+                }
+                if (nextMinBottom > limitY + EPS) {
+                    pushBreak({
+                        blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                        reason: 'heading-keep-with-next', offsetRatio: 0, printY: bTop
+                    });
+                    limitY = state.pageStartY + pageHeightPx;
+                }
+            }
+        }
+
+        if (bBottom > limitY + EPS) {
+            processBlockOverflow(b, bIndex, bTop, bBottom, bHeight, isHeading, pageHeightPx, EPS, state, pushBreak);
+        }
+
+        var startPageForBlock = 1;
+        for (var brkIdx = 0; brkIdx < state.breaks.length; brkIdx++) {
+            if (state.breaks[brkIdx].printY <= bTop + EPS) startPageForBlock = state.breaks[brkIdx].pageNumber;
+        }
+        state.blockPages.push({ blockIndex: bIndex, isToc: Boolean(b.isToc), startPage: startPageForBlock, endPage: state.currentPage });
+        if (b.forceBreakAfter) state.pendingForceBreak = true;
+    }
+
+    function processBlockOverflow(b, bIndex, bTop, bBottom, bHeight, isHeading, pageHeightPx, EPS, state, pushBreak) {
+        if (b.avoidBreakInside) {
+            if (bTop > state.pageStartY + EPS) {
+                pushBreak({
+                    blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                    reason: 'avoid-break-inside', offsetRatio: 0, printY: bTop
+                });
+            }
+            while (bBottom > state.pageStartY + pageHeightPx + EPS) {
+                var sliceY = state.pageStartY + pageHeightPx;
+                pushBreak({
+                    blockIndex: bIndex, isToc: b.isToc, anchorType: 'inside-block',
+                    reason: 'long-block-slice',
+                    offsetRatio: bHeight > 0 ? (sliceY - bTop) / bHeight : 0, printY: sliceY
+                });
+            }
+            return;
+        }
+        if (Array.isArray(b.subItems) && b.subItems.length > 0) {
+            var bTag = (b.tagName || '').toUpperCase();
+            var subPageCount = 0;
+            for (var sIdx = 0; sIdx < b.subItems.length; sIdx++) {
+                var sub = b.subItems[sIdx];
+                if (!sub || !isFiniteNumber(sub.top) || !isFiniteNumber(sub.bottom)) continue;
+                var subTop = Number(sub.top), subBottom = Number(sub.bottom);
+                var subHeight = isFiniteNumber(sub.height) ? Number(sub.height) : Math.max(0, subBottom - subTop);
+                var limitY = state.pageStartY + pageHeightPx;
+                var isLastSub = (sIdx === b.subItems.length - 1);
+                var effectiveSubBottom = isLastSub ? Math.max(subBottom, bBottom) : subBottom;
+                if (effectiveSubBottom <= limitY + EPS) {
+                    subPageCount++;
+                    continue;
+                }
+
+                var isOrphanInlineSplit = (sIdx === 1 && subPageCount === 1 && !sub.isBlockMedia &&
+                    bTag !== 'TABLE' && bTag !== 'UL' && bTag !== 'OL');
+                if ((sIdx === 0 || isOrphanInlineSplit) && bTop > state.pageStartY + EPS && subHeight <= pageHeightPx + EPS) {
+                    pushBreak({
+                        blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                        reason: 'subitem-overflow', offsetRatio: 0, printY: bTop
+                    });
+                    subPageCount = 0;
+                    sIdx = -1;
+                    continue;
+                } else if (subTop > state.pageStartY + EPS) {
+                    pushBreak({
+                        blockIndex: bIndex, isToc: b.isToc, anchorType: 'inside-block',
+                        reason: 'subitem-overflow',
+                        subIndex: sub.subIndex != null ? sub.subIndex : sIdx,
+                        mediaIndex: sub.mediaIndex != null ? sub.mediaIndex : null,
+                        charOffset: sub.charOffset != null ? sub.charOffset : null,
+                        offsetRatio: bHeight > 0 ? (subTop - bTop) / bHeight : 0, printY: subTop
+                    });
+                    subPageCount = 1;
+                }
+                while (subBottom > state.pageStartY + pageHeightPx + EPS) {
+                    var subSliceY = state.pageStartY + pageHeightPx;
+                    pushBreak({
+                        blockIndex: bIndex, isToc: b.isToc, anchorType: 'inside-block',
+                        reason: 'long-block-slice',
+                        subIndex: sub.subIndex != null ? sub.subIndex : sIdx,
+                        mediaIndex: sub.mediaIndex != null ? sub.mediaIndex : null,
+                        charOffset: sub.charOffset != null ? sub.charOffset : null,
+                        offsetRatio: bHeight > 0 ? (subSliceY - bTop) / bHeight : 0, printY: subSliceY
+                    });
+                    subPageCount = 1;
+                }
+            }
+            while (bBottom > state.pageStartY + pageHeightPx + EPS) {
+                var tailSliceY = state.pageStartY + pageHeightPx;
+                pushBreak({
+                    blockIndex: bIndex, isToc: b.isToc, anchorType: 'inside-block',
+                    reason: 'long-block-slice',
+                    offsetRatio: bHeight > 0 ? (tailSliceY - bTop) / bHeight : 0, printY: tailSliceY
+                });
+            }
+            return;
+        }
+        if ((isHeading || bHeight <= pageHeightPx + EPS) && bTop > state.pageStartY + EPS) {
+            pushBreak({
+                blockIndex: bIndex, isToc: b.isToc, anchorType: 'before-block',
+                reason: 'page-overflow', offsetRatio: 0, printY: bTop
+            });
+        }
+        while (bBottom > state.pageStartY + pageHeightPx + EPS) {
+            var rawSliceY = state.pageStartY + pageHeightPx;
+            pushBreak({
+                blockIndex: bIndex, isToc: b.isToc, anchorType: 'inside-block',
+                reason: 'long-block-slice',
+                offsetRatio: bHeight > 0 ? (rawSliceY - bTop) / bHeight : 0, printY: rawSliceY
+            });
+        }
+    }
+
     /**
      * Calculates synchronized scroll position for the target pane based on source scroll ratio.
      * @param {{ scrollTop: number, scrollHeight: number, clientHeight: number }} sourceMetrics
@@ -5780,17 +6312,107 @@ LetterModeStrategy.prototype = {
         return ratio * targetMax;
     }
 
+    function mapBreaksToScreenPositions(breaks, screenBlocks) {
+        if (!Array.isArray(breaks) || breaks.length === 0 || !Array.isArray(screenBlocks) || screenBlocks.length === 0) {
+            return [];
+        }
+        var blockMap = {};
+        for (var i = 0; i < screenBlocks.length; i++) {
+            var sb = screenBlocks[i];
+            if (!sb) continue;
+            var key = (sb.isToc ? 'toc:' : 'body:') + String(sb.blockIndex != null ? sb.blockIndex : i);
+            blockMap[key] = { block: sb, arrayIndex: i };
+        }
+
+        var mapped = [];
+        for (var j = 0; j < breaks.length; j++) {
+            var brk = breaks[j];
+            if (!brk) continue;
+            var lookupKey = (brk.isToc ? 'toc:' : 'body:') + String(brk.blockIndex);
+            var entry = blockMap[lookupKey];
+            if (!entry) continue;
+
+            var targetBlock = entry.block;
+            var bTop = Number(targetBlock.top) || 0;
+            var bBottom = Number(targetBlock.bottom) || bTop;
+            var bHeight = isFiniteNumber(targetBlock.height) ? Number(targetBlock.height) : Math.max(0, bBottom - bTop);
+            var screenY = bTop;
+
+            if (brk.anchorType === 'before-block') {
+                screenY = bTop;
+                if (entry.arrayIndex > 0) {
+                    var prevBlock = screenBlocks[entry.arrayIndex - 1];
+                    if (prevBlock && Boolean(prevBlock.isToc) === Boolean(targetBlock.isToc) && isFiniteNumber(prevBlock.bottom)) {
+                        var gap = bTop - Number(prevBlock.bottom);
+                        if (gap > 2) screenY = bTop - Math.min(8, gap / 2);
+                    }
+                }
+            } else {
+                var resolvedTop = null;
+                if (brk.charOffset != null && typeof targetBlock.resolveCharOffsetTop === 'function') {
+                    var charTop = targetBlock.resolveCharOffsetTop(brk.charOffset);
+                    if (isFiniteNumber(charTop)) resolvedTop = Number(charTop);
+                }
+                if (resolvedTop == null && brk.mediaIndex != null && Array.isArray(targetBlock.subItems)) {
+                    for (var mIdx = 0; mIdx < targetBlock.subItems.length; mIdx++) {
+                        var mSub = targetBlock.subItems[mIdx];
+                        if (mSub && mSub.mediaIndex === brk.mediaIndex && isFiniteNumber(mSub.top)) {
+                            resolvedTop = Math.max(bTop, Number(mSub.top) - 4);
+                            break;
+                        }
+                    }
+                }
+                if (resolvedTop == null && brk.subIndex != null && Array.isArray(targetBlock.subItems)) {
+                    for (var s = 0; s < targetBlock.subItems.length; s++) {
+                        var subItem = targetBlock.subItems[s];
+                        var candidateIdx = subItem && subItem.subIndex != null ? subItem.subIndex : s;
+                        if (subItem && candidateIdx === brk.subIndex && isFiniteNumber(subItem.top)) {
+                            resolvedTop = Number(subItem.top);
+                            break;
+                        }
+                    }
+                }
+                if (resolvedTop != null) {
+                    screenY = Math.max(bTop, Math.min(bBottom, resolvedTop));
+                } else {
+                    var ratio = isFiniteNumber(brk.offsetRatio) ? Math.max(0, Math.min(1, Number(brk.offsetRatio))) : 0;
+                    screenY = bTop + bHeight * ratio;
+                }
+            }
+
+            mapped.push({
+                pageNumber: brk.pageNumber,
+                breakIndex: brk.breakIndex != null ? brk.breakIndex : j,
+                blockIndex: brk.blockIndex,
+                isToc: Boolean(brk.isToc),
+                anchorType: brk.anchorType || 'before-block',
+                reason: brk.reason || 'page-overflow',
+                screenY: Math.round(screenY * 100) / 100
+            });
+        }
+        return mapped;
+    }
+
     var SettingsUiModule = {
         STORAGE_PREFIX: STORAGE_PREFIX,
         DEFAULT_EDITOR_ZOOM: DEFAULT_EDITOR_ZOOM,
         EDITOR_ZOOM_STEPS: EDITOR_ZOOM_STEPS,
+        MM_TO_PX_RATIO: MM_TO_PX_RATIO,
+        ADOPTED_PRINT_PROFILE: ADOPTED_PRINT_PROFILE,
+        cloneDefaultAdoptedProfile: cloneDefaultAdoptedProfile,
         formatStorageKey: formatStorageKey,
         getStorageItem: getStorageItem,
         setStorageItem: setStorageItem,
         getNextEditorZoom: getNextEditorZoom,
         clampPaneWidthPercent: clampPaneWidthPercent,
+        mmToCssPx: mmToCssPx,
+        cssPxToMm: cssPxToMm,
         calculateA4PageHeight: calculateA4PageHeight,
         shouldInsertPageBreak: shouldInsertPageBreak,
+        validateAndNormalizePrintProfile: validateAndNormalizePrintProfile,
+        formatPrintProfileStatusText: formatPrintProfileStatusText,
+        computePageBreakModel: computePageBreakModel,
+        mapBreaksToScreenPositions: mapBreaksToScreenPositions,
         calculateSyncedScrollTop: calculateSyncedScrollTop
     };
 
@@ -6049,6 +6671,9 @@ LetterModeStrategy.prototype = {
 	}
 
 	function removeAllEvents() {
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
 		if (eventRegistry) {
 			eventRegistry.removeAll();
 			eventListeners = eventRegistry.getListeners();
@@ -6488,8 +7113,9 @@ LetterModeStrategy.prototype = {
 	}
 
 	function toggleMode() {
-		setTimeout(updatePageBreaks, 50);
-		setTimeout(updatePageBreaks, 300);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("toggle-mode");
+		}
 		var attach = document.getElementById("attach");
 		var editorTabWrapper = document.getElementById("editorTabWrapper");
 		var editor = document.getElementById("editor");
@@ -6688,9 +7314,26 @@ LetterModeStrategy.prototype = {
 		}
 		
 		// 画像埋め込み
+		window.__kantanImageDimCache = window.__kantanImageDimCache || {};
 		var images = document.querySelectorAll("#previewer img");
 		for (var i = 0; i < images.length; i++) {
 			var elem = images[i];
+			if (elem.dataset && !elem.dataset.kantanImgBound) {
+				elem.dataset.kantanImgBound = "true";
+				elem.addEventListener("load", function() {
+					if (this.naturalWidth > 0 && this.naturalHeight > 0 && this.src) {
+						window.__kantanImageDimCache[this.src] = { w: this.naturalWidth, h: this.naturalHeight };
+					}
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("image-load");
+					}
+				});
+				elem.addEventListener("error", function() {
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("image-error");
+					}
+				});
+			}
 			loadImage(elem);
 		}
 		
@@ -6833,6 +7476,11 @@ LetterModeStrategy.prototype = {
 				nextEl = document.createElement("img");
 				nextEl.className = "kantan-video-print-thumb";
 				nextEl.alt = attachName;
+				nextEl.addEventListener("load", function() {
+					if (typeof schedulePageBreakUpdate === "function") {
+						schedulePageBreakUpdate("video-thumb-load");
+					}
+				});
 				if (videoElem.parentNode) {
 					videoElem.parentNode.insertBefore(nextEl, videoElem.nextSibling);
 				}
@@ -7047,6 +7695,7 @@ LetterModeStrategy.prototype = {
 					var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
 					var cacheKey = mermaidTheme + "\n" + renderSource;
 					var isAsyncDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(renderSource);
+					var isWidthSensitiveDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:gantt|pie)\b/i.test(renderSource);
 
 					if (window.__kantanMermaidCache[cacheKey] && !isMermaidErrorSvg(window.__kantanMermaidCache[cacheKey])) {
 						container.innerHTML = window.__kantanMermaidCache[cacheKey];
@@ -7069,6 +7718,9 @@ LetterModeStrategy.prototype = {
 								if (typeof bindFunctions === "function") {
 									bindFunctions(container);
 								}
+								if (typeof schedulePageBreakUpdate === "function") {
+									schedulePageBreakUpdate("mermaid-async");
+								}
 							}, container)["catch"](function (mErr) {
 								cleanupMermaidTempDom(diagramId);
 								container.textContent = mermaidSource;
@@ -7088,8 +7740,18 @@ LetterModeStrategy.prototype = {
 							}
 						}
 					} else {
+						var prevContainerWidth = container.style.width;
+						var prevContainerMaxWidth = container.style.maxWidth;
+						if (isWidthSensitiveDiagram) {
+							container.style.width = "1052px";
+							container.style.maxWidth = "none";
+						}
 						try {
 							mermaid.render(diagramId, renderSource, function (svgCode, bindFunctions) {
+								if (isWidthSensitiveDiagram) {
+									container.style.width = prevContainerWidth;
+									container.style.maxWidth = prevContainerMaxWidth;
+								}
 								if (isMermaidErrorSvg(svgCode)) {
 									cleanupMermaidTempDom(diagramId);
 									container.textContent = mermaidSource;
@@ -7106,6 +7768,10 @@ LetterModeStrategy.prototype = {
 								}
 							}, container);
 						} catch (mErr) {
+							if (isWidthSensitiveDiagram) {
+								container.style.width = prevContainerWidth;
+								container.style.maxWidth = prevContainerMaxWidth;
+							}
 							cleanupMermaidTempDom(diagramId);
 							container.textContent = mermaidSource;
 							container.classList.add("mermaid-error");
@@ -7919,10 +8585,16 @@ LetterModeStrategy.prototype = {
 		addClass(document.querySelector("body"), "initialState");
 		
 		/* ファイルの肥大化を防ぐため中身を消去 */
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
+		if (hasSaveExport && typeof window.KantanModules.SaveExport.cleanupTemporaryDomForSave === "function") {
+			window.KantanModules.SaveExport.cleanupTemporaryDomForSave(document);
+		}
 		document.getElementById("previewer").innerHTML = "";
 		document.getElementById("message-area").innerHTML = "";
 		document.getElementById("previewerStyle").innerHTML="";
-		var strayMermaid = document.querySelectorAll('div[id^="dkantan-mermaid-"], iframe[id^="ikantan-mermaid-"], body > svg[id^="kantan-mermaid-"]');
+		var strayMermaid = document.querySelectorAll('#kantan-print-measure-frame, .kantan-print-measure-frame, #kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator, div[id^="dkantan-mermaid-"], iframe[id^="ikantan-mermaid-"], body > svg[id^="kantan-mermaid-"]');
 		for (var sm = 0; sm < strayMermaid.length; sm++) {
 			if (strayMermaid[sm].parentNode) {
 				strayMermaid[sm].parentNode.removeChild(strayMermaid[sm]);
@@ -7959,6 +8631,12 @@ LetterModeStrategy.prototype = {
 		}
 		
 		// Stage 3: Serialize into self-contained single-file HTML document
+		if (typeof destroyPageBreakMeasurement === "function") {
+			destroyPageBreakMeasurement();
+		}
+		if (hasSaveExport && typeof window.KantanModules.SaveExport.cleanupTemporaryDomForSave === "function") {
+			window.KantanModules.SaveExport.cleanupTemporaryDomForSave(document);
+		}
 		var html;
 		if (hasSaveExport) {
 			html = window.KantanModules.SaveExport.serializeSingleHtmlDocument(document.getElementsByTagName("html")[0].innerHTML);
@@ -7971,15 +8649,15 @@ LetterModeStrategy.prototype = {
 		
 		contentAtSave = editor.value;
 		saved = true;
-		doPreview();
-		
 		removeClass(document.querySelector("body"), "initialState");
-		if (toggleFlag == true) {
-			toggleMode();
-		}
 		document.documentElement.style.setProperty("--editor-width", getItem("editor-width", "50%"));
 		if (typeof applyEditorZoom === "function") {
 			applyEditorZoom();
+		}
+		if (toggleFlag == true) {
+			toggleMode();
+		} else {
+			doPreview();
 		}
 		
 		document.getElementById("previewer").scrollTop = previewerScrollTop;
@@ -8490,6 +9168,9 @@ LetterModeStrategy.prototype = {
 		window.removeEventListener("touchmove", resize);
 		window.removeEventListener("mouseup", stopResize);
 		window.removeEventListener("touchend", stopResize);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("pane-resize");
+		}
 	}
 
 	// --- 2. 目次機能 ---
@@ -8517,14 +9198,18 @@ LetterModeStrategy.prototype = {
 		}
 		buildToc();
 		doLayout();
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("toggle-toc");
+		}
 	}
 
 	on("#previewer", "previewed", function() {
 		buildToc();
-		updatePageBreaks();
-		setTimeout(updatePageBreaks, 50);
-		setTimeout(updatePageBreaks, 300);
-		setTimeout(updatePageBreaks, 1000);
+		if (typeof schedulePageBreakUpdate === "function") {
+			schedulePageBreakUpdate("previewed");
+		} else {
+			updatePageBreaks();
+		}
 	});
 
 	function buildToc() {
@@ -8688,7 +9373,14 @@ LetterModeStrategy.prototype = {
 		
 		var title = document.title.replace(/^\* /, "");
 		var previewerStyle = document.getElementById("previewerStyle").innerHTML;
-		var previewerContent = document.getElementById("previewer").innerHTML;
+		var previewerClone = document.getElementById("previewer").cloneNode(true);
+		var exportInds = previewerClone.querySelectorAll("#kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator");
+		for (var ei = 0; ei < exportInds.length; ei++) {
+			if (exportInds[ei].parentNode) {
+				exportInds[ei].parentNode.removeChild(exportInds[ei]);
+			}
+		}
+		var previewerContent = previewerClone.innerHTML;
 		
 		var tocHtml = "";
 		if (document.body.classList.contains("toc-visible")) {
@@ -8827,83 +9519,608 @@ LetterModeStrategy.prototype = {
 		}
 	}
 
-	function updatePageBreaks() {
-		var p = document.getElementById("previewer");
-		if (!p) return;
-		var savedScroll = p.scrollTop;
-		var inds = p.querySelectorAll(".page-break-indicator");
-		for (var i = 0; i < inds.length; i++) {
-			if (inds[i].parentNode) inds[i].parentNode.removeChild(inds[i]);
-		}
-		var children = [];
-		for (var j = 0; j < p.children.length; j++) {
-			var c = p.children[j];
-			if (!c.classList.contains("page-break-indicator")) children.push(c);
-		}
-		if (children.length === 0) return;
-		var isEdit = document.body.classList.contains("editMode");
-		var origWidth = p.style.width;
-		var origMaxWidth = p.style.maxWidth;
-		var origFlex = p.style.flex;
-		if (isEdit) {
-			p.style.flex = "none";
-			p.style.width = "300mm";
-			p.style.maxWidth = "300mm";
-		}
-		var pWidth = p.offsetWidth;
-		if (pWidth <= 0) {
-			if (isEdit) {
-				p.style.flex = origFlex;
-				p.style.width = origWidth;
-				p.style.maxWidth = origMaxWidth;
-				p.scrollTop = savedScroll;
+	var pageBreakGenerationId = 0;
+	var pageBreakRafId = null;
+	var pageBreakFollowupTimer = null;
+	var currentPrintProfileState = null;
+
+	function getSettingsUiModule() {
+		return (window.KantanModules && window.KantanModules.SettingsUi) ? window.KantanModules.SettingsUi : null;
+	}
+
+	function isPageBreakIndicatorEnabled() {
+		var cb = document.getElementById("setting-show-page-break");
+		return Boolean(cb && cb.checked);
+	}
+
+	function initPrintProfileState() {
+		var sui = getSettingsUiModule();
+		if (!sui) return;
+		currentPrintProfileState = sui.validateAndNormalizePrintProfile(sui.ADOPTED_PRINT_PROFILE);
+	}
+
+	on("#setting-show-page-break", "change", function() {
+		if (this.checked) {
+			schedulePageBreakUpdate("toggle-show-page-break");
+		} else {
+			clearPageBreakOverlay(document.getElementById("previewer"));
+			var frame = document.getElementById("kantan-print-measure-frame");
+			if (frame && frame.parentNode) {
+				frame.parentNode.removeChild(frame);
 			}
-			return;
+			window.__kantanLastPageBreakModel = { measurementReady: false, enabled: false, totalPages: 1, breaks: [] };
 		}
-		var pageHeight = pWidth * (297 / 210);
-		if (window.KantanModules && window.KantanModules.SettingsUi) {
-			pageHeight = window.KantanModules.SettingsUi.calculateA4PageHeight(pWidth);
+	});
+
+	function schedulePageBreakUpdate(reason) {
+		var gen = ++pageBreakGenerationId;
+		if (pageBreakRafId != null && typeof cancelAnimationFrame === "function") {
+			cancelAnimationFrame(pageBreakRafId);
+			pageBreakRafId = null;
 		}
-		var pTop = p.offsetTop;
-		var currentPage = 1;
-		var nextBreak = pageHeight;
-		for (var k = 0; k < children.length; k++) {
-			var el = children[k];
-			var elTop = el.offsetTop - pTop;
-			var elBottom = elTop + el.offsetHeight;
-			var shouldBreak = (window.KantanModules && window.KantanModules.SettingsUi)
-				? window.KantanModules.SettingsUi.shouldInsertPageBreak({
-					elTop: elTop,
-					elBottom: elBottom,
-					elHeight: el.offsetHeight,
-					tagName: el.tagName,
-					nextBreak: nextBreak,
-					pageHeight: pageHeight,
-					index: k
-				})
-				: false;
-			if (shouldBreak && k > 0) {
-				currentPage++;
-				var ind = document.createElement("div");
-				ind.className = "page-break-indicator";
-				ind.setAttribute("data-page", "Page " + currentPage);
-				p.insertBefore(ind, el);
-				nextBreak = (ind.offsetTop - pTop) + pageHeight;
-			}
+		if (pageBreakFollowupTimer != null) {
+			clearTimeout(pageBreakFollowupTimer);
+			pageBreakFollowupTimer = null;
 		}
-		if (isEdit) {
-			p.style.flex = origFlex;
-			p.style.width = origWidth;
-			p.style.maxWidth = origMaxWidth;
-			p.scrollTop = savedScroll;
+		var runner = function() {
+			pageBreakRafId = null;
+			if (gen !== pageBreakGenerationId) return;
+			updatePageBreaks(gen, reason);
+		};
+		if (typeof requestAnimationFrame === "function") {
+			pageBreakRafId = requestAnimationFrame(runner);
+		} else {
+			pageBreakFollowupTimer = setTimeout(runner, 16);
 		}
 	}
 
-	window.addEventListener("resize", function() {
-		updatePageBreaks();
+	function destroyPageBreakMeasurement() {
+		pageBreakGenerationId++;
+		if (pageBreakRafId != null && typeof cancelAnimationFrame === "function") {
+			cancelAnimationFrame(pageBreakRafId);
+			pageBreakRafId = null;
+		}
+		if (pageBreakFollowupTimer != null) {
+			clearTimeout(pageBreakFollowupTimer);
+			pageBreakFollowupTimer = null;
+		}
+		var frame = document.getElementById("kantan-print-measure-frame");
+		if (frame && frame.parentNode) {
+			frame.parentNode.removeChild(frame);
+		}
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (overlay && overlay.parentNode) {
+			overlay.parentNode.removeChild(overlay);
+		}
+		var inds = document.querySelectorAll(".page-break-indicator");
+		for (var i = 0; i < inds.length; i++) {
+			if (inds[i].parentNode) inds[i].parentNode.removeChild(inds[i]);
+		}
+	}
+
+	function unwrapPrintMediaRules(cssText) {
+		if (!cssText) return "";
+		var out = [];
+		var re = /@media\s+print\s*\{/gi;
+		var match;
+		while ((match = re.exec(cssText)) !== null) {
+			var startIdx = re.lastIndex;
+			var depth = 1;
+			var pos = startIdx;
+			while (pos < cssText.length && depth > 0) {
+				var ch = cssText.charAt(pos);
+				if (ch === "{") depth++;
+				else if (ch === "}") depth--;
+				pos++;
+			}
+			if (depth === 0) {
+				out.push(cssText.substring(startIdx, pos - 1));
+			}
+		}
+		return out.join("\n");
+	}
+
+	function buildSharedPrintMeasurementCss() {
+		var isDark = document.body && document.body.classList.contains("dark");
+		var headStyleNodes = document.querySelectorAll("head style");
+		var headCssParts = [];
+		for (var hs = 0; hs < headStyleNodes.length; hs++) {
+			var sNode = headStyleNodes[hs];
+			if (sNode && sNode.innerHTML) {
+				headCssParts.push(sNode.innerHTML);
+			}
+		}
+		var headCss = headCssParts.join("\n");
+		var baseStyles = [
+			":root{--bg:" + (isDark ? "#0d1117" : "#f6f8fa") + ";--bg-surface:" + (isDark ? "#161b22" : "#fff") + ";--bg-preview:" + (isDark ? "#1c2128" : "#fff") + ";--border:" + (isDark ? "#30363d" : "#d1d9e0") + ";--text:" + (isDark ? "#c9d1d9" : "#1f2328") + ";--text-muted:" + (isDark ? "#8b949e" : "#59636e") + ";--accent:" + (isDark ? "#58a6ff" : "#0969da") + ";--danger:#cf222e;--radius:6px;--inline-code-bg:#818b981f;--font-sans:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"Noto Sans JP\",Roboto,sans-serif;--font-mono:\"Cascadia Code\",\"JetBrains Mono\",\"Noto Sans Mono\",Consolas,monospace}",
+			"html,body{margin:0!important;padding:0!important;width:100%!important;height:auto!important;min-height:0!important;overflow:visible!important;font-family:var(--font-sans);font-size:14px;color:var(--text);background:transparent}",
+			"#wrapper{margin:0!important;padding:0!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:100%!important;height:auto!important;overflow:visible!important}",
+			"#toc{display:block;width:100%;max-height:none;overflow:visible;position:relative;border:none;box-shadow:none;padding:0;margin:0 0 24px 0;order:-1;font-size:13px;line-height:1.5}",
+			"#toc .toc-header,#toc .toc-title,#toc .toc-body,#toc .toc-link{display:block;flex:none;height:auto;max-height:none;overflow:visible}",
+			"#toc .toc-title{text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);border-bottom:1px solid var(--border);margin-bottom:8px;padding:0 6px 8px;font-size:12px;font-weight:600}",
+			"#toc .toc-link{color:var(--text-muted);word-break:break-word;border-radius:4px;padding:4px 6px 4px 14px;text-decoration:none}",
+			"#previewer{box-sizing:border-box;border:0!important;margin:0!important;padding:0!important;width:100%!important;max-width:none!important;min-height:0!important;box-shadow:none!important;display:block!important;zoom:1!important;word-wrap:break-word}",
+			"#previewer h1,#previewer h2,#previewer h3,#previewer h4,#previewer h5,#previewer h6{border-bottom:1px solid var(--border);padding-bottom:0.3em}",
+			"#previewer video{display:none!important}",
+			"#previewer img.kantan-video-print-thumb{display:block!important;max-width:100%!important;height:auto!important;margin-top:8px;page-break-inside:avoid;break-inside:avoid}",
+			".note.info,.note.warn,.note.alert{page-break-inside:avoid;break-inside:avoid}",
+			".mermaid,.mermaid-rendered{page-break-inside:avoid;break-inside:avoid;max-width:100%!important}",
+			".mermaid svg,.mermaid-rendered svg{max-width:100%;height:auto}",
+			".mermaid svg[aria-roledescription^=\"flowchart\"],.mermaid-rendered svg[aria-roledescription^=\"flowchart\"],.mermaid svg[aria-roledescription=\"sequence\"],.mermaid-rendered svg[aria-roledescription=\"sequence\"],.mermaid svg[aria-roledescription^=\"class\"],.mermaid-rendered svg[aria-roledescription^=\"class\"],.mermaid svg[aria-roledescription^=\"state\"],.mermaid-rendered svg[aria-roledescription^=\"state\"],.mermaid svg.statediagram,.mermaid-rendered svg.statediagram{zoom:0.5}"
+		].join("\n");
+		return headCss + "\n" + unwrapPrintMediaRules(headCss) + "\n" + baseStyles;
+	}
+
+	function ensurePrintMeasureFrame(widthMm, heightMm) {
+		if (!document.body) return null;
+		var frame = document.getElementById("kantan-print-measure-frame");
+		if (!frame) {
+			frame = document.createElement("iframe");
+			frame.id = "kantan-print-measure-frame";
+			frame.className = "kantan-print-measure-frame";
+			frame.setAttribute("aria-hidden", "true");
+			frame.setAttribute("tabindex", "-1");
+			document.body.appendChild(frame);
+		}
+		frame.style.width = widthMm + "mm";
+		frame.style.height = heightMm + "mm";
+		return frame;
+	}
+
+	function isAvoidBreakElement(el, computedStyle) {
+		if (!el || !el.tagName) return false;
+		var tag = el.tagName.toUpperCase();
+		if (tag === "IMG" || tag === "SVG" || tag === "HR") return true;
+		if (el.classList) {
+			if (el.classList.contains("mermaid") ||
+				el.classList.contains("mermaid-rendered") ||
+				el.classList.contains("sequence") ||
+				el.classList.contains("flow") ||
+				el.classList.contains("kantan-video-print-thumb")) {
+				return true;
+			}
+			if (el.classList.contains("note") &&
+				(el.classList.contains("info") || el.classList.contains("warn") || el.classList.contains("alert"))) {
+				return true;
+			}
+		}
+		if (computedStyle) {
+			var bi = computedStyle.breakInside || computedStyle.pageBreakInside || "";
+			if (bi === "avoid" || bi === "avoid-page") return true;
+		}
+		return false;
+	}
+
+	function collectMeasuredSubItems(blockEl, mDoc, baseTop) {
+		var items = [];
+		if (!blockEl || !mDoc) return items;
+		var tag = (blockEl.tagName || "").toUpperCase();
+
+		if (tag === "TABLE") {
+			var rows = blockEl.querySelectorAll("tr");
+			for (var r = 0; r < rows.length; r++) {
+				var rRect = rows[r].getBoundingClientRect();
+				if (rRect.height > 0) {
+					items.push({
+						subIndex: r,
+						top: rRect.top - baseTop,
+						bottom: rRect.bottom - baseTop,
+						height: rRect.height,
+						charOffset: null
+					});
+				}
+			}
+			return items;
+		}
+
+		if (tag === "UL" || tag === "OL") {
+			var listItems = blockEl.children;
+			var liIdx = 0;
+			for (var l = 0; l < listItems.length; l++) {
+				if ((listItems[l].tagName || "").toUpperCase() !== "LI") continue;
+				var lRect = listItems[l].getBoundingClientRect();
+				if (lRect.height > 0) {
+					items.push({
+						subIndex: liIdx++,
+						top: lRect.top - baseTop,
+						bottom: lRect.bottom - baseTop,
+						height: lRect.height,
+						charOffset: null
+					});
+				}
+			}
+			return items;
+		}
+
+		// Collect embedded atomic images / video print thumbs inside paragraph or container
+		var innerImgs = blockEl.querySelectorAll("img");
+		var mediaIdx = 0;
+		var mWin = mDoc.defaultView || window;
+		for (var im = 0; im < innerImgs.length; im++) {
+			var imgEl = innerImgs[im];
+			var imgRect = imgEl.getBoundingClientRect();
+			if (imgRect.height > 0 && imgRect.width > 0) {
+				var imgCs = (mWin && typeof mWin.getComputedStyle === "function") ? mWin.getComputedStyle(imgEl) : null;
+				var isBlockMedia = Boolean((imgCs && imgCs.display === "block") || (imgEl.classList && imgEl.classList.contains("kantan-video-print-thumb")));
+				items.push({
+					subIndex: 0,
+					mediaIndex: mediaIdx++,
+					isBlockMedia: isBlockMedia,
+					top: imgRect.top - baseTop,
+					bottom: imgRect.bottom - baseTop,
+					height: imgRect.height,
+					charOffset: null,
+					avoidBreakInside: true
+				});
+			}
+		}
+
+		// Collect text line boxes via Range with character offsets for accurate screen mapping
+		if (typeof mDoc.createRange === "function" && typeof mDoc.createTreeWalker === "function") {
+			var range = mDoc.createRange();
+			var walker = mDoc.createTreeWalker(blockEl, 4 /* NodeFilter.SHOW_TEXT */, null, false);
+			var textNode;
+			var runningCharOffset = 0;
+			var lastLineTop = null;
+			while ((textNode = walker.nextNode())) {
+				var val = textNode.nodeValue || "";
+				var len = val.length;
+				if (len === 0) continue;
+				if (!val.trim()) {
+					runningCharOffset += len;
+					continue;
+				}
+				var step = 1;
+				for (var c = 0; c < len; c += step) {
+					range.setStart(textNode, c);
+					range.setEnd(textNode, c + 1);
+					var rects = range.getClientRects();
+					if (rects && rects.length > 0) {
+						var rc = rects[0];
+						if (rc.height > 0) {
+							var relTop = rc.top - baseTop;
+							var relBottom = rc.bottom - baseTop;
+							if (lastLineTop === null || Math.abs(relTop - lastLineTop) > 3) {
+								items.push({
+									subIndex: items.length,
+									top: relTop,
+									bottom: relBottom,
+									height: rc.height,
+									charOffset: runningCharOffset + c
+								});
+								lastLineTop = relTop;
+							} else if (items.length > 0) {
+								var prevItem = items[items.length - 1];
+								if (relBottom > prevItem.bottom) {
+									prevItem.bottom = relBottom;
+									prevItem.height = prevItem.bottom - prevItem.top;
+								}
+							}
+						}
+					}
+				}
+				runningCharOffset += len;
+			}
+		}
+
+		items.sort(function(a, b) { return a.top - b.top; });
+		for (var si = 0; si < items.length; si++) {
+			items[si].subIndex = si;
+		}
+		return items;
+	}
+
+	function resolveCharOffsetTopInElement(blockEl, targetCharOffset, previewerEl) {
+		if (!blockEl || typeof document.createRange !== "function" || typeof document.createTreeWalker !== "function") {
+			return null;
+		}
+		var walker = document.createTreeWalker(blockEl, 4 /* NodeFilter.SHOW_TEXT */, null, false);
+		var node;
+		var running = 0;
+		while ((node = walker.nextNode())) {
+			var len = (node.nodeValue || "").length;
+			if (targetCharOffset < running + len) {
+				var localIdx = Math.max(0, Math.min(len - 1, targetCharOffset - running));
+				var range = document.createRange();
+				range.setStart(node, localIdx);
+				range.setEnd(node, Math.min(len, localIdx + 1));
+				var rects = range.getClientRects();
+				if (rects && rects.length > 0) {
+					var bRect = blockEl.getBoundingClientRect();
+					var bOffsetHeight = blockEl.offsetHeight || bRect.height;
+					var scaleFactor = (bRect.height > 0 && bOffsetHeight > 0) ? (bOffsetHeight / bRect.height) : 1;
+					var relInBlock = (rects[0].top - bRect.top) * scaleFactor;
+					return (blockEl.offsetTop - (previewerEl ? 0 : 0)) + relInBlock;
+				}
+				return null;
+			}
+			running += len;
+		}
+		return null;
+	}
+
+	function clearPageBreakOverlay(previewerEl) {
+		var p = previewerEl || document.getElementById("previewer");
+		if (!p) return;
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (overlay) {
+			overlay.innerHTML = "";
+		}
+		var legacyInds = p.querySelectorAll(".page-break-indicator");
+		for (var i = 0; i < legacyInds.length; i++) {
+			if (!overlay || !overlay.contains(legacyInds[i])) {
+				if (legacyInds[i].parentNode) legacyInds[i].parentNode.removeChild(legacyInds[i]);
+			}
+		}
+	}
+
+	function renderPageBreakOverlay(previewerEl, mappedBreaks) {
+		if (!previewerEl) return;
+		clearPageBreakOverlay(previewerEl);
+		if (!Array.isArray(mappedBreaks) || mappedBreaks.length === 0) return;
+
+		var overlay = document.getElementById("kantan-page-break-overlay");
+		if (!overlay || overlay.parentNode !== previewerEl) {
+			if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+			overlay = document.createElement("div");
+			overlay.id = "kantan-page-break-overlay";
+			overlay.className = "kantan-page-break-overlay";
+			overlay.setAttribute("aria-hidden", "true");
+			previewerEl.appendChild(overlay);
+		}
+
+		for (var i = 0; i < mappedBreaks.length; i++) {
+			var brk = mappedBreaks[i];
+			if (!brk || brk.isToc) continue;
+			var ind = document.createElement("div");
+			ind.className = "page-break-indicator";
+			ind.setAttribute("data-page", "Page " + brk.pageNumber);
+			ind.setAttribute("data-break-reason", brk.reason || "page-overflow");
+			ind.setAttribute("data-anchor-type", brk.anchorType || "before-block");
+			ind.style.top = brk.screenY + "px";
+			overlay.appendChild(ind);
+		}
+	}
+
+	function collectScreenBlocks(previewerEl, bodyChildren) {
+		var screenBlocks = [];
+		for (var k = 0; k < bodyChildren.length; k++) {
+			(function(idx, el) {
+				var elTop = el.offsetTop;
+				var elHeight = el.offsetHeight;
+				var elBottom = elTop + elHeight;
+				var subItems = [];
+				var tag = (el.tagName || "").toUpperCase();
+				if (tag === "TABLE") {
+					var rows = el.querySelectorAll("tr");
+					for (var r = 0; r < rows.length; r++) {
+						var rTop = elTop + rows[r].offsetTop;
+						subItems.push({ subIndex: r, top: rTop, bottom: rTop + rows[r].offsetHeight });
+					}
+				} else if (tag === "UL" || tag === "OL") {
+					var liIdx = 0;
+					for (var l = 0; l < el.children.length; l++) {
+						if ((el.children[l].tagName || "").toUpperCase() !== "LI") continue;
+						var lEl = el.children[l];
+						var lTop = elTop + (lEl.offsetTop - el.offsetTop);
+						subItems.push({ subIndex: liIdx++, top: lTop, bottom: lTop + lEl.offsetHeight });
+					}
+				} else {
+					var mediaEls = el.querySelectorAll("img:not(.kantan-video-print-thumb), video");
+					for (var me = 0; me < mediaEls.length; me++) {
+						var mNode = mediaEls[me];
+						if (mNode.offsetHeight > 0) {
+							var mTop = elTop + (mNode.offsetTop - el.offsetTop);
+							subItems.push({ subIndex: me, mediaIndex: me, top: mTop, bottom: mTop + mNode.offsetHeight });
+						}
+					}
+				}
+				screenBlocks.push({
+					blockIndex: idx,
+					isToc: false,
+					top: elTop,
+					bottom: elBottom,
+					height: elHeight,
+					subItems: subItems,
+					resolveCharOffsetTop: function(charOffset) {
+						return resolveCharOffsetTopInElement(el, charOffset, previewerEl);
+					}
+				});
+			})(k, bodyChildren[k]);
+		}
+		return screenBlocks;
+	}
+
+	function measureDomInFrame(bodyChildren, widthMm, heightMm) {
+		var frame = ensurePrintMeasureFrame(widthMm, heightMm);
+		var mDoc = frame && (frame.contentDocument || (frame.contentWindow && frame.contentWindow.document));
+		if (!mDoc) return null;
+
+		if (!mDoc.body || !mDoc.head) {
+			mDoc.open();
+			mDoc.write("<!doctype html><html><head><meta charset='utf-8'></head><body></body></html>");
+			mDoc.close();
+		}
+
+		var mWin = frame.contentWindow || window;
+		mDoc.documentElement.style.width = widthMm + "mm";
+		mDoc.body.style.width = widthMm + "mm";
+		mDoc.body.className = document.body ? document.body.className : "";
+		var styleEl = mDoc.getElementById("kantan-measure-style");
+		if (!styleEl) {
+			styleEl = mDoc.createElement("style");
+			styleEl.id = "kantan-measure-style";
+			mDoc.head.appendChild(styleEl);
+		}
+		styleEl.textContent = buildSharedPrintMeasurementCss();
+
+		mDoc.body.innerHTML = '<div id="wrapper"><div id="previewer"></div></div>';
+		var mWrapper = mDoc.getElementById("wrapper");
+		var mPreviewer = mDoc.getElementById("previewer");
+
+		var mToc = null;
+		if (document.body && document.body.classList.contains("toc-visible")) {
+			var srcToc = document.getElementById("toc");
+			if (srcToc) {
+				mToc = srcToc.cloneNode(true);
+				mWrapper.insertBefore(mToc, mPreviewer);
+			}
+		}
+
+		var measuredNodeList = [];
+		for (var idx = 0; idx < bodyChildren.length; idx++) {
+			var srcChild = bodyChildren[idx];
+			var cloneChild = srcChild.cloneNode(true);
+			var srcImgs = srcChild.querySelectorAll("img");
+			var cloneImgs = cloneChild.querySelectorAll("img");
+			for (var imIdx = 0; imIdx < srcImgs.length && imIdx < cloneImgs.length; imIdx++) {
+				var sImg = srcImgs[imIdx];
+				var cachedDim = (window.__kantanImageDimCache && sImg.src) ? window.__kantanImageDimCache[sImg.src] : null;
+				var nw = sImg.naturalWidth || (cachedDim ? cachedDim.w : 0);
+				var nh = sImg.naturalHeight || (cachedDim ? cachedDim.h : 0);
+				if (nw > 0 && nh > 0) {
+					if (sImg.src && window.__kantanImageDimCache) {
+						window.__kantanImageDimCache[sImg.src] = { w: nw, h: nh };
+					}
+					if (!cloneImgs[imIdx].style.width) cloneImgs[imIdx].style.width = nw + "px";
+					cloneImgs[imIdx].style.aspectRatio = nw + " / " + nh;
+					cloneImgs[imIdx].style.maxWidth = "100%";
+					cloneImgs[imIdx].style.height = "auto";
+				}
+			}
+			var innerInds = cloneChild.querySelectorAll("#kantan-page-break-overlay, .kantan-page-break-overlay, .page-break-indicator");
+			for (var ii = 0; ii < innerInds.length; ii++) {
+				if (innerInds[ii].parentNode) innerInds[ii].parentNode.removeChild(innerInds[ii]);
+			}
+			mPreviewer.appendChild(cloneChild);
+			measuredNodeList.push({ blockIndex: idx, el: cloneChild });
+		}
+
+		var baseTop = mWrapper.getBoundingClientRect().top;
+		var measuredBlocks = [];
+
+		if (mToc) {
+			var tocRect = mToc.getBoundingClientRect();
+			if (tocRect.height > 0) {
+				var tocLinks = mToc.querySelectorAll(".toc-header, .toc-link");
+				var tocSubs = [];
+				for (var tl = 0; tl < tocLinks.length; tl++) {
+					var tlRect = tocLinks[tl].getBoundingClientRect();
+					if (tlRect.height > 0) {
+						tocSubs.push({ subIndex: tl, top: tlRect.top - baseTop, bottom: tlRect.bottom - baseTop, height: tlRect.height });
+					}
+				}
+				measuredBlocks.push({
+					blockIndex: -1, tagName: "ASIDE",
+					top: tocRect.top - baseTop, bottom: tocRect.bottom - baseTop, height: tocRect.height,
+					isToc: true, isHeading: false, forceBreakBefore: false, forceBreakAfter: false, avoidBreakInside: false, subItems: tocSubs
+				});
+			}
+		}
+
+		for (var m = 0; m < measuredNodeList.length; m++) {
+			var item = measuredNodeList[m];
+			var mEl = item.el;
+			var rect = mEl.getBoundingClientRect();
+			var cStyle = (mWin && typeof mWin.getComputedStyle === "function") ? mWin.getComputedStyle(mEl) : null;
+			if (cStyle && cStyle.display === "none") continue;
+			var mTop = rect.top - baseTop, mBottom = rect.bottom - baseTop, mHeight = rect.height;
+			var tagName = (mEl.tagName || "").toUpperCase();
+			var isHeading = /^H[1-6]$/.test(tagName);
+			var avoidInside = isAvoidBreakElement(mEl, cStyle);
+			var bb = cStyle ? (cStyle.breakBefore || cStyle.pageBreakBefore || "") : "";
+			var ba = cStyle ? (cStyle.breakAfter || cStyle.pageBreakAfter || "") : "";
+			var subItems = (!avoidInside && mHeight > 20) ? collectMeasuredSubItems(mEl, mDoc, baseTop) : [];
+
+			measuredBlocks.push({
+				blockIndex: item.blockIndex, tagName: tagName,
+				top: mTop, bottom: mBottom, height: mHeight,
+				isToc: false, isHeading: isHeading,
+				forceBreakBefore: (bb === "page" || bb === "always"),
+				forceBreakAfter: (ba === "page" || ba === "always"),
+				avoidBreakInside: avoidInside,
+				avoidBreakAfter: (ba === "avoid" || ba === "avoid-page"),
+				subItems: subItems
+			});
+		}
+		return measuredBlocks;
+	}
+
+	function updatePageBreaks(genId) {
+		var p = document.getElementById("previewer");
+		if (!p) return;
+		if (genId != null && genId !== pageBreakGenerationId) return;
+
+		if (!isPageBreakIndicatorEnabled()) {
+			clearPageBreakOverlay(p);
+			var mFrame = document.getElementById("kantan-print-measure-frame");
+			if (mFrame && mFrame.parentNode) {
+				mFrame.parentNode.removeChild(mFrame);
+			}
+			window.__kantanLastPageBreakModel = { measurementReady: false, enabled: false, totalPages: 1, breaks: [] };
+			return;
+		}
+
+		var sui = getSettingsUiModule();
+		if (!currentPrintProfileState && sui) {
+			initPrintProfileState();
+		}
+		if (!sui || !currentPrintProfileState || !currentPrintProfileState.measurementReady || !currentPrintProfileState.contentAreaMm) {
+			clearPageBreakOverlay(p);
+			window.__kantanLastPageBreakModel = { measurementReady: false, enabled: true, totalPages: 1, breaks: [] };
+			return;
+		}
+
+		var bodyChildren = [];
+		for (var j = 0; j < p.children.length; j++) {
+			var c = p.children[j];
+			if (c.id === "kantan-page-break-overlay" ||
+				c.classList.contains("kantan-page-break-overlay") ||
+				c.classList.contains("page-break-indicator")) {
+				continue;
+			}
+			bodyChildren.push(c);
+		}
+		if (bodyChildren.length === 0) {
+			clearPageBreakOverlay(p);
+			window.__kantanLastPageBreakModel = { measurementReady: true, totalPages: 1, breaks: [] };
+			return;
+		}
+
+		var widthMm = currentPrintProfileState.contentAreaMm.width;
+		var heightMm = currentPrintProfileState.contentAreaMm.height;
+		var pageWidthPx = currentPrintProfileState.contentAreaPx ? currentPrintProfileState.contentAreaPx.width : sui.mmToCssPx(widthMm);
+		var pageHeightPx = currentPrintProfileState.contentAreaPx ? currentPrintProfileState.contentAreaPx.height : sui.mmToCssPx(heightMm);
+
+		var measuredBlocks = measureDomInFrame(bodyChildren, widthMm, heightMm);
+		if (!measuredBlocks) {
+			clearPageBreakOverlay(p);
+			return;
+		}
+
+		var model = sui.computePageBreakModel(measuredBlocks, { pageHeightPx: pageHeightPx, pageWidthPx: pageWidthPx });
+		window.__kantanLastPageBreakModel = model;
+
+		var screenBlocks = collectScreenBlocks(p, bodyChildren);
+		var mappedBreaks = sui.mapBreaksToScreenPositions(model.breaks, screenBlocks);
+		renderPageBreakOverlay(p, mappedBreaks);
+	}
+
+	initPrintProfileState();
+	on(window, "resize", function() {
+		schedulePageBreakUpdate("window-resize");
 	});
-	setTimeout(updatePageBreaks, 100);
-	setTimeout(updatePageBreaks, 500);
+	on(window, "beforeprint", function() {
+		if (!currentPrintProfileState || !currentPrintProfileState.measurementReady) {
+			clearPageBreakOverlay(document.getElementById("previewer"));
+		}
+	});
+	if (typeof document !== "undefined" && document.fonts && document.fonts.ready && typeof document.fonts.ready.then === "function") {
+		document.fonts.ready.then(function() {
+			schedulePageBreakUpdate("fonts-ready");
+		})["catch"](function() {});
+	}
+	schedulePageBreakUpdate("init");
 
 
 

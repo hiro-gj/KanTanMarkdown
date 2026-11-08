@@ -9,20 +9,20 @@ github.com style (c) Vasily Polovnyov <vast@whiteants.net>
   display: block;
   overflow-x: auto;
   padding: 0.5em;
-  color: #333;
+  color: #1f2328;
   background: #f8f8f8;
 }
 
 .hljs-comment,
 .hljs-quote {
-  color: #998;
+  color: #1f2328;
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
 .hljs-subst {
-  color: #333;
+  color: #1f2328;
   font-weight: bold;
 }
 
