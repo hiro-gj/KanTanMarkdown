@@ -28,8 +28,8 @@ function runTests() {
     const requiredArtifacts = [
         { file: 'ktm-new.html', minSizeKb: 8, maxSizeKb: 30 },
         { file: path.join('dist', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 4500 },
-        { file: path.join('dist', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 200 },
-        { file: path.join('dist', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 250 },
+        { file: path.join('dist', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 250 },
+        { file: path.join('dist', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 300 },
         { file: path.join('dist', 'ktm-full.html'), minSizeKb: 300, maxSizeKb: 4500 },
         { file: path.join('dist', 'kantanUpdate.js'), minSizeKb: 300, maxSizeKb: 4500 }
     ];
@@ -182,8 +182,8 @@ function runTests() {
     test('dist/preview subfolder contains valid preview distribution artifacts', () => {
         const previewArtifacts = [
             { file: path.join('dist', 'preview', 'ktm-dev.html'), minSizeKb: 300, maxSizeKb: 4500, isHtml: true },
-            { file: path.join('dist', 'preview', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 200, isHtml: true },
-            { file: path.join('dist', 'preview', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 250, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-lite.html'), minSizeKb: 80, maxSizeKb: 250, isHtml: true },
+            { file: path.join('dist', 'preview', 'ktm-std.html'), minSizeKb: 120, maxSizeKb: 300, isHtml: true },
             { file: path.join('dist', 'preview', 'ktm-full.html'), minSizeKb: 2500, maxSizeKb: 4500, isHtml: true },
             { file: path.join('dist', 'preview', 'kantanUpdate.js'), minSizeKb: 2500, maxSizeKb: 4500, isHtml: false }
         ];
@@ -344,25 +344,38 @@ function runTests() {
 
         assert(kantanCss.includes('--page-aspect-ratio: 210 / 297;'),
             'kantan.css must maintain A4 ratio reference via --page-aspect-ratio: 210 / 297;');
-        assert(kantanCss.includes('.page-break-indicator {') && kantanCss.includes('margin: 28px -40px 20px;'),
-            'kantan.css must define .page-break-indicator styling');
+        assert(kantanCss.includes('@page') && kantanCss.includes('size: A4 portrait;') && kantanCss.includes('margin: 10mm;'),
+            'kantan.css must define @page { size: A4 portrait; margin: 10mm; }');
+        assert(kantanCss.includes('#kantan-page-break-overlay') && kantanCss.includes('.page-break-indicator {') &&
+            kantanCss.includes('position: absolute;'),
+            'kantan.css must define out-of-flow overlay and .page-break-indicator styling');
+        assert(kantanCss.includes('#kantan-print-measure-frame') && kantanCss.includes('visibility: hidden;'),
+            'kantan.css must define offscreen measurement iframe without display:none');
         assert(kantanCss.includes('.page-break-indicator::after') && kantanCss.includes('attr(data-page)'),
             'kantan.css must display page indicator badge with data-page attribute');
         assert(kantanCss.includes('@media print') && kantanCss.includes('.page-break-indicator') &&
             kantanCss.includes('display: none !important;'),
-            'kantan.css must hide .page-break-indicator during printing');
+            'kantan.css must hide .page-break-indicator and measurement frame during printing');
 
-        assert(kantanMdJs.includes('function updatePageBreaks()'),
-            'kantanMarkdown.js must implement updatePageBreaks function');
-        assert(kantanMdJs.includes('pageHeight = pWidth * (297 / 210);'),
-            'kantanMarkdown.js must calculate pageHeight based on A4 210/297 ratio');
+        assert(kantanMdJs.includes('function updatePageBreaks(') && kantanMdJs.includes('function schedulePageBreakUpdate('),
+            'kantanMarkdown.js must implement updatePageBreaks and schedulePageBreakUpdate');
+        assert(kantanMdJs.includes('measureDomInFrame(') && kantanMdJs.includes('computePageBreakModel(') &&
+            kantanMdJs.includes('mapBreaksToScreenPositions('),
+            'kantanMarkdown.js must measure in offscreen frame, compute page-break model, and map to screen coordinates');
         assert(kantanMdJs.includes('ind.className = "page-break-indicator";') &&
-            kantanMdJs.includes('ind.setAttribute("data-page", "Page " + currentPage);'),
-            'kantanMarkdown.js must insert page-break-indicator element with Page N label');
-        assert(kantanMdJs.includes('updatePageBreaks();'),
-            'kantanMarkdown.js must hook updatePageBreaks on previewed and resize events');
+            kantanMdJs.includes('ind.setAttribute("data-page", "Page " + brk.pageNumber);'),
+            'kantanMarkdown.js must render page-break-indicator overlay elements with Page N label');
+        assert(kantanMdJs.includes('schedulePageBreakUpdate("previewed");') &&
+            kantanMdJs.includes('schedulePageBreakUpdate("window-resize");'),
+            'kantanMarkdown.js must hook schedulePageBreakUpdate on previewed and resize events');
 
         const ktmHtml = fs.readFileSync(path.join(rootDir, 'src', 'ktm.html'), 'utf-8');
+        assert(ktmHtml.includes('<label><input type="checkbox" id="setting-show-page-break"> 改ページインジゲータを表示する</label>'),
+            'src/ktm.html must include unchecked #setting-show-page-break checkbox ("改ページインジゲータを表示する")');
+        assert(!ktmHtml.includes('id="print-profile-section"') && !ktmHtml.includes('id="print-profile-file"'),
+            'src/ktm.html must not include removed print-profile-section controls');
+        assert(kantanMdJs.includes('function isPageBreakIndicatorEnabled(') && kantanMdJs.includes('on("#setting-show-page-break", "change"'),
+            'kantanMarkdown.js must control page-break indicator visibility via #setting-show-page-break');
         assert(ktmHtml.includes('href="https://hiro-gj.github.io/KanTanMarkdown/dist/kantanUpdate.js" id="updateButton"'),
             'src/ktm.html #updateButton must point to remote kantanUpdate.js URL instead of relative "#"');
         assert(!ktmHtml.includes('href="#"'),
@@ -426,6 +439,8 @@ function runTests() {
             'previewer.css code, tt must set word-wrap: break-word and overflow-wrap: break-word');
         assert(/padding:\s*2px\s+5px/.test(previewerRuleBody),
             'previewer.css code, tt must set padding: 2px 5px to prevent underscore border overlap');
+        assert(/color:\s*var\(--text,\s*#1f2328\)/.test(previewerRuleBody),
+            'previewer.css code, tt must set color: var(--text, #1f2328) so underscores match standard black text in light mode');
 
         const ktmNewMatch = ktmNewHtml.match(inlineCodeRuleRegex);
         assert(ktmNewMatch, 'ktm-new.html must define code, tt style block');

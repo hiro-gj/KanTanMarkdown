@@ -101,12 +101,57 @@
     }
 
     /**
+     * Removes temporary measurement iframes, page-break overlays, stray Mermaid nodes,
+     * and temporary measurement attributes before serializing HTML for saving.
+     * @param {Document} doc
+     */
+    function cleanupTemporaryDomForSave(doc) {
+        if (!doc || typeof doc.querySelectorAll !== 'function') return;
+        var tempSelectors = [
+            '#kantan-print-measure-frame',
+            '.kantan-print-measure-frame',
+            '#kantan-page-break-overlay',
+            '.kantan-page-break-overlay',
+            '.page-break-indicator',
+            'div[id^="dkantan-mermaid-"]',
+            'iframe[id^="ikantan-mermaid-"]',
+            'body > svg[id^="kantan-mermaid-"]'
+        ].join(', ');
+        var tempNodes = doc.querySelectorAll(tempSelectors);
+        for (var i = 0; i < tempNodes.length; i++) {
+            var node = tempNodes[i];
+            if (node && node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+        }
+        var taggedNodes = doc.querySelectorAll('[data-kantan-block-id], [data-kantan-measure-id]');
+        for (var j = 0; j < taggedNodes.length; j++) {
+            taggedNodes[j].removeAttribute('data-kantan-block-id');
+            taggedNodes[j].removeAttribute('data-kantan-measure-id');
+        }
+        var showPbCb = doc.getElementById('setting-show-page-break');
+        if (showPbCb) {
+            showPbCb.removeAttribute('checked');
+        }
+        var profileInput = doc.getElementById('print-profile-file');
+        if (profileInput) {
+            try {
+                profileInput.value = '';
+            } catch (_) {}
+        }
+    }
+
+    /**
      * Stage 3: Serializes the inner HTML of the document root into a complete single-file HTML string.
+     * Strips any residual measurement iframe or page-break overlay markup if present.
      * @param {string} htmlInnerMarkup
      * @returns {string}
      */
     function serializeSingleHtmlDocument(htmlInnerMarkup) {
-        var html = '<!doctype html>\n<html>\n' + (htmlInnerMarkup || '');
+        var cleanedMarkup = (htmlInnerMarkup || '')
+            .replace(/<iframe[^>]*\bid=["']kantan-print-measure-frame["'][^>]*>[\s\S]*?<\/iframe>/gi, '')
+            .replace(/<div[^>]*\bid=["']kantan-page-break-overlay["'][^>]*>[\s\S]*?<\/div>/gi, '');
+        var html = '<!doctype html>\n<html>\n' + cleanedMarkup;
         var lastScriptCloseIdx = html.lastIndexOf('/script>');
         if (lastScriptCloseIdx !== -1) {
             html = html.substring(0, lastScriptCloseIdx) + '/script>\n</body>\n</html>';
@@ -149,6 +194,7 @@
         normalizeDocumentTitle: normalizeDocumentTitle,
         collectDocumentSaveState: collectDocumentSaveState,
         prepareSavePayload: prepareSavePayload,
+        cleanupTemporaryDomForSave: cleanupTemporaryDomForSave,
         serializeSingleHtmlDocument: serializeSingleHtmlDocument,
         triggerBlobDownload: triggerBlobDownload
     };

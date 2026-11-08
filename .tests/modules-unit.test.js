@@ -159,6 +159,53 @@ function runTests() {
             { scrollTop: 50, scrollHeight: 200, clientHeight: 100 },
             { scrollHeight: 500, clientHeight: 100 }
         ), 200);
+
+        const w190Px = SettingsUi.mmToCssPx(190);
+        const h277Px = SettingsUi.mmToCssPx(277);
+        assert(Math.abs(w190Px - (190 * 96 / 25.4)) < 1e-6);
+        assert(Math.abs(h277Px - (277 * 96 / 25.4)) < 1e-6);
+        assert(Math.abs(SettingsUi.cssPxToMm(w190Px) - 190) < 1e-6);
+        assert.strictEqual(SettingsUi.mmToCssPx(0), 0);
+        assert.strictEqual(SettingsUi.mmToCssPx(-10), 0);
+        assert.strictEqual(SettingsUi.mmToCssPx(NaN), 0);
+        assert.strictEqual(SettingsUi.mmToCssPx(null), 0);
+        assert.strictEqual(SettingsUi.cssPxToMm('invalid'), 0);
+
+        const adoptedRes = SettingsUi.validateAndNormalizePrintProfile(SettingsUi.ADOPTED_PRINT_PROFILE);
+        assert.strictEqual(adoptedRes.valid, true);
+        assert.strictEqual(adoptedRes.measurementReady, true);
+        assert.deepStrictEqual(adoptedRes.contentAreaMm, { width: 190, height: 277 });
+        assert(SettingsUi.formatPrintProfileStatusText(adoptedRes).statusLabel.includes('準備完了'));
+
+        const defaultMarginRes = SettingsUi.validateAndNormalizePrintProfile({
+            schemaVersion: 1,
+            source: { browser: 'Chrome' },
+            paper: { widthMm: 210, heightMm: 297, landscape: false },
+            margins: { mode: 'default', effectiveMm: null, storedCustomMarginsRaw: { marginTop: 28 }, storedCustomMarginsActive: false },
+            scaling: { mode: 'custom', percent: 100 },
+            headerFooterEnabled: false,
+            backgroundsEnabled: true
+        });
+        assert.strictEqual(defaultMarginRes.valid, true);
+        assert.strictEqual(defaultMarginRes.measurementReady, false);
+        assert.strictEqual(defaultMarginRes.profile.margins.effectiveMm, null);
+        assert(defaultMarginRes.reasons.includes('missing-effective-margins'));
+
+        const landscapeRes = SettingsUi.validateAndNormalizePrintProfile({
+            schemaVersion: 1,
+            source: { browser: 'Chrome' },
+            paper: { widthMm: 210, heightMm: 297, landscape: true },
+            margins: { mode: 'custom', effectiveMm: { top: 10, right: 10, bottom: 10, left: 10 } },
+            scaling: { mode: 'custom', percent: 100 },
+            headerFooterEnabled: false,
+            backgroundsEnabled: true
+        });
+        assert.strictEqual(landscapeRes.measurementReady, false);
+        assert(landscapeRes.reasons.includes('landscape-orientation'));
+
+        const invalidJsonRes = SettingsUi.validateAndNormalizePrintProfile('{ broken json');
+        assert.strictEqual(invalidJsonRes.valid, false);
+        assert.strictEqual(invalidJsonRes.measurementReady, false);
     });
 
     // 5. UpdateInit event registry deduplication and cleanup tests
@@ -294,6 +341,115 @@ function runTests() {
         );
         assert.strictEqual(downloadOk, true);
         assert.deepStrictEqual(clickedDownload, { download: 'テスト文書.html', href: 'blob:mock-save-url' });
+
+        // Save exclusion of measurement iframe and page-break overlay
+        let removedCount = 0;
+        let attrClearedCount = 0;
+        let showPbAttrRemoved = false;
+        SaveExport.cleanupTemporaryDomForSave({
+            querySelectorAll(sel) {
+                if (sel.includes('#kantan-print-measure-frame')) {
+                    return [{ parentNode: { removeChild() { removedCount++; } } }, { parentNode: { removeChild() { removedCount++; } } }];
+                }
+                if (sel.includes('[data-kantan-block-id]')) {
+                    return [{ removeAttribute() { attrClearedCount++; } }];
+                }
+                return [];
+            },
+            getElementById(id) {
+                if (id === 'setting-show-page-break') {
+                    return { removeAttribute(attr) { if (attr === 'checked') showPbAttrRemoved = true; } };
+                }
+                return { value: 'profile.json' };
+            }
+        });
+        assert.strictEqual(removedCount, 2);
+        assert.strictEqual(attrClearedCount, 2);
+        assert.strictEqual(showPbAttrRemoved, true);
+
+        const serializedClean = SaveExport.serializeSingleHtmlDocument(
+            '<head></head><body><div id="previewer"><div id="kantan-page-break-overlay"><div class="page-break-indicator"></div></div></div>' +
+            '<iframe id="kantan-print-measure-frame"></iframe><script id="kantanMarkdownJs">1;</script>'
+        );
+        assert(!serializedClean.includes('kantan-print-measure-frame'));
+        assert(!serializedClean.includes('kantan-page-break-overlay'));
+
+        // Boundary model calculation & screen coordinate mapping tests
+        const emptyModel = SettingsUi.computePageBreakModel([], { pageHeightPx: 1000, pageWidthPx: 700 });
+        assert.strictEqual(emptyModel.totalPages, 1);
+        assert.strictEqual(emptyModel.breaks.length, 0);
+
+        const complexBlocks = [
+            { blockIndex: 0, tagName: 'H1', top: 0, bottom: 50, height: 50, isHeading: true },
+            { blockIndex: 1, tagName: 'P', top: 60, bottom: 1000, height: 940 },
+            { blockIndex: 2, tagName: 'DIV', top: 1010, bottom: 1300, height: 290, avoidBreakInside: true },
+            { blockIndex: 3, tagName: 'DIV', top: 1850, bottom: 2250, height: 400, avoidBreakInside: true },
+            { blockIndex: 4, tagName: 'H2', top: 2800, bottom: 2840, height: 40, isHeading: true, avoidBreakAfter: true },
+            { blockIndex: 5, tagName: 'DIV', top: 2845, bottom: 3000, height: 155, avoidBreakInside: true },
+            { blockIndex: 6, tagName: 'TABLE', top: 3010, bottom: 3950, height: 940, subItems: [
+                { subIndex: 0, top: 3010, bottom: 3500, height: 490 },
+                { subIndex: 1, top: 3500, bottom: 3950, height: 450 }
+            ] },
+            { blockIndex: 7, tagName: 'P', top: 3960, bottom: 4100, height: 140, forceBreakBefore: true },
+            { blockIndex: 8, tagName: 'PRE', top: 4110, bottom: 6500, height: 2390 }
+        ];
+        const model1 = SettingsUi.computePageBreakModel(complexBlocks, { pageHeightPx: 1000, pageWidthPx: 700 });
+        const model2 = SettingsUi.computePageBreakModel(complexBlocks, { pageHeightPx: 1000, pageWidthPx: 700 });
+        assert.deepStrictEqual(model1, model2);
+        assert(model1.breaks.some(b => b.blockIndex === 2 && b.anchorType === 'before-block' && b.pageNumber === 2));
+        assert(model1.breaks.some(b => b.blockIndex === 3 && b.reason === 'avoid-break-inside' && b.pageNumber === 3));
+        assert(model1.breaks.some(b => b.blockIndex === 4 && b.reason === 'heading-keep-with-next' && b.pageNumber === 4));
+        assert(model1.breaks.some(b => b.blockIndex === 6 && b.anchorType === 'inside-block' && b.subIndex === 1 && b.pageNumber === 5));
+        assert(model1.breaks.some(b => b.blockIndex === 7 && b.reason === 'explicit-break-before' && b.pageNumber === 6));
+        assert(model1.breaks.filter(b => b.blockIndex === 8 && b.anchorType === 'inside-block').length >= 2);
+
+        const screenBlocks = complexBlocks.map(b => ({
+            blockIndex: b.blockIndex, isToc: false, top: b.top * 1.2, bottom: b.bottom * 1.2, height: b.height * 1.2,
+            subItems: b.subItems ? b.subItems.map(s => ({ subIndex: s.subIndex, top: s.top * 1.2, bottom: s.bottom * 1.2 })) : []
+        }));
+        const snapshotBefore = JSON.stringify(screenBlocks);
+        const mapped = SettingsUi.mapBreaksToScreenPositions(model1.breaks, screenBlocks);
+        assert.strictEqual(JSON.stringify(screenBlocks), snapshotBefore);
+        assert.strictEqual(mapped.length, model1.breaks.length);
+
+        // Orphan 1-line inline avoidance vs block media split & bottom padding overflow tests
+        const orphanAndMediaBlocks = [
+            { blockIndex: 0, tagName: 'P', top: 0, bottom: 900, height: 900 },
+            // Block 1: 1st inline text line fits (910..928 <= 1000), 2nd inline image (isBlockMedia: false) overflows (929..1632 > 1000) -> must break before-block (orphans: 2)
+            { blockIndex: 1, tagName: 'P', top: 910, bottom: 1632, height: 722, subItems: [
+                { subIndex: 0, top: 910, bottom: 928, height: 18, charOffset: 0 },
+                { subIndex: 1, mediaIndex: 0, isBlockMedia: false, top: 929, bottom: 1632, height: 703, avoidBreakInside: true }
+            ] },
+            // Block 2: 1st line fits (1640..1658 <= 1910), 2nd block-level video thumb (isBlockMedia: true, mediaIndex: 0) overflows (1666..2060 > 1910) -> must break inside-block with mediaIndex=0
+            { blockIndex: 2, tagName: 'P', top: 1640, bottom: 2060, height: 420, subItems: [
+                { subIndex: 0, top: 1640, bottom: 1658, height: 18, charOffset: 0 },
+                { subIndex: 1, mediaIndex: 0, isBlockMedia: true, top: 1666, bottom: 2060, height: 394, avoidBreakInside: true }
+            ] },
+            { blockIndex: 3, tagName: 'P', top: 2070, bottom: 2650, height: 580 },
+            // Block 4: 1-line PRE where subItem[0].bottom (2665 <= 2666) fits, but block bottom with padding (2674 > 2666) overflows -> must break before-block, not long-block-slice
+            { blockIndex: 4, tagName: 'PRE', top: 2655, bottom: 2674, height: 19, subItems: [
+                { subIndex: 0, top: 2658, bottom: 2665, height: 7, charOffset: 0 }
+            ] }
+        ];
+        const omModel = SettingsUi.computePageBreakModel(orphanAndMediaBlocks, { pageHeightPx: 1000, pageWidthPx: 700 });
+        assert.strictEqual(omModel.breaks.length, 3);
+        assert.strictEqual(omModel.breaks[0].blockIndex, 1);
+        assert.strictEqual(omModel.breaks[0].anchorType, 'before-block');
+        assert.strictEqual(omModel.breaks[1].blockIndex, 2);
+        assert.strictEqual(omModel.breaks[1].anchorType, 'inside-block');
+        assert.strictEqual(omModel.breaks[1].mediaIndex, 0);
+        assert.strictEqual(omModel.breaks[2].blockIndex, 4);
+        assert.strictEqual(omModel.breaks[2].anchorType, 'before-block');
+
+        const omScreenBlocks = [
+            { blockIndex: 0, isToc: false, top: 0, bottom: 900, height: 900, subItems: [] },
+            { blockIndex: 1, isToc: false, top: 910, bottom: 1632, height: 722, subItems: [{ subIndex: 0, mediaIndex: 0, top: 929, bottom: 1632 }] },
+            { blockIndex: 2, isToc: false, top: 1640, bottom: 2200, height: 560, subItems: [{ subIndex: 0, mediaIndex: 0, top: 1670, bottom: 2200 }] },
+            { blockIndex: 3, isToc: false, top: 2210, bottom: 2800, height: 590, subItems: [] },
+            { blockIndex: 4, isToc: false, top: 2810, bottom: 2840, height: 30, subItems: [] }
+        ];
+        const omMapped = SettingsUi.mapBreaksToScreenPositions(omModel.breaks, omScreenBlocks);
+        assert.strictEqual(omMapped[1].screenY, 1666, 'mediaIndex=0 must map to video element top minus margin offset (1670 - 4 = 1666)');
     });
 
     // 8. Core kantanMarkdown.js delegation to all 5 modules (R3)
@@ -317,9 +473,12 @@ function runTests() {
             'addAttachFileElement must delegate to AttachmentManager.resolveUniqueAttachName');
         assert(kantanMdCode.includes('AttachmentManager.validateAttachmentRename('),
             'onFileNameChanged must delegate to AttachmentManager.validateAttachmentRename');
-        assert(kantanMdCode.includes('SettingsUi.calculateA4PageHeight(') &&
-            kantanMdCode.includes('SettingsUi.shouldInsertPageBreak('),
+        assert(kantanMdCode.includes('validateAndNormalizePrintProfile(') &&
+            kantanMdCode.includes('computePageBreakModel(') &&
+            kantanMdCode.includes('mapBreaksToScreenPositions('),
             'updatePageBreaks must delegate to SettingsUi');
+        assert(kantanMdCode.includes('SaveExport.cleanupTemporaryDomForSave(document)'),
+            'getHTMLForSave must call SaveExport.cleanupTemporaryDomForSave');
         assert(kantanMdCode.includes('UpdateInit.createEventRegistry(') &&
             kantanMdCode.includes('UpdateInit.resolveUpdateScriptUrl('),
             'event registration and update URL resolution must delegate to UpdateInit');
