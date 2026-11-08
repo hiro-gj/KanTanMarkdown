@@ -23,7 +23,11 @@
 	}
 
 	/* アップデート */
-    updateKantanVersion(document.getElementById("kantanVersion").value);
+	var initialVersionElem = document.getElementById("kantanVersion");
+	if (initialVersionElem && !initialVersionElem.getAttribute("data-embedded-version")) {
+		initialVersionElem.setAttribute("data-embedded-version", initialVersionElem.value);
+	}
+    updateKantanVersion(initialVersionElem ? initialVersionElem.value : "");
 	
 	var eventRegistry = (window.KantanModules && window.KantanModules.UpdateInit)
 		? window.KantanModules.UpdateInit.createEventRegistry(document)
@@ -132,6 +136,15 @@
 
 	on("#updateButton", "click", function(event) {
 		event.preventDefault();
+		if (window.KantanModules && window.KantanModules.UpdateInit &&
+			typeof window.KantanModules.UpdateInit.hideSettingsPanel === "function") {
+			window.KantanModules.UpdateInit.hideSettingsPanel(document);
+		} else {
+			var sp = document.getElementById("settings-panel");
+			if (sp) {
+				sp.setAttribute("hidden", "");
+			}
+		}
 		
 		if(!window.confirm(
 				"最新版にアップデートします。\n" +
@@ -1460,6 +1473,15 @@
 	} 
 	
 	function showImportDialog(msg, callback) {
+		if (window.KantanModules && window.KantanModules.UpdateInit &&
+			typeof window.KantanModules.UpdateInit.hideSettingsPanel === "function") {
+			window.KantanModules.UpdateInit.hideSettingsPanel(document);
+		} else {
+			var sp = document.getElementById("settings-panel");
+			if (sp) {
+				sp.setAttribute("hidden", "");
+			}
+		}
 		document.getElementById("btn-save").disabled =  true;
 		document.getElementById("importDialogMessage").innerText = msg;
 		var dialogElement = document.getElementById("importDialog");

@@ -520,6 +520,31 @@ function runTests() {
         }
     });
 
+    // Test 13: Update flow settings-panel auto-close, importDialog stacking order, and CSS overwrite logic
+    test('Update flow closes #settings-panel, places #importDialog above panels, and applies latest CSS when CSS overwrite is checked', () => {
+        const kantanCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'kantan.css'), 'utf-8');
+        const kantanUpdateSrc = fs.readFileSync(path.join(rootDir, 'src', 'kantanUpdate.js'), 'utf-8');
+        const kantanMdSrc = fs.readFileSync(path.join(rootDir, 'src', 'js', 'kantanMarkdown.js'), 'utf-8');
+
+        const importDialogRuleMatch = kantanCss.match(/#importDialog\s*\{([^}]+)\}/);
+        assert(importDialogRuleMatch, 'src/css/kantan.css must define #importDialog rule');
+        const importDialogRule = importDialogRuleMatch[1];
+        assert(/z-index:\s*2000/.test(importDialogRule) && /position:\s*fixed/.test(importDialogRule),
+            '#importDialog must use position: fixed and z-index: 2000 so #settings-panel (z-index: 1500) never obscures it');
+
+        assert(kantanMdSrc.includes('hideSettingsPanel(document)'),
+            'src/js/kantanMarkdown.js must close #settings-panel when clicking #updateButton or opening #importDialog');
+        assert(kantanUpdateSrc.includes('hideSettingsPanel(document)') &&
+            kantanUpdateSrc.includes('resolveCssAfterUpdate('),
+            'src/kantanUpdate.js must close #settings-panel in doUpdate and resolve CSS overwrite via resolveCssAfterUpdate');
+        assert(!/if\s*\(\(dialogResult\.css\s*==\s*true\)\s*&&\s*originalCss\)\s*\{\s*var\s+cssEditor\s*=\s*document\.querySelector\("#cssEditor"\);\s*cssEditor\.value\s*=\s*originalCss;/.test(kantanUpdateSrc),
+            'src/kantanUpdate.js must not overwrite latest CSS with stale originalCss when dialogResult.css (CSS上書き) is true');
+
+        const previewUpdateJs = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'kantanUpdate.js'), 'utf-8');
+        assert(previewUpdateJs.includes('resolveCssAfterUpdate') && previewUpdateJs.includes('hideSettingsPanel'),
+            'dist/preview/kantanUpdate.js must embed resolveCssAfterUpdate and hideSettingsPanel');
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);

@@ -2,7 +2,19 @@ kantanUpdate({
 	"newVersion": "<inline src="kantanVersion.txt" />",
 	"ktmString": <inline src="ktmString.js" />,
 	"doUpdate": function() {
-		var kantanVersion = document.getElementById("kantanVersion").value;
+		if (window.KantanModules && window.KantanModules.UpdateInit &&
+			typeof window.KantanModules.UpdateInit.hideSettingsPanel === "function") {
+			window.KantanModules.UpdateInit.hideSettingsPanel(document);
+		} else {
+			var settingsPanel = document.getElementById("settings-panel");
+			if (settingsPanel) {
+				settingsPanel.setAttribute("hidden", "");
+			}
+		}
+
+		var versionElem = document.getElementById("kantanVersion");
+		var kantanVersion = (versionElem && versionElem.getAttribute("data-embedded-version"))
+			|| (versionElem ? versionElem.value : "");
 		if (kantanVersion == this.newVersion) {
 			var confirm = window.confirm("お使いのKantanMarkdownは最新です。それでも強制的にアップデートを実行しますか？");		
 			if (confirm == false) {
@@ -67,6 +79,10 @@ kantanUpdate({
 		html.innerHTML = newHtml;
 
 		// バージョン・エディション更新
+		var updatedVerElem = document.getElementById("kantanVersion");
+		if (updatedVerElem) {
+			updatedVerElem.setAttribute("data-embedded-version", this.newVersion);
+		}
 		updateKantanVersion(this.newVersion);
 		updateKantanEdition(kantanEdition);
 		
@@ -123,15 +139,37 @@ kantanUpdate({
 			saved = false;
 		}
 		
-		// CSS引継ぎ
-		if ((dialogResult.css == true) && originalCss) {
-			var cssEditor = document.querySelector("#cssEditor");
-			cssEditor.value = originalCss;
-			saved = false;
+		// CSS上書き・引継ぎ（「CSS(上書き)」チェック時は新バージョンの標準CSSで上書き、未チェック時は既存CSSを引継ぎ）
+		var cssEditor = document.querySelector("#cssEditor");
+		if (cssEditor) {
+			if (window.KantanModules && window.KantanModules.UpdateInit &&
+				typeof window.KantanModules.UpdateInit.resolveCssAfterUpdate === "function") {
+				var cssResolution = window.KantanModules.UpdateInit.resolveCssAfterUpdate(
+					cssEditor.value,
+					originalCss,
+					Boolean(dialogResult.css)
+				);
+				cssEditor.value = cssResolution.cssValue;
+				if (cssResolution.markUnsaved) {
+					saved = false;
+				}
+			} else if (dialogResult.css == true) {
+				saved = false;
+			} else if (originalCss) {
+				cssEditor.value = originalCss;
+			}
 		}
 		
 		// 念のため古いエレメントを削除しておく
 		fileListElement = null;
+
+		// アップデート再構築後は初期状態（閲覧モード・ファイラー閉鎖）へ整える
+		if (typeof closeFiler === "function") {
+			closeFiler();
+		}
+		if (typeof isEditMode === "function" && isEditMode() && typeof toggleMode === "function") {
+			toggleMode();
+		}
 		
 		// プレビュー
 		doPreview();

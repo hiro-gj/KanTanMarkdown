@@ -133,6 +133,10 @@
         if (showPbCb) {
             showPbCb.removeAttribute('checked');
         }
+        var kantanVerEl = doc.getElementById('kantanVersion');
+        if (kantanVerEl && typeof kantanVerEl.removeAttribute === 'function') {
+            kantanVerEl.removeAttribute('data-embedded-version');
+        }
         var profileInput = doc.getElementById('print-profile-file');
         if (profileInput) {
             try {
