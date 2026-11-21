@@ -218,6 +218,66 @@ function runTests() {
         assert(removedIds.includes('dkantan-mermaid-err'), 'cleanupMermaidTempDom must remove temporary #d<id> wrapper');
     });
 
+    test('Mermaid code fence HTML-escaping preserves <br/>, <config>, List<Confirmation>, and supports Mermaid / mermaid:title fences', () => {
+        const renderer = new marked.Renderer();
+        const origCode = renderer.code.bind(renderer);
+        renderer.code = function(code, lang, escaped) {
+            if (PreviewMermaid.isMermaidLang(lang)) {
+                return PreviewMermaid.renderMermaidCodeFence(code, escaped);
+            }
+            return origCode(code, lang, escaped);
+        };
+        const mdInput = [
+            '```Mermaid',
+            'sequenceDiagram',
+            '    Note right of Helper: CanIncludeInClipboardHistory=0<br/>CanUploadToCloudClipboard=0 設定',
+            '    Helper->>Helper: WriteXmlString() で内部 <config> XML 構築',
+            '    Client-->>Form: List<Confirmation> 返却・一覧描画',
+            '```',
+            '',
+            '```mermaid:構成図.mmd',
+            'flowchart TD',
+            '    MAIN_UI["WinAuthForm & AuthenticatorListBox<br/>(メイン画面・トレイ・通知)"] --> CONFIG_MGR["WinAuthConfig<br/>(構成管理)"]',
+            '    IFS[/while\\] --> IFB[\\  /]',
+            '```'
+        ].join('\n');
+
+        const html = marked(mdInput, {
+            renderer: renderer,
+            highlight: function(code, lang) {
+                if (PreviewMermaid.isMermaidLang(lang)) return code;
+                return '<span class="hl">' + code + '</span>';
+            }
+        });
+
+        const divMatches = [...html.matchAll(/<div class="mermaid">([\s\S]*?)<\/div>/g)];
+        assert.strictEqual(divMatches.length, 2, 'Both ```Mermaid and ```mermaid:構成図.mmd must render as <div class="mermaid">');
+        assert(!divMatches[0][1].includes('<br/>') && divMatches[0][1].includes('&lt;br/&gt;'),
+            'Raw <br/> must be HTML-escaped inside <div class="mermaid"> so innerHTML does not create <br> elements');
+        assert(divMatches[0][1].includes('&lt;config&gt;') && divMatches[0][1].includes('List&lt;Confirmation&gt;'),
+            'Angle-bracket tokens <config> and <Confirmation> must be HTML-escaped rather than stripped as unknown HTML tags');
+
+        // Simulate browser textContent extraction (no <br> DOM elements exist inside escaped fence)
+        const decodeEntities = (s) => s
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&');
+
+        const seqSource = PreviewMermaid.normalizeMermaidText(decodeEntities(divMatches[0][1]));
+        assert(seqSource.includes('Note right of Helper: CanIncludeInClipboardHistory=0<br/>CanUploadToCloudClipboard=0 設定'),
+            'Note line with <br/> must remain a single line without physical newline splitting');
+        assert(seqSource.includes('<config>') && seqSource.includes('List<Confirmation>'),
+            '<config> and List<Confirmation> must survive intact into Mermaid source');
+
+        const flowSource = PreviewMermaid.normalizeMermaidText(decodeEntities(divMatches[1][1]));
+        assert(flowSource.includes('MAIN_UI["WinAuthForm & AuthenticatorListBox<br/>(メイン画面・トレイ・通知)"]'),
+            'Flowchart node label with <br/> must remain intact on a single line');
+        assert(flowSource.includes('IFS[/"while"\\] --> IFB[\\" "/]'),
+            'Blank inverse trapezoid label must be normalized to single-space quote');
+    });
+
     console.log(`\nMermaid Parser Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) process.exit(1);
     else process.exit(0);

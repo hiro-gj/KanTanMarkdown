@@ -22,7 +22,7 @@
 | getItem(name,defaultValue) / setItem(name,value) | 設定名・値 | 接頭辞付きLocalStorage。例外捕捉 |
 | kantanUpdate(json) | {newVersion,ktmString,doUpdate,rewirteHtml} | json.doUpdate実行。rewirteHtmlは実装の綴り通り |
 | KantanModules.SaveExport.* | DOMまたは保存状態・Blob | 4段階保存処理および一時DOM除外（collectDocumentSaveState、prepareSavePayload、cleanupTemporaryDomForSave、serializeSingleHtmlDocument、triggerBlobDownload） |
-| KantanModules.PreviewMermaid.* | Mermaid文字列・CSS文字列・Markdown文字列 | normalizeMermaidText、isMermaidErrorSvg、cleanupMermaidTempDom、replaceAttachUrlInCss、parseLinesForHeadingSync |
+| KantanModules.PreviewMermaid.* | 言語指定文字列・Mermaid文字列・CSS文字列・Markdown文字列 | isMermaidLang、escapeMermaidHtml、renderMermaidCodeFence、isAsyncMermaidDiagram、isWidthSensitiveMermaidDiagram、normalizeMermaidText、isMermaidErrorSvg、cleanupMermaidTempDom、replaceAttachUrlInCss、parseLinesForHeadingSync |
 | KantanModules.AttachmentManager.* | 添付名・Data URL・DOM | resolveUniqueAttachName、validateAttachmentRename、base64ToBlob、collectAttachmentsFromDom、decodeAttachName、extractAttachName、isVideoAttachment、buildAttachmentInsertTag |
 | KantanModules.SettingsUi.* | 設定名・ズーム・プロファイルJSON・計測ブロック・画面ブロック・スクロール量 | LocalStorage永続化、getNextEditorZoom、mmToCssPx、cssPxToMm、validateAndNormalizePrintProfile、formatPrintProfileStatusText、computePageBreakModel、mapBreaksToScreenPositions、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop |
 | KantanModules.UpdateInit.* | 要素・イベント・パス・版番号・CSS文字列 | createEventRegistry（重複登録防止付きregister / removeAll）、resolveUpdateScriptUrl、compareVersions、shouldUpdateDisplayedVersion、hideSettingsPanel、resolveCssAfterUpdate |

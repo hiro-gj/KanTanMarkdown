@@ -227,11 +227,34 @@
 	toKantanEditor(document.getElementById("cssEditor"));
 
 	/* marked カスタムレンダラー（Mermaidフェンス対応） */
+	function isMermaidLang(lang) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid &&
+			typeof window.KantanModules.PreviewMermaid.isMermaidLang === "function") {
+			return window.KantanModules.PreviewMermaid.isMermaidLang(lang);
+		}
+		if (typeof lang !== "string") return false;
+		return /^\s*mermaid(?:\s*:.*)?\s*$/i.test(lang);
+	}
+
+	function renderMermaidCodeFence(code, escaped) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid &&
+			typeof window.KantanModules.PreviewMermaid.renderMermaidCodeFence === "function") {
+			return window.KantanModules.PreviewMermaid.renderMermaidCodeFence(code, escaped);
+		}
+		var safeCode = escaped ? String(code == null ? "" : code) : String(code == null ? "" : code)
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
+		return '<div class="mermaid">' + safeCode + '</div>';
+	}
+
 	var markedRenderer = new marked.Renderer();
 	var originalCodeRenderer = markedRenderer.code.bind(markedRenderer);
 	markedRenderer.code = function (code, lang, escaped) {
-		if (lang === "mermaid" && typeof mermaid !== "undefined") {
-			return '<div class="mermaid">' + code + '</div>';
+		if (isMermaidLang(lang) && typeof mermaid !== "undefined") {
+			return renderMermaidCodeFence(code, escaped);
 		}
 		return originalCodeRenderer(code, lang, escaped);
 	};
@@ -246,7 +269,7 @@
 		marked.setOptions({
 			renderer: markedRenderer,
 			highlight: function (code, lang) {
-				if (lang === "mermaid") {
+				if (isMermaidLang(lang)) {
 					return code;
 				}
 				return hljs.highlightAuto(code, [lang]).value;
@@ -1031,6 +1054,22 @@
 		return rawText;
 	}
 
+	function isAsyncMermaidDiagram(source) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid &&
+			typeof window.KantanModules.PreviewMermaid.isAsyncMermaidDiagram === "function") {
+			return window.KantanModules.PreviewMermaid.isAsyncMermaidDiagram(source);
+		}
+		return /^\s*(?:%%\{[\s\S]*?\}%%\s*|%%[^\r\n]*(?:\r?\n|$)\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(source || "");
+	}
+
+	function isWidthSensitiveMermaidDiagram(source) {
+		if (window.KantanModules && window.KantanModules.PreviewMermaid &&
+			typeof window.KantanModules.PreviewMermaid.isWidthSensitiveMermaidDiagram === "function") {
+			return window.KantanModules.PreviewMermaid.isWidthSensitiveMermaidDiagram(source);
+		}
+		return /^\s*(?:%%\{[\s\S]*?\}%%\s*|%%[^\r\n]*(?:\r?\n|$)\s*)*(?:gantt|pie)\b/i.test(source || "");
+	}
+
 		// シーケンス図
 		if (typeof Diagram !== "undefined") {
 			var sequences = document.getElementsByClassName("sequence");
@@ -1102,8 +1141,8 @@
 					var renderSource = normalizeMermaidText(mermaidSource);
 					var diagramId = "kantan-mermaid-" + Date.now() + "-" + mi;
 					var cacheKey = mermaidTheme + "\n" + renderSource;
-					var isAsyncDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:mindmap|timeline|flowchart-elk)\b/i.test(renderSource);
-					var isWidthSensitiveDiagram = /^\s*(?:%%[^\n]*\n\s*)*(?:gantt|pie)\b/i.test(renderSource);
+					var isAsyncDiagram = isAsyncMermaidDiagram(renderSource);
+					var isWidthSensitiveDiagram = isWidthSensitiveMermaidDiagram(renderSource);
 
 					if (window.__kantanMermaidCache[cacheKey] && !isMermaidErrorSvg(window.__kantanMermaidCache[cacheKey])) {
 						container.innerHTML = window.__kantanMermaidCache[cacheKey];
