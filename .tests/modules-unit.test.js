@@ -62,6 +62,80 @@ function runTests() {
         assert.strictEqual(lines[7], '# HTML H3</h3>');
     });
 
+    test('PreviewMermaid.isMermaidLang, escapeMermaidHtml, and renderMermaidCodeFence handle case, Qiita titles, and HTML/XSS escaping', () => {
+        assert.strictEqual(PreviewMermaid.isMermaidLang('mermaid'), true);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('Mermaid'), true);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('MERMAID'), true);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('mermaid:構成図.mmd'), true);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('  mermaid : flow.mmd  '), true);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('mermaidjs'), false);
+        assert.strictEqual(PreviewMermaid.isMermaidLang('javascript'), false);
+        assert.strictEqual(PreviewMermaid.isMermaidLang(''), false);
+        assert.strictEqual(PreviewMermaid.isMermaidLang(null), false);
+        assert.strictEqual(PreviewMermaid.isMermaidLang({}), false);
+
+        const raw = 'Note right of A: x=1<br/>y=2 & <config> "q" \'s\' </div>';
+        const escaped = PreviewMermaid.escapeMermaidHtml(raw);
+        assert.strictEqual(escaped, 'Note right of A: x=1&lt;br/&gt;y=2 &amp; &lt;config&gt; &quot;q&quot; &#39;s&#39; &lt;/div&gt;');
+        assert.strictEqual(PreviewMermaid.renderMermaidCodeFence(raw, false), '<div class="mermaid">' + escaped + '</div>');
+        assert.strictEqual(PreviewMermaid.renderMermaidCodeFence(escaped, true), '<div class="mermaid">' + escaped + '</div>');
+    });
+
+    test('PreviewMermaid.isAsyncMermaidDiagram and isWidthSensitiveMermaidDiagram skip single-line comments and multiline %%{init}%% directives', () => {
+        const multilineInit = "%%{\n  init: {\n    'theme': 'base'\n  }\n}%%\n";
+        assert.strictEqual(PreviewMermaid.isAsyncMermaidDiagram(multilineInit + 'timeline\n  title History'), true);
+        assert.strictEqual(PreviewMermaid.isAsyncMermaidDiagram('%% comment 1\n' + multilineInit + '  flowchart-elk TD\n  A-->B'), true);
+        assert.strictEqual(PreviewMermaid.isAsyncMermaidDiagram('mindmap\n  root'), true);
+        assert.strictEqual(PreviewMermaid.isAsyncMermaidDiagram(multilineInit + 'flowchart TD\n  A-->B'), false);
+
+        assert.strictEqual(PreviewMermaid.isWidthSensitiveMermaidDiagram(multilineInit + 'gantt\n  title Plan'), true);
+        assert.strictEqual(PreviewMermaid.isWidthSensitiveMermaidDiagram('%% header\n' + multilineInit + 'pie title Ratio'), true);
+        assert.strictEqual(PreviewMermaid.isWidthSensitiveMermaidDiagram(multilineInit + 'sequenceDiagram\n  A->>B: Hi'), false);
+    });
+
+    test('PreviewMermaid.normalizeMermaidText handles blank labels, inline comments, 1-level nested brackets, sequence semicolons/entities, idempotency, and ReDoS safety', () => {
+        const blankTrap = 'graph TB\n  IFS[/while\\]-->IFB[\\  /]\n  A[ ] --> B(   )';
+        const normBlank = PreviewMermaid.normalizeMermaidText(blankTrap);
+        assert(normBlank.includes('IFS[/"while"\\]-->IFB[\\" "/]'), 'Adjacent trapezoid and blank inverse trapezoid must be quoted with single space');
+        assert(normBlank.includes('A[" "] --> B(" ")'), 'Whitespace-only square and round nodes must preserve a space inside quotes');
+        assert(!normBlank.includes('""'), 'Whitespace-only labels must not collapse into empty quotes');
+        assert.strictEqual(PreviewMermaid.normalizeMermaidText(normBlank), normBlank, 'Blank label normalization must be idempotent');
+
+        const withComment = 'flowchart TD %% header comment\n  A[100%% 完了] --> B[次処理] %% TODO: C[未実装] --> D[保留]';
+        const normComment = PreviewMermaid.normalizeMermaidText(withComment);
+        assert(normComment.includes('A["100%% 完了"] --> B["次処理"] %% TODO: C[未実装] --> D[保留]'),
+            'Inline %% comment must remain untouched while %% inside label is quoted');
+        assert.strictEqual(PreviewMermaid.normalizeMermaidText(normComment), normComment);
+
+        const nested = 'flowchart LR\n  A(処理(サブ)) --> B[配列 a[0] 参照] --> C[配列 a[0]] --> D{条件{x}}';
+        const normNested = PreviewMermaid.normalizeMermaidText(nested);
+        assert(normNested.includes('A("処理(サブ)")'), 'Nested parentheses must quote outer node');
+        assert(normNested.includes('B["配列 a[0] 参照"]'), 'Nested brackets with trailing text must quote outer node');
+        assert(normNested.includes('C["配列 a[0]"]'), 'Nested brackets at end of label must quote outer node');
+        assert(normNested.includes('D{"条件{x}"}'), 'Nested braces must quote outer node');
+        assert.strictEqual(PreviewMermaid.normalizeMermaidText(normNested), normNested, 'Nested bracket normalization must be idempotent');
+
+        const seqPlain = 'sequenceDiagram\n  Alice->>Bob: こんにちは<br/>テスト <config>';
+        assert.strictEqual(PreviewMermaid.normalizeMermaidText(seqPlain), seqPlain, 'sequenceDiagram without semicolons must remain byte-for-byte identical');
+
+        const seqSemi = [
+            'sequenceDiagram',
+            '  Client->>+Server: Cookie: a=1; HttpOnly &lt;tag&gt; &amp; &quot;q&quot; &#39;s&#39;',
+            '  Note right of Server: line1<br/>a=1; b=2; already #59; ok'
+        ].join('\n');
+        const normSeq = PreviewMermaid.normalizeMermaidText(seqSemi);
+        assert(normSeq.includes("Client->>+Server: Cookie: a=1#59; HttpOnly <tag> & \"q\" 's'"),
+            'Message semicolons and HTML entities must be normalized');
+        assert(normSeq.includes('Note right of Server: line1<br/>a=1#59; b=2#59; already #59; ok'),
+            'Note semicolons must be normalized without double-encoding existing #59;');
+        assert.strictEqual(PreviewMermaid.normalizeMermaidText(normSeq), normSeq, 'sequenceDiagram normalization must be idempotent');
+
+        const t0 = Date.now();
+        const malformed = 'flowchart TD\n  A' + '[x'.repeat(2000);
+        PreviewMermaid.normalizeMermaidText(malformed);
+        assert(Date.now() - t0 < 500, 'Malformed unclosed brackets must complete quickly without ReDoS');
+    });
+
     // 2. AttachmentManager module tests
     test('AttachmentManager.resolveUniqueAttachName avoids collisions with _2, _3 suffixes', () => {
         const existing = new Set(['image.png', 'image_2.png', 'archive']);
@@ -498,8 +572,12 @@ function runTests() {
             'getHTMLForSave must call SaveExport.serializeSingleHtmlDocument');
         assert(kantanMdCode.includes('SaveExport.triggerBlobDownload('),
             'save/download must call SaveExport.triggerBlobDownload');
-        assert(kantanMdCode.includes('PreviewMermaid.normalizeMermaidText('),
-            'normalizeMermaidText must delegate to PreviewMermaid.normalizeMermaidText');
+        assert(kantanMdCode.includes('PreviewMermaid.normalizeMermaidText(') &&
+            kantanMdCode.includes('PreviewMermaid.isMermaidLang(') &&
+            kantanMdCode.includes('PreviewMermaid.renderMermaidCodeFence(') &&
+            kantanMdCode.includes('PreviewMermaid.isAsyncMermaidDiagram(') &&
+            kantanMdCode.includes('PreviewMermaid.isWidthSensitiveMermaidDiagram('),
+            'Mermaid language check, fence HTML escaping, diagram classification, and normalization must delegate to PreviewMermaid');
         assert(kantanMdCode.includes('PreviewMermaid.replaceAttachUrlInCss('),
             'replaceAttachURL must delegate to PreviewMermaid.replaceAttachUrlInCss');
         assert(kantanMdCode.includes('PreviewMermaid.parseLinesForHeadingSync('),
