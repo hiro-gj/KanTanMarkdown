@@ -24,6 +24,9 @@
     --toolbar-height: 40px;
     --inline-code-bg: #818b981f;
     --shadow-button: 0 1px 1px 0 #1f23280a, 0 1px 2px 0 #1f232808;
+    --toolbar-toggle-glow-zero: rgba(9, 105, 218, 0);
+    --toolbar-toggle-glow-ring: rgba(9, 105, 218, 0.18);
+    --toolbar-toggle-glow-soft: rgba(9, 105, 218, 0.24);
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;
     --font-mono: "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace;
 }
@@ -39,6 +42,9 @@ body.dark {
     --text-muted: #8b949e;
     --accent: #58a6ff;
     --accent-hover: #79c0ff;
+    --toolbar-toggle-glow-zero: rgba(88, 166, 255, 0);
+    --toolbar-toggle-glow-ring: rgba(88, 166, 255, 0.24);
+    --toolbar-toggle-glow-soft: rgba(88, 166, 255, 0.32);
 }
 
 body {
@@ -92,6 +98,48 @@ body.onDragover {
 
 #toolbar-toggle:hover {
     background: var(--bg);
+}
+
+@keyframes kantanToolbarToggleGentleBlink {
+    0%, 100% {
+        opacity: 0.72;
+        border-color: var(--border);
+        color: var(--text);
+        box-shadow: var(--shadow-button), 0 0 0 0 var(--toolbar-toggle-glow-zero), 0 0 0 0 var(--toolbar-toggle-glow-zero);
+    }
+    50% {
+        opacity: 1;
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: var(--shadow-button), 0 0 0 4px var(--toolbar-toggle-glow-ring), 0 0 10px 0 var(--toolbar-toggle-glow-soft);
+    }
+}
+
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink {
+    animation: kantanToolbarToggleGentleBlink 2.8s ease-in-out infinite;
+}
+
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink:hover,
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink:focus-visible {
+    animation: none;
+    opacity: 1;
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--bg);
+}
+
+.initialState #toolbar-toggle,
+.drawMode #toolbar-toggle {
+    animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink {
+        animation: none;
+        opacity: 1;
+        border-color: var(--accent);
+        box-shadow: var(--shadow-button), 0 0 0 3px var(--toolbar-toggle-glow-ring);
+    }
 }
 
 #toolbar {
@@ -5854,6 +5902,13 @@ LetterModeStrategy.prototype = {
                 profileInput.value = '';
             } catch (_) {}
         }
+        var toggleBtn = doc.getElementById('toolbar-toggle');
+        if (toggleBtn && toggleBtn.classList) {
+            toggleBtn.classList.remove('toolbar-toggle-blink');
+            if (toggleBtn.className === '') {
+                toggleBtn.removeAttribute('class');
+            }
+        }
     }
 
     /**
@@ -6455,6 +6510,77 @@ LetterModeStrategy.prototype = {
         return ratio * targetMax;
     }
 
+    /**
+     * Determines whether the given markdown string is empty or contains only whitespace characters.
+     * @param {string|*} markdown
+     * @returns {boolean}
+     */
+    function isMarkdownEmpty(markdown) {
+        return typeof markdown !== 'string' || markdown.trim().length === 0;
+    }
+
+    /**
+     * Determines whether the top-right circular menu button (#toolbar-toggle) should blink gently.
+     * Blinks when markdown body is empty, toolbar is closed, and not in view-only or draw mode.
+     * @param {{ markdown?: string, isToolbarOpen?: boolean, isViewOnly?: boolean, isDrawMode?: boolean }} [params]
+     * @returns {boolean}
+     */
+    function shouldBlinkToolbarToggle(params) {
+        if (!params || typeof params !== 'object') {
+            return false;
+        }
+        if (Boolean(params.isViewOnly) || Boolean(params.isDrawMode) || Boolean(params.isToolbarOpen)) {
+            return false;
+        }
+        return isMarkdownEmpty(params.markdown);
+    }
+
+    /**
+     * Synchronizes the .toolbar-toggle-blink class on #toolbar-toggle based on editor content and UI state.
+     * @param {Document} [doc]
+     * @param {{ isViewOnly?: boolean }} [options]
+     * @returns {boolean}
+     */
+    function syncToolbarToggleBlink(doc, options) {
+        var d = doc || (typeof document !== 'undefined' ? document : null);
+        if (!d || typeof d.getElementById !== 'function') {
+            return false;
+        }
+        var toggleBtn = d.getElementById('toolbar-toggle');
+        if (!toggleBtn) {
+            return false;
+        }
+        var editor = d.getElementById('editor');
+        var toolbar = d.getElementById('toolbar');
+        var body = d.body;
+        var isToolbarOpen = Boolean(
+            (toolbar && toolbar.classList && toolbar.classList.contains('visible')) ||
+            (body && body.classList && body.classList.contains('toolbar-open'))
+        );
+        var isDrawMode = Boolean(body && body.classList && body.classList.contains('drawMode'));
+        var isViewOnly = Boolean(options && options.isViewOnly);
+        var markdown = (editor && typeof editor.value === 'string') ? editor.value : '';
+
+        var shouldBlink = shouldBlinkToolbarToggle({
+            markdown: markdown,
+            isToolbarOpen: isToolbarOpen,
+            isViewOnly: isViewOnly,
+            isDrawMode: isDrawMode
+        });
+
+        if (toggleBtn.classList) {
+            if (shouldBlink) {
+                toggleBtn.classList.add('toolbar-toggle-blink');
+            } else {
+                toggleBtn.classList.remove('toolbar-toggle-blink');
+                if (toggleBtn.className === '') {
+                    toggleBtn.removeAttribute('class');
+                }
+            }
+        }
+        return shouldBlink;
+    }
+
     function mapBreaksToScreenPositions(breaks, screenBlocks) {
         if (!Array.isArray(breaks) || breaks.length === 0 || !Array.isArray(screenBlocks) || screenBlocks.length === 0) {
             return [];
@@ -6556,7 +6682,10 @@ LetterModeStrategy.prototype = {
         formatPrintProfileStatusText: formatPrintProfileStatusText,
         computePageBreakModel: computePageBreakModel,
         mapBreaksToScreenPositions: mapBreaksToScreenPositions,
-        calculateSyncedScrollTop: calculateSyncedScrollTop
+        calculateSyncedScrollTop: calculateSyncedScrollTop,
+        isMarkdownEmpty: isMarkdownEmpty,
+        shouldBlinkToolbarToggle: shouldBlinkToolbarToggle,
+        syncToolbarToggleBlink: syncToolbarToggleBlink
     };
 
     root.KantanModules = root.KantanModules || {};
@@ -6798,6 +6927,7 @@ LetterModeStrategy.prototype = {
 })(typeof window !== 'undefined' ? window : globalThis);
 
 	/* 編集不可ブラウザ判定 */
+	var isViewOnlyMode = false;
 
 	// Blobが使用できないブラウザは保存不可
 	try {
@@ -6813,11 +6943,15 @@ LetterModeStrategy.prototype = {
 	}
 
 	function setViewOnly() {
+		isViewOnlyMode = true;
 		document.getElementById("message-area").innerText
 				 = "このブラウザでは編集できません。";
 		var navElems = document.querySelectorAll("#toolbar button");
 		for (var i = 0; i < navElems.length; i++) {
 			navElems[i].setAttribute("disabled", "disabled");
+		}
+		if (typeof syncToolbarToggleAttention === "function") {
+			syncToolbarToggleAttention();
 		}
 	}
 
@@ -7178,6 +7312,28 @@ LetterModeStrategy.prototype = {
 	var toggleIcon = document.getElementById("toolbar-toggle-icon");
 	var isToolbarVisible = getItem("toolbar-visible", "false") === "true";
 
+	function syncToolbarToggleAttention() {
+		if (window.KantanModules && window.KantanModules.SettingsUi &&
+			typeof window.KantanModules.SettingsUi.syncToolbarToggleBlink === "function") {
+			return window.KantanModules.SettingsUi.syncToolbarToggleBlink(document, { isViewOnly: isViewOnlyMode });
+		}
+		var btn = document.getElementById("toolbar-toggle");
+		if (!btn) return false;
+		var ed = document.getElementById("editor");
+		var tb = document.getElementById("toolbar");
+		var tbOpen = (tb && tb.classList.contains("visible")) || document.body.classList.contains("toolbar-open");
+		var inDraw = document.body.classList.contains("drawMode");
+		var val = ed ? ed.value : "";
+		var empty = (typeof val !== "string" || val.trim().length === 0);
+		var shouldBlink = !isViewOnlyMode && !inDraw && !tbOpen && empty;
+		if (shouldBlink) {
+			addClass(btn, "toolbar-toggle-blink");
+		} else {
+			removeClass(btn, "toolbar-toggle-blink");
+		}
+		return shouldBlink;
+	}
+
 	if (isToolbarVisible) {
 		addClass(toolbar, "visible");
 		addClass(document.body, "toolbar-open");
@@ -7187,6 +7343,7 @@ LetterModeStrategy.prototype = {
 		removeClass(document.body, "toolbar-open");
 		toggleIcon.innerText = "☰";
 	}
+	syncToolbarToggleAttention();
 
 	on("#toolbar-toggle", "click", function() {
 		if (toolbar.classList.contains("visible")) {
@@ -7205,6 +7362,7 @@ LetterModeStrategy.prototype = {
 			toggleIcon.innerText = "✕";
 			setItem("toolbar-visible", "true");
 		}
+		syncToolbarToggleAttention();
 		doLayout();
 	});
 
@@ -7473,9 +7631,21 @@ LetterModeStrategy.prototype = {
 		}
 	});
 
-	// エディタに変化があったらプレビュー予約
-	on("#editor", "change", queuePreview);
-	on("#editor", "keyup", queuePreview);
+	// エディタに変化があったらプレビュー予約およびメニューボタン明滅の同期
+	on("#editor", "change", function() {
+		syncToolbarToggleAttention();
+		queuePreview();
+	});
+	on("#editor", "keyup", function() {
+		syncToolbarToggleAttention();
+		queuePreview();
+	});
+	on("#editor", "input", function() {
+		syncToolbarToggleAttention();
+	});
+	on("#editor", "changeByJs", function() {
+		syncToolbarToggleAttention();
+	});
 	
 	// 自動更新がONならプレビューする
 	// ただし、onkeyupなど呼ばれる頻度が高いので一定時間待って最後の呼び出しのみ実行する
@@ -8040,6 +8210,8 @@ LetterModeStrategy.prototype = {
 		var event = document.createEvent("Event");
 		event.initEvent("previewed", true, true);
 		previewer.dispatchEvent(event);
+
+		syncToolbarToggleAttention();
 	}
 	
 	function replaceAttachURL(str) {
@@ -8671,6 +8843,7 @@ LetterModeStrategy.prototype = {
 		var trimElement = rootElement.querySelector("script.trimInfo");
 		
 		addClass(document.querySelector("body"), "drawMode");
+		syncToolbarToggleAttention();
 		
 		var nav = document.querySelector("nav");
 		var attach = document.querySelector("#attach");
@@ -8700,6 +8873,7 @@ LetterModeStrategy.prototype = {
 					showBlock(attach);
 					showBlock(wrapper);
 					removeClass(document.querySelector("body"), "drawMode");
+					syncToolbarToggleAttention();
 				}
 		);
 	}

@@ -14,6 +14,9 @@
     --toolbar-height: 40px;
     --inline-code-bg: #818b981f;
     --shadow-button: 0 1px 1px 0 #1f23280a, 0 1px 2px 0 #1f232808;
+    --toolbar-toggle-glow-zero: rgba(9, 105, 218, 0);
+    --toolbar-toggle-glow-ring: rgba(9, 105, 218, 0.18);
+    --toolbar-toggle-glow-soft: rgba(9, 105, 218, 0.24);
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, sans-serif;
     --font-mono: "Cascadia Code", "JetBrains Mono", "Noto Sans Mono", Consolas, monospace;
 }
@@ -29,6 +32,9 @@ body.dark {
     --text-muted: #8b949e;
     --accent: #58a6ff;
     --accent-hover: #79c0ff;
+    --toolbar-toggle-glow-zero: rgba(88, 166, 255, 0);
+    --toolbar-toggle-glow-ring: rgba(88, 166, 255, 0.24);
+    --toolbar-toggle-glow-soft: rgba(88, 166, 255, 0.32);
 }
 
 body {
@@ -82,6 +88,48 @@ body.onDragover {
 
 #toolbar-toggle:hover {
     background: var(--bg);
+}
+
+@keyframes kantanToolbarToggleGentleBlink {
+    0%, 100% {
+        opacity: 0.72;
+        border-color: var(--border);
+        color: var(--text);
+        box-shadow: var(--shadow-button), 0 0 0 0 var(--toolbar-toggle-glow-zero), 0 0 0 0 var(--toolbar-toggle-glow-zero);
+    }
+    50% {
+        opacity: 1;
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: var(--shadow-button), 0 0 0 4px var(--toolbar-toggle-glow-ring), 0 0 10px 0 var(--toolbar-toggle-glow-soft);
+    }
+}
+
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink {
+    animation: kantanToolbarToggleGentleBlink 2.8s ease-in-out infinite;
+}
+
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink:hover,
+body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink:focus-visible {
+    animation: none;
+    opacity: 1;
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--bg);
+}
+
+.initialState #toolbar-toggle,
+.drawMode #toolbar-toggle {
+    animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body:not(.toolbar-open):not(.drawMode):not(.initialState) #toolbar-toggle.toolbar-toggle-blink {
+        animation: none;
+        opacity: 1;
+        border-color: var(--accent);
+        box-shadow: var(--shadow-button), 0 0 0 3px var(--toolbar-toggle-glow-ring);
+    }
 }
 
 #toolbar {

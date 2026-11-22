@@ -24,7 +24,7 @@
 | KantanModules.SaveExport.* | DOMまたは保存状態・Blob | 4段階保存処理および一時DOM除外（collectDocumentSaveState、prepareSavePayload、cleanupTemporaryDomForSave、serializeSingleHtmlDocument、triggerBlobDownload） |
 | KantanModules.PreviewMermaid.* | 言語指定文字列・Mermaid文字列・CSS文字列・Markdown文字列 | isMermaidLang、escapeMermaidHtml、renderMermaidCodeFence、isAsyncMermaidDiagram、isWidthSensitiveMermaidDiagram、normalizeMermaidText、isMermaidErrorSvg、cleanupMermaidTempDom、replaceAttachUrlInCss、parseLinesForHeadingSync |
 | KantanModules.AttachmentManager.* | 添付名・Data URL・DOM | resolveUniqueAttachName、validateAttachmentRename、base64ToBlob、collectAttachmentsFromDom、decodeAttachName、extractAttachName、isVideoAttachment、buildAttachmentInsertTag |
-| KantanModules.SettingsUi.* | 設定名・ズーム・プロファイルJSON・計測ブロック・画面ブロック・スクロール量 | LocalStorage永続化、getNextEditorZoom、mmToCssPx、cssPxToMm、validateAndNormalizePrintProfile、formatPrintProfileStatusText、computePageBreakModel、mapBreaksToScreenPositions、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop |
+| KantanModules.SettingsUi.* | 設定名・ズーム・プロファイルJSON・計測ブロック・画面ブロック・スクロール量・明滅判定 | LocalStorage永続化、getNextEditorZoom、mmToCssPx、cssPxToMm、validateAndNormalizePrintProfile、formatPrintProfileStatusText、computePageBreakModel、mapBreaksToScreenPositions、calculateA4PageHeight、shouldInsertPageBreak、calculateSyncedScrollTop、isMarkdownEmpty、shouldBlinkToolbarToggle、syncToolbarToggleBlink |
 | KantanModules.UpdateInit.* | 要素・イベント・パス・版番号・CSS文字列 | createEventRegistry（重複登録防止付きregister / removeAll）、resolveUpdateScriptUrl、compareVersions、shouldUpdateDisplayedVersion、hideSettingsPanel、resolveCssAfterUpdate |
 
 ## 外部リソース

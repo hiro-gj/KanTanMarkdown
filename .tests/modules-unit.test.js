@@ -280,6 +280,56 @@ function runTests() {
         const invalidJsonRes = SettingsUi.validateAndNormalizePrintProfile('{ broken json');
         assert.strictEqual(invalidJsonRes.valid, false);
         assert.strictEqual(invalidJsonRes.measurementReady, false);
+
+        // Toolbar toggle blinking attention logic
+        assert.strictEqual(SettingsUi.isMarkdownEmpty(''), true);
+        assert.strictEqual(SettingsUi.isMarkdownEmpty('   \n\t  '), true);
+        assert.strictEqual(SettingsUi.isMarkdownEmpty(null), true);
+        assert.strictEqual(SettingsUi.isMarkdownEmpty(undefined), true);
+        assert.strictEqual(SettingsUi.isMarkdownEmpty('# Hello'), false);
+        assert.strictEqual(SettingsUi.isMarkdownEmpty('a'), false);
+
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '', isToolbarOpen: false, isViewOnly: false, isDrawMode: false }), true);
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '   ', isToolbarOpen: false, isViewOnly: false, isDrawMode: false }), true);
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '# Doc', isToolbarOpen: false, isViewOnly: false, isDrawMode: false }), false);
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '', isToolbarOpen: true, isViewOnly: false, isDrawMode: false }), false);
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '', isToolbarOpen: false, isViewOnly: true, isDrawMode: false }), false);
+        assert.strictEqual(SettingsUi.shouldBlinkToolbarToggle({ markdown: '', isToolbarOpen: false, isViewOnly: false, isDrawMode: true }), false);
+
+        const mockClasses = new Set();
+        let classAttrRemoved = false;
+        const mockToggleBtn = {
+            classList: {
+                contains: (c) => mockClasses.has(c),
+                add: (c) => mockClasses.add(c),
+                remove: (c) => mockClasses.delete(c)
+            },
+            get className() { return Array.from(mockClasses).join(' '); },
+            removeAttribute: (attr) => { if (attr === 'class') classAttrRemoved = true; }
+        };
+        const mockToolbar = {
+            classList: { contains: () => false }
+        };
+        const mockEditor = { value: '' };
+        const mockDocForBlink = {
+            getElementById: (id) => {
+                if (id === 'toolbar-toggle') return mockToggleBtn;
+                if (id === 'editor') return mockEditor;
+                if (id === 'toolbar') return mockToolbar;
+                return null;
+            },
+            body: { classList: { contains: () => false } }
+        };
+
+        // When empty and closed -> should add class
+        assert.strictEqual(SettingsUi.syncToolbarToggleBlink(mockDocForBlink), true);
+        assert.strictEqual(mockClasses.has('toolbar-toggle-blink'), true);
+
+        // When markdown entered -> should remove class and clean attribute
+        mockEditor.value = '# New Content';
+        assert.strictEqual(SettingsUi.syncToolbarToggleBlink(mockDocForBlink), false);
+        assert.strictEqual(mockClasses.has('toolbar-toggle-blink'), false);
+        assert.strictEqual(classAttrRemoved, true);
     });
 
     // 5. UpdateInit event registry deduplication and cleanup tests
@@ -455,6 +505,7 @@ function runTests() {
         let removedCount = 0;
         let attrClearedCount = 0;
         let showPbAttrRemoved = false;
+        let toggleBlinkRemoved = false;
         SaveExport.cleanupTemporaryDomForSave({
             querySelectorAll(sel) {
                 if (sel.includes('#kantan-print-measure-frame')) {
@@ -469,12 +520,22 @@ function runTests() {
                 if (id === 'setting-show-page-break') {
                     return { removeAttribute(attr) { if (attr === 'checked') showPbAttrRemoved = true; } };
                 }
+                if (id === 'toolbar-toggle') {
+                    return {
+                        classList: {
+                            remove(cls) { if (cls === 'toolbar-toggle-blink') toggleBlinkRemoved = true; }
+                        },
+                        className: '',
+                        removeAttribute(attr) { if (attr === 'class') attrClearedCount++; }
+                    };
+                }
                 return { value: 'profile.json' };
             }
         });
         assert.strictEqual(removedCount, 2);
-        assert.strictEqual(attrClearedCount, 2);
+        assert.strictEqual(attrClearedCount, 3);
         assert.strictEqual(showPbAttrRemoved, true);
+        assert.strictEqual(toggleBlinkRemoved, true);
 
         const serializedClean = SaveExport.serializeSingleHtmlDocument(
             '<head></head><body><div id="previewer"><div id="kantan-page-break-overlay"><div class="page-break-indicator"></div></div></div>' +
@@ -588,8 +649,9 @@ function runTests() {
             'onFileNameChanged must delegate to AttachmentManager.validateAttachmentRename');
         assert(kantanMdCode.includes('validateAndNormalizePrintProfile(') &&
             kantanMdCode.includes('computePageBreakModel(') &&
-            kantanMdCode.includes('mapBreaksToScreenPositions('),
-            'updatePageBreaks must delegate to SettingsUi');
+            kantanMdCode.includes('mapBreaksToScreenPositions(') &&
+            kantanMdCode.includes('SettingsUi.syncToolbarToggleBlink('),
+            'updatePageBreaks and toolbar-toggle blink attention must delegate to SettingsUi');
         assert(kantanMdCode.includes('SaveExport.cleanupTemporaryDomForSave(document)'),
             'getHTMLForSave must call SaveExport.cleanupTemporaryDomForSave');
         assert(kantanMdCode.includes('UpdateInit.createEventRegistry(') &&
