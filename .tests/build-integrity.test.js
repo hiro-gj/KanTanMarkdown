@@ -545,6 +545,21 @@ function runTests() {
             'dist/preview/kantanUpdate.js must embed resolveCssAfterUpdate and hideSettingsPanel');
     });
 
+    // Test 14: Top-right circular menu toggle gentle blinking on empty document embedded across all preview editions
+    test('All preview editions and kantanUpdate.js embed top-right menu toggle gentle blinking animation and sync logic', () => {
+        const previewTargets = ['ktm-dev.html', 'ktm-lite.html', 'ktm-std.html', 'ktm-full.html', 'kantanUpdate.js'];
+        for (const target of previewTargets) {
+            const targetPath = path.join(rootDir, 'dist', 'preview', target);
+            const content = fs.readFileSync(targetPath, 'utf-8');
+            assert(content.includes('kantanToolbarToggleGentleBlink'),
+                `dist/preview/${target} must embed @keyframes kantanToolbarToggleGentleBlink`);
+            assert(content.includes('toolbar-toggle-blink'),
+                `dist/preview/${target} must embed toolbar-toggle-blink CSS/JS rules`);
+            assert(content.includes('syncToolbarToggleBlink'),
+                `dist/preview/${target} must embed syncToolbarToggleBlink function`);
+        }
+    });
+
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) {
         process.exit(1);

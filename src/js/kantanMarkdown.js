@@ -1,4 +1,5 @@
 	/* 編集不可ブラウザ判定 */
+	var isViewOnlyMode = false;
 
 	// Blobが使用できないブラウザは保存不可
 	try {
@@ -14,11 +15,15 @@
 	}
 
 	function setViewOnly() {
+		isViewOnlyMode = true;
 		document.getElementById("message-area").innerText
 				 = "このブラウザでは編集できません。";
 		var navElems = document.querySelectorAll("#toolbar button");
 		for (var i = 0; i < navElems.length; i++) {
 			navElems[i].setAttribute("disabled", "disabled");
+		}
+		if (typeof syncToolbarToggleAttention === "function") {
+			syncToolbarToggleAttention();
 		}
 	}
 
@@ -379,6 +384,28 @@
 	var toggleIcon = document.getElementById("toolbar-toggle-icon");
 	var isToolbarVisible = getItem("toolbar-visible", "false") === "true";
 
+	function syncToolbarToggleAttention() {
+		if (window.KantanModules && window.KantanModules.SettingsUi &&
+			typeof window.KantanModules.SettingsUi.syncToolbarToggleBlink === "function") {
+			return window.KantanModules.SettingsUi.syncToolbarToggleBlink(document, { isViewOnly: isViewOnlyMode });
+		}
+		var btn = document.getElementById("toolbar-toggle");
+		if (!btn) return false;
+		var ed = document.getElementById("editor");
+		var tb = document.getElementById("toolbar");
+		var tbOpen = (tb && tb.classList.contains("visible")) || document.body.classList.contains("toolbar-open");
+		var inDraw = document.body.classList.contains("drawMode");
+		var val = ed ? ed.value : "";
+		var empty = (typeof val !== "string" || val.trim().length === 0);
+		var shouldBlink = !isViewOnlyMode && !inDraw && !tbOpen && empty;
+		if (shouldBlink) {
+			addClass(btn, "toolbar-toggle-blink");
+		} else {
+			removeClass(btn, "toolbar-toggle-blink");
+		}
+		return shouldBlink;
+	}
+
 	if (isToolbarVisible) {
 		addClass(toolbar, "visible");
 		addClass(document.body, "toolbar-open");
@@ -388,6 +415,7 @@
 		removeClass(document.body, "toolbar-open");
 		toggleIcon.innerText = "☰";
 	}
+	syncToolbarToggleAttention();
 
 	on("#toolbar-toggle", "click", function() {
 		if (toolbar.classList.contains("visible")) {
@@ -406,6 +434,7 @@
 			toggleIcon.innerText = "✕";
 			setItem("toolbar-visible", "true");
 		}
+		syncToolbarToggleAttention();
 		doLayout();
 	});
 
@@ -674,9 +703,21 @@
 		}
 	});
 
-	// エディタに変化があったらプレビュー予約
-	on("#editor", "change", queuePreview);
-	on("#editor", "keyup", queuePreview);
+	// エディタに変化があったらプレビュー予約およびメニューボタン明滅の同期
+	on("#editor", "change", function() {
+		syncToolbarToggleAttention();
+		queuePreview();
+	});
+	on("#editor", "keyup", function() {
+		syncToolbarToggleAttention();
+		queuePreview();
+	});
+	on("#editor", "input", function() {
+		syncToolbarToggleAttention();
+	});
+	on("#editor", "changeByJs", function() {
+		syncToolbarToggleAttention();
+	});
 	
 	// 自動更新がONならプレビューする
 	// ただし、onkeyupなど呼ばれる頻度が高いので一定時間待って最後の呼び出しのみ実行する
@@ -1241,6 +1282,8 @@
 		var event = document.createEvent("Event");
 		event.initEvent("previewed", true, true);
 		previewer.dispatchEvent(event);
+
+		syncToolbarToggleAttention();
 	}
 	
 	function replaceAttachURL(str) {
@@ -1872,6 +1915,7 @@
 		var trimElement = rootElement.querySelector("script.trimInfo");
 		
 		addClass(document.querySelector("body"), "drawMode");
+		syncToolbarToggleAttention();
 		
 		var nav = document.querySelector("nav");
 		var attach = document.querySelector("#attach");
@@ -1901,6 +1945,7 @@
 					showBlock(attach);
 					showBlock(wrapper);
 					removeClass(document.querySelector("body"), "drawMode");
+					syncToolbarToggleAttention();
 				}
 		);
 	}

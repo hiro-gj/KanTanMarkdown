@@ -143,6 +143,13 @@
                 profileInput.value = '';
             } catch (_) {}
         }
+        var toggleBtn = doc.getElementById('toolbar-toggle');
+        if (toggleBtn && toggleBtn.classList) {
+            toggleBtn.classList.remove('toolbar-toggle-blink');
+            if (toggleBtn.className === '') {
+                toggleBtn.removeAttribute('class');
+            }
+        }
     }
 
     /**

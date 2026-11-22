@@ -531,6 +531,77 @@
         return ratio * targetMax;
     }
 
+    /**
+     * Determines whether the given markdown string is empty or contains only whitespace characters.
+     * @param {string|*} markdown
+     * @returns {boolean}
+     */
+    function isMarkdownEmpty(markdown) {
+        return typeof markdown !== 'string' || markdown.trim().length === 0;
+    }
+
+    /**
+     * Determines whether the top-right circular menu button (#toolbar-toggle) should blink gently.
+     * Blinks when markdown body is empty, toolbar is closed, and not in view-only or draw mode.
+     * @param {{ markdown?: string, isToolbarOpen?: boolean, isViewOnly?: boolean, isDrawMode?: boolean }} [params]
+     * @returns {boolean}
+     */
+    function shouldBlinkToolbarToggle(params) {
+        if (!params || typeof params !== 'object') {
+            return false;
+        }
+        if (Boolean(params.isViewOnly) || Boolean(params.isDrawMode) || Boolean(params.isToolbarOpen)) {
+            return false;
+        }
+        return isMarkdownEmpty(params.markdown);
+    }
+
+    /**
+     * Synchronizes the .toolbar-toggle-blink class on #toolbar-toggle based on editor content and UI state.
+     * @param {Document} [doc]
+     * @param {{ isViewOnly?: boolean }} [options]
+     * @returns {boolean}
+     */
+    function syncToolbarToggleBlink(doc, options) {
+        var d = doc || (typeof document !== 'undefined' ? document : null);
+        if (!d || typeof d.getElementById !== 'function') {
+            return false;
+        }
+        var toggleBtn = d.getElementById('toolbar-toggle');
+        if (!toggleBtn) {
+            return false;
+        }
+        var editor = d.getElementById('editor');
+        var toolbar = d.getElementById('toolbar');
+        var body = d.body;
+        var isToolbarOpen = Boolean(
+            (toolbar && toolbar.classList && toolbar.classList.contains('visible')) ||
+            (body && body.classList && body.classList.contains('toolbar-open'))
+        );
+        var isDrawMode = Boolean(body && body.classList && body.classList.contains('drawMode'));
+        var isViewOnly = Boolean(options && options.isViewOnly);
+        var markdown = (editor && typeof editor.value === 'string') ? editor.value : '';
+
+        var shouldBlink = shouldBlinkToolbarToggle({
+            markdown: markdown,
+            isToolbarOpen: isToolbarOpen,
+            isViewOnly: isViewOnly,
+            isDrawMode: isDrawMode
+        });
+
+        if (toggleBtn.classList) {
+            if (shouldBlink) {
+                toggleBtn.classList.add('toolbar-toggle-blink');
+            } else {
+                toggleBtn.classList.remove('toolbar-toggle-blink');
+                if (toggleBtn.className === '') {
+                    toggleBtn.removeAttribute('class');
+                }
+            }
+        }
+        return shouldBlink;
+    }
+
     function mapBreaksToScreenPositions(breaks, screenBlocks) {
         if (!Array.isArray(breaks) || breaks.length === 0 || !Array.isArray(screenBlocks) || screenBlocks.length === 0) {
             return [];
@@ -632,7 +703,10 @@
         formatPrintProfileStatusText: formatPrintProfileStatusText,
         computePageBreakModel: computePageBreakModel,
         mapBreaksToScreenPositions: mapBreaksToScreenPositions,
-        calculateSyncedScrollTop: calculateSyncedScrollTop
+        calculateSyncedScrollTop: calculateSyncedScrollTop,
+        isMarkdownEmpty: isMarkdownEmpty,
+        shouldBlinkToolbarToggle: shouldBlinkToolbarToggle,
+        syncToolbarToggleBlink: syncToolbarToggleBlink
     };
 
     root.KantanModules = root.KantanModules || {};
