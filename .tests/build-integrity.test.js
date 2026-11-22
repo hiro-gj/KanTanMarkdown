@@ -280,6 +280,9 @@ function runTests() {
             'deploy-pages.yml must not force-move published tags or patch internal Actions JS');
         assert(deployYaml.includes('node scripts/build.js --prepare-pages') && deployYaml.includes("path: '_site'"),
             'deploy-pages.yml must stage only public files into _site for GitHub Pages deployment');
+        assert(/jobs:\s+build:\s+runs-on:/m.test(deployYaml) && /deploy:\s+environment:\s+name:\s*github-pages[\s\S]*needs:\s*build/m.test(deployYaml),
+            'deploy-pages.yml must separate build and deploy jobs to avoid artifact lookup race condition');
+
 
         const testWorkflowPath = path.join(rootDir, '.github', 'workflows', 'test.yml');
         assert(fs.existsSync(testWorkflowPath), '.github/workflows/test.yml must exist');
