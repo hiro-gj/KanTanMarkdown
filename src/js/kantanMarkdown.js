@@ -228,6 +228,10 @@
 	}
 	
 	/* エディタに機能追加 */
+	var initialDefaultCssValue = (function() {
+		var cssEl = document.getElementById("cssEditor");
+		return cssEl ? cssEl.value : "";
+	})();
 	toKantanEditor(document.getElementById("editor"));
 	toKantanEditor(document.getElementById("cssEditor"));
 
@@ -1443,9 +1447,85 @@
 	on("body", "drop", function(e) {
 		e.stopPropagation();
 		e.preventDefault();
-		attachFiles(e.dataTransfer.files);
 		removeClass(this, "onDragover");
+		if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+			handleDroppedFiles(e.dataTransfer.files);
+		}
 	});
+
+	function handleDroppedFiles(files) {
+		var ed = document.getElementById("kantanEdition");
+		var curEd = ed ? ed.value : "";
+		var km = window.KantanModules;
+		var AttachmentManager = km && km.AttachmentManager;
+		var SaveExport = km && km.SaveExport;
+		if (AttachmentManager ? !AttachmentManager.isMarkdownDropSupportedEdition(curEd) : (curEd !== "full")) {
+			attachFiles(files);
+			return;
+		}
+
+		var mdFiles = [], otherFiles = [];
+		for (var i = 0; i < files.length; i++) {
+			var f = files[i];
+			if (AttachmentManager ? AttachmentManager.isMarkdownFile(f) : Boolean(f && f.name && /\.md$/i.test(f.name))) {
+				mdFiles.push(f);
+			} else {
+				otherFiles.push(f);
+			}
+		}
+
+		if (mdFiles.length > 0) {
+			if (isViewOnlyMode) {
+				alert("このブラウザでは新しいファイルを作成・保存できません。");
+			} else if (typeof isDrawMode === "function" && isDrawMode()) {
+				alert("画像編集中はMarkdownファイルを転記できません。");
+			} else {
+				var max = (SaveExport && SaveExport.MAX_MARKDOWN_DROP_FILES) || 10;
+				if (mdFiles.length > max) {
+					alert("一度に転記できるMarkdownファイルは最大" + max + "件までです。先頭" + max + "件のみ処理します。");
+					mdFiles = mdFiles.slice(0, max);
+				}
+				for (var m = 0; m < mdFiles.length; m++) transcribeMarkdownFileToNewKantanHtml(mdFiles[m]);
+			}
+		}
+		if (otherFiles.length > 0) attachFiles(otherFiles);
+	}
+
+	function transcribeMarkdownFileToNewKantanHtml(file) {
+		var km = window.KantanModules, am = km && km.AttachmentManager, se = km && km.SaveExport;
+		if (!am || !se) return;
+		var check = am.validateMarkdownDropFile(file, se.MAX_MARKDOWN_DROP_BYTES);
+		if (!check.valid) {
+			alert(check.reason === "too-large" ? "ファイルサイズが上限（10MB）を超えているため転記できません。" : "対応していないファイル形式のため転記できません。");
+			return;
+		}
+		var fr = new FileReader();
+		fr.onerror = function() { alert("Markdownファイルの読み込みに失敗しました。"); };
+		fr.onload = function(e) {
+			try {
+				var norm = se.normalizeDroppedMarkdownText(e && e.target ? e.target.result : "");
+				if (!norm.valid) {
+					alert("バイナリデータまたは不正な形式が含まれているため転記できません。");
+					return;
+				}
+				var info = se.buildTranscribedHtmlFileName(file.name);
+				var uBtn = document.getElementById("updateButton");
+				var uHref = uBtn ? (uBtn.getAttribute("href") || "") : "";
+				var isPrev = Boolean((window.location && window.location.pathname && window.location.pathname.indexOf("/dist/preview/") !== -1) || uHref.indexOf("/dist/preview/") !== -1);
+				var html = se.buildCleanStandaloneHtmlForMarkdown(document, {
+					markdownText: norm.text,
+					baseTitle: info.baseTitle,
+					defaultCssText: initialDefaultCssValue,
+					isPreviewPath: isPrev
+				});
+				se.triggerBlobDownload(new Blob([html], { type: "text/html;charset=utf-8" }), info.fileName, document, window);
+			} catch (err) {
+				if (window.console && console.warn) console.warn("Markdown転記エラー:", err);
+				alert("新しいかんたんMarkdownファイルの生成に失敗しました。");
+			}
+		};
+		fr.readAsText(file, "UTF-8");
+	}
 	on("body", "dragleave", function(e){
 		removeClass(this, "onDragover");
 	});
