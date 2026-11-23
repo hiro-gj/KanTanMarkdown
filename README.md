@@ -8,6 +8,7 @@
 - UIや新ナビゲーションの刷新は「[kantan-md](https://kantan-md.pages.dev/)」を参考にさせていただきました。
   - GFMのAlertやMermaid記法は利用できます。
 - QiitaのNote記法も利用できるようにしました。
+- 同梱・依存するサードパーティ製コンポーネントおよびアートワークのライセンス情報は [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) を参照してください。
 - 「[GEAR.indigoBiz](https://github.com/hiro-gj/KanTanMarkdown/tree/master/.gear)」のコードベースのリバースエンジニアリングを起点とした仕様書生成。
 ---
 

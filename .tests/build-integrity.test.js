@@ -495,12 +495,64 @@ function runTests() {
         const noticesPath = path.join(rootDir, 'THIRD_PARTY_NOTICES.md');
         assert(fs.existsSync(noticesPath), 'THIRD_PARTY_NOTICES.md must exist in repository root');
         const noticesContent = fs.readFileSync(noticesPath, 'utf-8');
+
+        // Backward-compatible assertions for Qiita Note syntax attributions
         assert(noticesContent.includes('qiita_marker') && noticesContent.includes('qiita-markdown'),
             'THIRD_PARTY_NOTICES.md must describe qiita_marker and qiita-markdown');
         assert(noticesContent.includes('Copyright (c) 2015 Garen J. Torikian') &&
             noticesContent.includes('Copyright (c) 2021 Qiita Inc.') &&
             noticesContent.includes('Copyright (c) 2014 Ryo Nakamura'),
             'THIRD_PARTY_NOTICES.md must include upstream copyrights');
+
+        // Structural and comprehensive third-party inventory assertions
+        const requiredSectionsAndComponents = [
+            '# Third-Party Notices',
+            '## Included third-party components',
+            '## License texts and copyright notices',
+            '## Acknowledgements',
+            'Marked',
+            'markdown-it-github-alerts',
+            'Primer Octicons',
+            'Bootstrap Icons',
+            'Highlight.js',
+            'Raphaël',
+            'Underscore.js',
+            'js-sequence-diagrams',
+            'flowchart.js',
+            'Mermaid',
+            'DOMPurify',
+            'elkjs',
+            'Cytoscape',
+            'cytoscape-cose-bilkent',
+            'D3',
+            'dagre-d3-es',
+            'Day.js',
+            'js-yaml',
+            'khroma',
+            'lodash-es',
+            'stylis',
+            'ts-dedent',
+            '@braintree/sanitize-url',
+            'esbuild'
+        ];
+        for (const token of requiredSectionsAndComponents) {
+            assert(noticesContent.includes(token),
+                `THIRD_PARTY_NOTICES.md must include "${token}"`);
+        }
+
+        // Ensure components not present in KanTanMarkdown are not mistakenly listed as bundled
+        const excludedComponents = ['TanStack Highlight', 'KaTeX fonts', 'es-toolkit', '@upsetjs/venn.js'];
+        for (const excluded of excludedComponents) {
+            assert(!noticesContent.includes(excluded),
+                `THIRD_PARTY_NOTICES.md must not claim non-bundled component "${excluded}"`);
+        }
+
+        // OWASP path-leak and raw script injection checks
+        const noticesLeakRegex = /file:\/\/\/|c:\/users|c:\\users|h\.matsumoto|ctd\.co\.jp/i;
+        assert(!noticesLeakRegex.test(noticesContent),
+            'THIRD_PARTY_NOTICES.md must not contain local file paths or user environment info');
+        assert(!/<script\b/i.test(noticesContent),
+            'THIRD_PARTY_NOTICES.md must not contain raw <script> tags');
 
         const previewerCss = fs.readFileSync(path.join(rootDir, 'src', 'css', 'previewer.css'), 'utf-8');
         assert(previewerCss.includes('.note.info') && previewerCss.includes('.note.warn') && previewerCss.includes('.note.alert'),
