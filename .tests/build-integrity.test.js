@@ -506,10 +506,10 @@ function runTests() {
 
         // Structural and comprehensive third-party inventory assertions
         const requiredSectionsAndComponents = [
-            '# Third-Party Notices',
-            '## Included third-party components',
-            '## License texts and copyright notices',
-            '## Acknowledgements',
+            'Third-Party Notices',
+            'Included third-party components',
+            'License texts and copyright notices',
+            'Acknowledgements',
             'Marked',
             'markdown-it-github-alerts',
             'Primer Octicons',

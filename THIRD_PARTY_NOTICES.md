@@ -1,12 +1,12 @@
-# Third-Party Notices
+# サードパーティライセンス表示 (Third-Party Notices)
 
-KanTanMarkdown distributes third-party software and artwork (icons and styles) under the licenses listed below. The original portions of KanTanMarkdown are provided under the [MIT License](./LICENSE). Copyright notices and license texts for third-party components are reproduced in the following sections.
+KanTanMarkdown は、以下のライセンスに基づきサードパーティ製のソフトウェアおよびアートワーク（アイコン・スタイル等）を同梱・再配布しています。KanTanMarkdown 固有の独自コード部分については [MIT License](./LICENSE) が適用されます。各サードパーティ製コンポーネントの著作権表示およびライセンス条文の全文は、後続の各セクションに原文のまま再録しています。
 
-## Included third-party components
+## 同梱・利用サードパーティコンポーネント (Included third-party components)
 
-### Direct runtime components and assets
+### 直接同梱コンポーネントおよびアセット (Direct runtime components and assets)
 
-| Component | Version / Source | License | Bundled Editions |
+| コンポーネント (Component) | バージョン / 参照元 (Version / Source) | ライセンス (License) | 同梱エディション (Bundled Editions) |
 |---|---|---|---|
 | Marked | 0.3.x (`src/js/marked.min.js`) | MIT (+ BSD-3-Clause Markdown notice) | `lite`, `std`, `full`, `dev`, `kantanUpdate.js` |
 | qiita_marker (JS port) | commit `cb88c606` (`src/js/qiita_marker.js`) | MIT | `lite`, `std`, `full`, `dev`, `kantanUpdate.js` |
@@ -21,11 +21,11 @@ KanTanMarkdown distributes third-party software and artwork (icons and styles) u
 | flowchart.js | 1.6.1 (`src/js/flowchart.min.js`) | MIT | `full`, `dev`, `kantanUpdate.js` |
 | Mermaid | 9.4.3 (`src/js/mermaid.min.js`) | MIT | `full`, `dev`, `kantanUpdate.js` |
 
-### Bundled dependencies inside `src/js/mermaid.min.js` (v9.4.3)
+### `src/js/mermaid.min.js` (v9.4.3) 内部バンドル依存 (Bundled dependencies inside `src/js/mermaid.min.js`)
 
-All components below are bundled only in `full`, `dev`, and `kantanUpdate.js`:
+以下のコンポーネントはすべて `full`、`dev`、および `kantanUpdate.js` にのみバンドルされています:
 
-| Component | License |
+| コンポーネント (Component) | ライセンス (License) |
 |---|---|
 | @braintree/sanitize-url | MIT |
 | Cytoscape.js (incl. embedded MIT helpers) | MIT |
@@ -42,20 +42,20 @@ All components below are bundled only in `full`, `dev`, and `kantanUpdate.js`:
 | stylis | MIT |
 | ts-dedent | MIT |
 
-### Development / Build-only dependencies (not distributed in HTML artifacts)
+### 開発・ビルド専用依存（配布HTML成果物には非同梱） (Development / Build-only dependencies)
 
-| Component | Version | License | Scope |
+| コンポーネント (Component) | バージョン (Version) | ライセンス (License) | 適用範囲 (Scope) |
 |---|---|---|---|
-| esbuild | ^0.25.0 (`package.json`) | MIT | Build-time bundler/minifier only (`scripts/build.js`) |
+| esbuild | ^0.25.0 (`package.json`) | MIT | ビルド時のバンドル・ミニファイ専用 (`scripts/build.js`) |
 
-## License texts and copyright notices
+## 各ライセンス条文および著作権表示 (License texts and copyright notices)
 
-The following copyright notices and license texts are retained for redistribution.
+以下の著作権表示およびライセンス条文全文は、再配布条件に基づき原文のまま保持・掲載しています。
 
 ### Marked
 
-License: MIT (with Markdown BSD-3-Clause notice)
-Repository: https://github.com/markedjs/marked
+- ライセンス: MIT (Markdown BSD-3-Clause notice を含む)
+- リポジトリ: https://github.com/markedjs/marked
 
 ```text
 Copyright (c) 2011-2014, Christopher Jeffrey (https://github.com/chjj/)
@@ -86,15 +86,15 @@ All rights reserved. (BSD 3-Clause License)
 
 ### qiita_marker
 
-License: MIT
-- Repository: https://github.com/increments/qiita_marker
-- Reference commit: `cb88c6062b43973c4508f568d1bce86de4a6acdb`
-- Modifications for KanTanMarkdown:
-  - Ported custom block parsing logic from C (`qfm_custom_block.c` / `qfm_scanners.re`) to pure JavaScript (`src/js/qiita_marker.js`).
-  - Integrated with marked 0.3.x Lexer and Parser architecture.
-  - Added support for Qiita Note syntax (`:::note info|warn|alert ... :::`).
-  - Implemented self-contained inline SVG icons to eliminate external font or CDN dependencies.
-  - Added scoped CSS styles preventing styling conflicts with existing KanTanMarkdown alert classes.
+- ライセンス: MIT
+- リポジトリ: https://github.com/increments/qiita_marker
+- 参照コミット: `cb88c6062b43973c4508f568d1bce86de4a6acdb`
+- KanTanMarkdown 向け改変・移植内容:
+  - C言語製カスタムブロック構文解析ロジック（`qfm_custom_block.c` / `qfm_scanners.re`）を Pure JavaScript（`src/js/qiita_marker.js`）へ移植。
+  - marked 0.3.x の Lexer / Parser アーキテクチャに統合。
+  - Qiita Note 記法（`:::note info|warn|alert ... :::`）の描画サポートを追加。
+  - 外部フォントやCDNへの依存を排除するため、自己完結型のインラインSVGアイコンを実装。
+  - 既存の KanTanMarkdown アラートクラスとの衝突を防止するスコープ付きCSSスタイルを追加。
 
 ```text
 The MIT License (MIT)
@@ -123,11 +123,11 @@ THE SOFTWARE.
 
 ### qiita-markdown
 
-License: MIT
-- Repository: https://github.com/increments/qiita-markdown
-- Reference commit: `d7d3908333b3f12f5cf32d57f9baa55d8f673f25`
-- Modifications for KanTanMarkdown:
-  - Referenced custom block filter specification (`lib/qiita/markdown/filters/custom_block.rb`) for note type normalization, subtype fallback rules, and HTML DOM structure.
+- ライセンス: MIT
+- リポジトリ: https://github.com/increments/qiita-markdown
+- 参照コミット: `d7d3908333b3f12f5cf32d57f9baa55d8f673f25`
+- KanTanMarkdown 向け改変内容:
+  - カスタムブロックフィルタ仕様（`lib/qiita/markdown/filters/custom_block.rb`）を参照し、Note種別の正規化ルール、フォールバック処理、HTML DOM構造を実装。
 
 ```text
 The MIT License (MIT)
@@ -155,9 +155,9 @@ THE SOFTWARE.
 
 ### markdown-it-github-alerts
 
-License: MIT
-Repository: https://github.com/antfu/markdown-it-github-alerts
-Note: Referenced for alert blockquote marker parsing rules in `src/js/github-alerts.js`.
+- ライセンス: MIT
+- リポジトリ: https://github.com/antfu/markdown-it-github-alerts
+- 注記: `src/js/github-alerts.js` における引用ブロックマーカー構文解析ルールの設計参照元。
 
 ```text
 MIT License
@@ -185,9 +185,9 @@ SOFTWARE.
 
 ### Primer Octicons
 
-License: MIT
-Repository: https://github.com/primer/octicons
-Note: 5 alert SVG icons (`info`, `light-bulb`, `report`, `alert`, `stop`) embedded in `src/js/github-alerts.js`.
+- ライセンス: MIT
+- リポジトリ: https://github.com/primer/octicons
+- 注記: `src/js/github-alerts.js` に埋め込まれた5種のアラートSVGアイコン（`info`, `light-bulb`, `report`, `alert`, `stop`）。
 
 ```text
 MIT License
@@ -215,9 +215,9 @@ SOFTWARE.
 
 ### Bootstrap Icons
 
-License: MIT
-Repository: https://github.com/twbs/icons
-Note: 8 toolbar SVG icons embedded in `src/ktm.html`.
+- ライセンス: MIT
+- リポジトリ: https://github.com/twbs/icons
+- 注記: `src/ktm.html` に埋め込まれた8種のツールバーSVGアイコン。
 
 ```text
 MIT License
@@ -243,10 +243,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Highlight.js (and github.com style)
+### Highlight.js (および github.com スタイル)
 
-License: BSD-3-Clause
-Repository: https://github.com/highlightjs/highlight.js (v9.0.0 in `src/js/highlight.min.js`, style in `src/css/hljs.css`)
+- ライセンス: BSD-3-Clause
+- リポジトリ: https://github.com/highlightjs/highlight.js (`src/js/highlight.min.js` 内 v9.0.0、スタイルは `src/css/hljs.css`)
 
 ```text
 Copyright (c) 2006, Ivan Sagalaev
@@ -277,10 +277,10 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### Raphaël (including Eve)
+### Raphaël (Eve を含む)
 
-License: MIT
-Repository: https://github.com/DmitryBaranovskiy/raphael (v2.1.4 in `src/js/raphael.min.js`, includes Eve v0.4.2)
+- ライセンス: MIT
+- リポジトリ: https://github.com/DmitryBaranovskiy/raphael (`src/js/raphael.min.js` 内 v2.1.4、Eve v0.4.2 を内包)
 
 ```text
 The MIT License
@@ -309,8 +309,8 @@ THE SOFTWARE.
 
 ### Underscore.js
 
-License: MIT
-Repository: https://github.com/jashkenas/underscore (v1.4.4 in `src/js/underscore.min.js`)
+- ライセンス: MIT
+- リポジトリ: https://github.com/jashkenas/underscore (`src/js/underscore.min.js` 内 v1.4.4)
 
 ```text
 Copyright (c) 2009-2013 Jeremy Ashkenas, DocumentCloud
@@ -337,11 +337,11 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### js-sequence-diagrams (including Jison parser and Daniel font)
+### js-sequence-diagrams (Jison パーサーおよび Daniel フォントを含む)
 
-License: BSD-2-Clause (Simplified BSD License)
-Repository: https://github.com/bramp/js-sequence-diagrams (v1.0.6 in `src/js/js-sequence-diagrams.min.js`)
-Note: Includes Jison-generated parser (MIT, Copyright (c) 2009-2014 Zachary Carter) and embedded Cufón glyph data for the "Daniel" font by Daniel Midgley (free to use for any purpose).
+- ライセンス: BSD-2-Clause (Simplified BSD License)
+- リポジトリ: https://github.com/bramp/js-sequence-diagrams (`src/js/js-sequence-diagrams.min.js` 内 v1.0.6)
+- 注記: Jison 生成パーサー（MIT, Copyright (c) 2009-2014 Zachary Carter）および Daniel Midgley 氏による Daniel フォント（商用・非商用問わず自由利用可）の埋め込み Cufón グリフデータを含みます。
 
 ```text
 Copyright (c) 2012-2015, Andrew Brampton (bramp.net)
@@ -370,8 +370,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### flowchart.js
 
-License: MIT
-Repository: https://github.com/adrai/flowchart.js (v1.6.1 in `src/js/flowchart.min.js`)
+- ライセンス: MIT
+- リポジトリ: https://github.com/adrai/flowchart.js (`src/js/flowchart.min.js` 内 v1.6.1)
 
 ```text
 Copyright (c) 2016 Adriano Raiano
@@ -397,8 +397,8 @@ THE SOFTWARE.
 
 ### Mermaid
 
-License: MIT
-Repository: https://github.com/mermaid-js/mermaid (v9.4.3 in `src/js/mermaid.min.js`)
+- ライセンス: MIT
+- リポジトリ: https://github.com/mermaid-js/mermaid (`src/js/mermaid.min.js` 内 v9.4.3)
 
 ```text
 The MIT License (MIT)
@@ -424,17 +424,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### Mermaid v9.4.3 Bundled MIT Components (`src/js/mermaid.min.js`)
+### Mermaid v9.4.3 内部バンドル MIT コンポーネント (`src/js/mermaid.min.js`)
 
-Each component below is bundled in `full` / `dev` editions and `kantanUpdate.js` under the MIT License:
+以下のコンポーネントはすべて `full` / `dev` エディションおよび `kantanUpdate.js` に MIT License のもとでバンドルされています:
 
 - **`@braintree/sanitize-url`** — `Copyright (c) 2017 Braintree`
 - **`Cytoscape.js`** — `Copyright (c) 2016-2022, The Cytoscape Consortium.`
-  - Embedded MIT-licensed helpers retained in `mermaid.min.js`:
+  - `mermaid.min.js` 内に保持されている内包ヘルパー（MIT License）:
     - Promises/A+ 1.1.1 Thenable: `Copyright (c) 2013-2014 Ralf S. Engelschall (http://engelschall.com)`
-    - Event object based on jQuery events: `Copyright OpenJS Foundation and other contributors (https://jquery.org/license/)`
-    - Bezier curve function generator: `Copyright Gaetan Renaudeau`
-    - Runge-Kutta spring physics function generator (adapted from Framer.js): `Copyright Koen Bok`
+    - jQuery 由来のイベントオブジェクト: `Copyright OpenJS Foundation and other contributors (https://jquery.org/license/)`
+    - ベジェ曲線ジェネレーター: `Copyright Gaetan Renaudeau`
+    - ルンゲ＝クッタ法バネ物理演算ジェネレーター（Framer.js 改変）: `Copyright Koen Bok`
 - **`cytoscape-cose-bilkent`** (`cose-base`, `layout-base`) — `Copyright (c) 2016-2018, The Cytoscape Consortium.` / `Copyright (c) 2019 - present, iVis@Bilkent.`
 - **`dagre-d3-es`** (`dagre`, `graphlib`) — `Copyright (c) 2012-2014 Chris Pettitt`
 - **`Day.js`** — `Copyright (c) 2018-present, iamkun`
@@ -447,7 +447,7 @@ Each component below is bundled in `full` / `dev` editions and `kantanUpdate.js`
 
 ### D3
 
-License: ISC
+- ライセンス: ISC
 
 ```text
 Copyright 2010-2023 Mike Bostock
@@ -467,9 +467,8 @@ THIS SOFTWARE.
 
 ### DOMPurify
 
-Copyright notice: Copyright Cure53 and other contributors.
-
-License: (MPL-2.0 OR Apache-2.0)
+- 著作権表示: Copyright Cure53 and other contributors.
+- ライセンス: (MPL-2.0 OR Apache-2.0)
 
 ```text
 Apache License
@@ -677,11 +676,9 @@ Apache License
 
 ### elkjs
 
-License: Eclipse Public License 2.0 (EPL-2.0)
-
-Source code for the unmodified `elkjs@0.9.3` component: https://github.com/kieler/elkjs/tree/0.9.3
-
-The EPL-2.0 license applies to this component, not to the independent kantan-md code. For the corresponding source code, see the upstream repository above.
+- ライセンス: Eclipse Public License 2.0 (EPL-2.0)
+- 無改変の `elkjs@0.9.3` コンポーネントソースコード: https://github.com/kieler/elkjs/tree/0.9.3
+- 注記: EPL-2.0 ライセンスはこのコンポーネントにのみ適用され、KanTanMarkdown 固有の独立したコードには適用されません。対応するソースコードは上記の上流リポジトリを参照してください。
 
 ```text
 # Eclipse Public License - v 2.0
@@ -950,10 +947,10 @@ version(s), and exceptions or additional permissions here}.”
 > You may add additional accurate notices of copyright ownership.
 ```
 
-### esbuild (Build-only dependency)
+### esbuild (ビルド専用依存)
 
-License: MIT (used at build time only via `scripts/build.js`; not distributed in HTML artifacts)
-Repository: https://github.com/evanw/esbuild
+- ライセンス: MIT (`scripts/build.js` によるビルド時のみ使用。配布HTML成果物には含まれません)
+- リポジトリ: https://github.com/evanw/esbuild
 
 ```text
 MIT License
@@ -979,8 +976,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Acknowledgements
+## 謝辞・先行プロジェクト (Acknowledgements)
 
-KanTanMarkdown (v2 / v3 by `hiro-gj`) is a fork of **KanTanMarkdown** (`v1.201604012.01`) originally created by **tatesuke** (`Copyright (c) 2016 tatesuke`, MIT License; see [LICENSE](./LICENSE)).
+KanTanMarkdown（hiro-gj による v2 / v3）は、元々 tatesuke 氏によって制作された **KanTanMarkdown**（`v1.201604012.01`、`Copyright (c) 2016 tatesuke`、MIT License、詳細は [LICENSE](./LICENSE) 参照）のフォークです。
 
-UI/navigation modernization, GFM Alert presentation, and the structure of this third-party license notice were inspired by **kantan-md** (`https://kantan-md.pages.dev/`, `Copyright (c) 2026 webaholic404`, MIT License).
+UIおよび新ナビゲーションの刷新、GFM Alert の表現、ならびに本サードパーティライセンス表示の文書構成は **kantan-md**（`https://kantan-md.pages.dev/`、`Copyright (c) 2026 webaholic404`、MIT License）を参考にさせていただきました。
