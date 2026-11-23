@@ -203,6 +203,44 @@
         return '<a href="attach:' + safeAttr + '">' + safeText + '</a>';
     }
 
+    var DISALLOWED_MARKDOWN_PREFIXES = ['image/', 'video/', 'audio/'];
+    var DISALLOWED_MARKDOWN_MIMES = [
+        'application/pdf', 'application/zip', 'application/x-zip-compressed',
+        'application/gzip', 'application/x-tar', 'application/x-7z-compressed',
+        'application/x-rar-compressed', 'application/x-msdownload',
+        'application/x-executable', 'application/wasm'
+    ];
+
+    function isMarkdownDropSupportedEdition(edition) {
+        return typeof edition === 'string' && edition.trim() === 'full';
+    }
+
+    function isMarkdownFile(fileOrName, explicitMime) {
+        var name = '', mime = '';
+        if (typeof fileOrName === 'string') {
+            name = fileOrName;
+            mime = explicitMime || '';
+        } else if (fileOrName && typeof fileOrName === 'object') {
+            name = fileOrName.name || '';
+            mime = explicitMime || fileOrName.type || '';
+        }
+        if (!name || !/\.md$/i.test(name.trim())) return false;
+        var lm = mime.trim().toLowerCase();
+        if (!lm) return true;
+        for (var i = 0; i < DISALLOWED_MARKDOWN_PREFIXES.length; i++) {
+            if (lm.indexOf(DISALLOWED_MARKDOWN_PREFIXES[i]) === 0) return false;
+        }
+        return DISALLOWED_MARKDOWN_MIMES.indexOf(lm) === -1;
+    }
+
+    function validateMarkdownDropFile(file, maxBytes) {
+        var limit = (typeof maxBytes === 'number' && maxBytes > 0) ? maxBytes : 10 * 1024 * 1024;
+        if (!file || typeof file !== 'object') return { valid: false, reason: 'invalid-file' };
+        if (!isMarkdownFile(file)) return { valid: false, reason: 'not-markdown' };
+        if (typeof file.size === 'number' && file.size > limit) return { valid: false, reason: 'too-large' };
+        return { valid: true };
+    }
+
     var AttachmentManagerModule = {
         resolveUniqueAttachName: resolveUniqueAttachName,
         validateAttachmentRename: validateAttachmentRename,
@@ -211,7 +249,10 @@
         decodeAttachName: decodeAttachName,
         extractAttachName: extractAttachName,
         isVideoAttachment: isVideoAttachment,
-        buildAttachmentInsertTag: buildAttachmentInsertTag
+        buildAttachmentInsertTag: buildAttachmentInsertTag,
+        isMarkdownDropSupportedEdition: isMarkdownDropSupportedEdition,
+        isMarkdownFile: isMarkdownFile,
+        validateMarkdownDropFile: validateMarkdownDropFile
     };
 
     root.KantanModules = root.KantanModules || {};

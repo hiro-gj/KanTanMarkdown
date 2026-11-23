@@ -101,6 +101,23 @@
     }
 
     /**
+     * Finds an element by ID from either a Document or an Element (e.g., cloned HTMLHtmlElement).
+     * @param {Document | Element} rootNode
+     * @param {string} id
+     * @returns {Element | null}
+     */
+    function queryById(rootNode, id) {
+        if (!rootNode) return null;
+        if (typeof rootNode.getElementById === 'function') {
+            return rootNode.getElementById(id);
+        }
+        if (typeof rootNode.querySelector === 'function') {
+            return rootNode.querySelector('#' + id);
+        }
+        return null;
+    }
+
+    /**
      * Removes temporary measurement iframes, page-break overlays, stray Mermaid nodes,
      * and temporary measurement attributes before serializing HTML for saving.
      * @param {Document} doc
@@ -129,21 +146,21 @@
             taggedNodes[j].removeAttribute('data-kantan-block-id');
             taggedNodes[j].removeAttribute('data-kantan-measure-id');
         }
-        var showPbCb = doc.getElementById('setting-show-page-break');
+        var showPbCb = queryById(doc, 'setting-show-page-break');
         if (showPbCb) {
             showPbCb.removeAttribute('checked');
         }
-        var kantanVerEl = doc.getElementById('kantanVersion');
+        var kantanVerEl = queryById(doc, 'kantanVersion');
         if (kantanVerEl && typeof kantanVerEl.removeAttribute === 'function') {
             kantanVerEl.removeAttribute('data-embedded-version');
         }
-        var profileInput = doc.getElementById('print-profile-file');
+        var profileInput = queryById(doc, 'print-profile-file');
         if (profileInput) {
             try {
                 profileInput.value = '';
             } catch (_) {}
         }
-        var toggleBtn = doc.getElementById('toolbar-toggle');
+        var toggleBtn = queryById(doc, 'toolbar-toggle');
         if (toggleBtn && toggleBtn.classList) {
             toggleBtn.classList.remove('toolbar-toggle-blink');
             if (toggleBtn.className === '') {
@@ -197,7 +214,130 @@
             ev.initMouseEvent('click', true, false, w, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
             a.dispatchEvent(ev);
         }
+        if (typeof w.URL.revokeObjectURL === 'function') {
+            setTimeout(function () {
+                try {
+                    w.URL.revokeObjectURL(blobURL);
+                } catch (_) {}
+            }, 10000);
+        }
         return true;
+    }
+
+    var MAX_MARKDOWN_DROP_BYTES = 10 * 1024 * 1024;
+    var MAX_MARKDOWN_DROP_FILES = 10;
+
+    function normalizeDroppedMarkdownText(rawText) {
+        if (typeof rawText !== 'string') return { valid: false, text: '', reason: 'invalid-text' };
+        if (rawText.indexOf('\x00') !== -1) return { valid: false, text: '', reason: 'binary-content' };
+        return { valid: true, text: rawText.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n') };
+    }
+
+    function formatMarkdownForTextareaContent(normalizedMarkdown) {
+        var text = typeof normalizedMarkdown === 'string' ? normalizedMarkdown : '';
+        return text.charAt(0) === '\n' ? ('\n' + text) : text;
+    }
+
+    function buildTranscribedHtmlFileName(rawFileName) {
+        var raw = typeof rawFileName === 'string' ? rawFileName : '';
+        var leaf = raw.replace(/^.*[/\\]/, '').replace(/\.md$/i, '');
+        var s = leaf.replace(/[\x00-\x1f\x7f<>:"/\\|?*]/g, '_').replace(/\s+/g, ' ').trim().replace(/^[.\s]+|[.\s]+$/g, '');
+        if (s.length > 120) s = s.substring(0, 120).replace(/[.\s]+$/g, '');
+        if (!s || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i.test(s)) s = s ? ('_' + s) : '無題';
+        return { baseTitle: s, fileName: s + '.html' };
+    }
+
+    function buildCleanStandaloneHtmlForMarkdown(sourceDoc, options) {
+        var opts = options || {}, mdText = opts.markdownText || '', isPrev = Boolean(opts.isPreviewPath);
+        var doc = sourceDoc.documentElement.cloneNode(true);
+        doc.removeAttribute('style');
+
+        var verEl = queryById(doc, 'kantanVersion');
+        var ver = verEl ? (verEl.getAttribute('data-embedded-version') || verEl.value || '') : '';
+        if (verEl && ver) verEl.setAttribute('value', ver);
+
+        cleanupTemporaryDomForSave(doc);
+
+        var cels = doc.querySelectorAll('#updateScriptArea,#fileList,#previewer,#previewerStyle,#message-area,#toc .toc-body');
+        for (var i = 0; i < cels.length; i++) cels[i].innerHTML = '';
+
+        var q = function(id) { return queryById(doc, id); };
+        var setT = function(id, val) { var e = q(id); if (e) e.textContent = val; };
+
+        var atBtn = q('attachButton');
+        if (atBtn) { atBtn.value = ''; atBtn.removeAttribute('value'); }
+
+        setT('importDialogMessage', '');
+
+        var ed = q('editor');
+        if (ed) ed.textContent = formatMarkdownForTextareaContent(mdText);
+
+        var cssEd = q('cssEditor');
+        if (cssEd && typeof opts.defaultCssText === 'string') cssEd.textContent = formatMarkdownForTextareaContent(opts.defaultCssText);
+
+        var mt = q('markdownTab'), ct = q('cssTab');
+        if (mt && mt.parentNode && mt.parentNode.classList) mt.parentNode.classList.add('selected');
+        if (ct && ct.parentNode && ct.parentNode.classList) ct.parentNode.classList.remove('selected');
+        var etw = q('editorTabWrapper');
+        if (etw && etw.classList) etw.classList.remove('fullWidth');
+        var prev = q('previewer');
+        if (prev) prev.className = 'full-width';
+
+        var body = doc.querySelector('body');
+        if (body) body.className = 'initialState view-mode';
+
+        var tb = q('toolbar');
+        if (tb) {
+            tb.removeAttribute('class');
+            var btns = tb.querySelectorAll('button');
+            for (var b = 0; b < btns.length; b++) btns[b].removeAttribute('disabled');
+        }
+
+        var bmap = { '#toolbar-toggle-icon': '☰', '#btn-dark-mode .btn-text': 'ダーク', '#btn-toggle-mode .btn-text': '編集', '#btn-toggle-attach .btn-text': '画像を添付' };
+        for (var sel in bmap) { var be = doc.querySelector(sel); if (be) be.textContent = bmap[sel]; }
+
+        var sp = q('settings-panel');
+        if (sp) {
+            sp.setAttribute('hidden', '');
+            var cbs = sp.querySelectorAll('input[type=checkbox]');
+            for (var c = 0; c < cbs.length; c++) {
+                if (cbs[c].id === 'setting-auto-sync') cbs[c].setAttribute('checked', 'checked');
+                else cbs[c].removeAttribute('checked');
+            }
+        }
+
+        var chks = { importDialogAttach: 'checked', importDialogMarkdown: 'checked', importDialogCss: null };
+        for (var cid in chks) {
+            var ce = q(cid);
+            if (ce) { if (chks[cid]) ce.setAttribute('checked', 'checked'); else ce.removeAttribute('checked'); }
+        }
+
+        var styles = doc.querySelectorAll('*[style]');
+        for (var s = 0; s < styles.length; s++) {
+            var st = styles[s];
+            if (!st.closest || !st.closest('#settings-panel')) st.removeAttribute('style');
+        }
+        var rh = q('resize-handle');
+        if (rh) rh.setAttribute('style', 'display: none;');
+
+        var tEl = doc.querySelector('title');
+        if (tEl) tEl.textContent = normalizeDocumentTitle(opts.baseTitle || '無題');
+
+        var edEl = q('kantanEdition');
+        if (edEl) edEl.setAttribute('value', 'full');
+        if (ver) {
+            var vsp = doc.querySelectorAll('.version');
+            for (var v = 0; v < vsp.length; v++) vsp[v].textContent = ver + '_full';
+        }
+
+        var up = q('updateButton');
+        if (up) up.setAttribute('href', 'https://hiro-gj.github.io/KanTanMarkdown/dist/' + (isPrev ? 'preview/' : '') + 'kantanUpdate.js');
+        var nls = doc.querySelectorAll('a[href*="ktm-new.html"]');
+        for (var n = 0; n < nls.length; n++) nls[n].setAttribute('href', 'https://hiro-gj.github.io/KanTanMarkdown/ktm-new.html');
+        var tls = doc.querySelectorAll('#markdownTab, #cssTab');
+        for (var t = 0; t < tls.length; t++) tls[t].setAttribute('href', 'javascript:void(0)');
+
+        return serializeSingleHtmlDocument(doc.innerHTML);
     }
 
     var SaveExportModule = {
@@ -207,7 +347,13 @@
         prepareSavePayload: prepareSavePayload,
         cleanupTemporaryDomForSave: cleanupTemporaryDomForSave,
         serializeSingleHtmlDocument: serializeSingleHtmlDocument,
-        triggerBlobDownload: triggerBlobDownload
+        triggerBlobDownload: triggerBlobDownload,
+        MAX_MARKDOWN_DROP_BYTES: MAX_MARKDOWN_DROP_BYTES,
+        MAX_MARKDOWN_DROP_FILES: MAX_MARKDOWN_DROP_FILES,
+        normalizeDroppedMarkdownText: normalizeDroppedMarkdownText,
+        formatMarkdownForTextareaContent: formatMarkdownForTextareaContent,
+        buildTranscribedHtmlFileName: buildTranscribedHtmlFileName,
+        buildCleanStandaloneHtmlForMarkdown: buildCleanStandaloneHtmlForMarkdown
     };
 
     root.KantanModules = root.KantanModules || {};

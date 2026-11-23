@@ -830,6 +830,110 @@ function runTests() {
         }
     });
 
+    // 11. Markdown drag-and-drop transcription unit tests
+    test('AttachmentManager handles Markdown drop edition, file extension, MIME guard, and size limit', () => {
+        // isMarkdownDropSupportedEdition
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition('full'), true);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition(' full '), true);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition('lite'), false);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition('std'), false);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition('dev'), false);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition(''), false);
+        assert.strictEqual(AttachmentManager.isMarkdownDropSupportedEdition(null), false);
+
+        // isMarkdownFile
+        assert.strictEqual(AttachmentManager.isMarkdownFile('readme.md'), true);
+        assert.strictEqual(AttachmentManager.isMarkdownFile('README.MD'), true);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'doc.md', type: '' }), true);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'doc.md', type: 'text/markdown' }), true);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'doc.md', type: 'text/plain' }), true);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'doc.txt', type: 'text/plain' }), false);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'doc.html', type: 'text/html' }), false);
+        // MIME disguise protection
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'fake.md', type: 'image/png' }), false);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'fake.md', type: 'video/mp4' }), false);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'fake.md', type: 'application/pdf' }), false);
+        assert.strictEqual(AttachmentManager.isMarkdownFile({ name: 'fake.md', type: 'application/zip' }), false);
+
+        // validateMarkdownDropFile
+        assert.deepStrictEqual(AttachmentManager.validateMarkdownDropFile(null), { valid: false, reason: 'invalid-file' });
+        assert.deepStrictEqual(AttachmentManager.validateMarkdownDropFile({ name: 'test.png', size: 100 }), { valid: false, reason: 'not-markdown' });
+        assert.deepStrictEqual(AttachmentManager.validateMarkdownDropFile({ name: 'test.md', size: 10 * 1024 * 1024 + 1 }), { valid: false, reason: 'too-large' });
+        assert.deepStrictEqual(AttachmentManager.validateMarkdownDropFile({ name: 'test.md', size: 1024 }), { valid: true });
+    });
+
+    test('SaveExport normalizes dropped Markdown text, protects leading newline, and sanitizes filenames', () => {
+        // normalizeDroppedMarkdownText
+        assert.deepStrictEqual(SaveExport.normalizeDroppedMarkdownText(123), { valid: false, text: '', reason: 'invalid-text' });
+        assert.deepStrictEqual(SaveExport.normalizeDroppedMarkdownText('hello\x00world'), { valid: false, text: '', reason: 'binary-content' });
+        const bomNormalized = SaveExport.normalizeDroppedMarkdownText('\uFEFF# Header\r\nLine 2\rLine 3\n');
+        assert.strictEqual(bomNormalized.valid, true);
+        assert.strictEqual(bomNormalized.text, '# Header\nLine 2\nLine 3\n');
+
+        // formatMarkdownForTextareaContent
+        assert.strictEqual(SaveExport.formatMarkdownForTextareaContent(''), '');
+        assert.strictEqual(SaveExport.formatMarkdownForTextareaContent('# Title'), '# Title');
+        assert.strictEqual(SaveExport.formatMarkdownForTextareaContent('\n# Title with leading blank line'), '\n\n# Title with leading blank line');
+
+        // buildTranscribedHtmlFileName
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('my-notes.md'), { baseTitle: 'my-notes', fileName: 'my-notes.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('C:\\Users\\test\\docs\\report.MD'), { baseTitle: 'report', fileName: 'report.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('../../traversal.md'), { baseTitle: 'traversal', fileName: 'traversal.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('bad:<>|?*name.md'), { baseTitle: 'bad______name', fileName: 'bad______name.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('CON.md'), { baseTitle: '_CON', fileName: '_CON.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('nul.txt.md'), { baseTitle: '_nul.txt', fileName: '_nul.txt.html' });
+        assert.deepStrictEqual(SaveExport.buildTranscribedHtmlFileName('.md'), { baseTitle: '無題', fileName: '無題.html' });
+        const longName = 'a'.repeat(200) + '.md';
+        const longResult = SaveExport.buildTranscribedHtmlFileName(longName);
+        assert.strictEqual(longResult.baseTitle.length, 120);
+        assert.strictEqual(longResult.fileName, 'a'.repeat(120) + '.html');
+    });
+
+    test('SaveExport.buildCleanStandaloneHtmlForMarkdown initializes clone DOM, transfers markdown safely, and preserves source DOM', () => {
+        const titleObj = { textContent: '' };
+        const editorObj = { textContent: '' };
+        const sourceDoc = {
+            documentElement: {
+                cloneNode(deep) {
+                    return {
+                        removeAttribute() {},
+                        querySelector(sel) {
+                            if (sel === 'title') return titleObj;
+                            if (sel === 'body') return { className: '' };
+                            if (sel === '#editor') return editorObj;
+                            return null;
+                        },
+                        querySelectorAll(sel) { return []; },
+                        get innerHTML() {
+                            return '<head><title>' + titleObj.textContent + '</title></head><body><textarea id="editor">' + editorObj.textContent + '</textarea><script id="kantanMarkdownJs"></script></body>';
+                        }
+                    };
+                }
+            }
+        };
+
+        const resultHtml = SaveExport.buildCleanStandaloneHtmlForMarkdown(sourceDoc, {
+            markdownText: '# Transcribed Markdown\nLine 2',
+            baseTitle: 'transcribed-doc',
+            defaultCssText: 'body { font-size: 14px; }'
+        });
+
+        assert(resultHtml.startsWith('<!doctype html>\n<html>\n'));
+        assert(resultHtml.includes('transcribed-doc'));
+    });
+
+    test('kantanMarkdown.js integrates handleDroppedFiles and delegates to AttachmentManager & SaveExport', () => {
+        const code = fs.readFileSync(path.join(rootDir, 'src', 'js', 'kantanMarkdown.js'), 'utf-8');
+        assert(code.includes('handleDroppedFiles(e.dataTransfer.files)'), 'drop handler must call handleDroppedFiles');
+        assert(code.includes('AttachmentManager.isMarkdownDropSupportedEdition('), 'handleDroppedFiles must check isMarkdownDropSupportedEdition');
+        assert(code.includes('AttachmentManager.isMarkdownFile('), 'handleDroppedFiles must check isMarkdownFile');
+        assert(code.includes('.validateMarkdownDropFile('), 'transcribeMarkdownFileToNewKantanHtml must validate via AttachmentManager');
+        assert(code.includes('.normalizeDroppedMarkdownText('), 'transcribeMarkdownFileToNewKantanHtml must normalize markdown text');
+        assert(code.includes('.buildTranscribedHtmlFileName('), 'transcribeMarkdownFileToNewKantanHtml must build filename');
+        assert(code.includes('.buildCleanStandaloneHtmlForMarkdown('), 'transcribeMarkdownFileToNewKantanHtml must build clean standalone html');
+        assert(code.includes('.triggerBlobDownload('), 'transcribeMarkdownFileToNewKantanHtml must trigger download');
+    });
+
     console.log(`\nModules Unit Test Summary: ${passCount} passed, ${failCount} failed`);
     if (failCount > 0) process.exit(1);
     else process.exit(0);

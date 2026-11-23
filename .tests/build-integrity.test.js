@@ -75,6 +75,7 @@ function runTests() {
         const previewMatch = content.match(previewSizeRegex);
         assert(previewMatch, 'ktm-new.html preview table must also have "空の容量" row with valid size format');
         assert(content.includes('<td>Mermaid</td>'), 'ktm-new.html feature comparison must include Mermaid row');
+        assert(content.includes('<td>MDファイル転記（D&amp;D）</td>'), 'ktm-new.html feature comparison must include MD file drop transcription row');
         assert(content.includes('a[href*="/dist/"]') && content.includes('"?t=" + Date.now()'),
             'ktm-new.html must append cache-busting timestamp parameter on edition link click');
     });
@@ -561,6 +562,19 @@ function runTests() {
             assert(content.includes('syncToolbarToggleBlink'),
                 `dist/preview/${target} must embed syncToolbarToggleBlink function`);
         }
+    });
+
+    // Test 15: Markdown drag-and-drop transcription embedded in preview artifacts and size margins maintained
+    test('All preview editions embed Markdown drag-and-drop transcription logic and size limits stay within boundaries', () => {
+        const fullPreview = fs.readFileSync(path.join(rootDir, 'dist', 'preview', 'ktm-full.html'), 'utf-8');
+        assert(fullPreview.includes('handleDroppedFiles') && fullPreview.includes('isMarkdownDropSupportedEdition') &&
+            fullPreview.includes('buildCleanStandaloneHtmlForMarkdown'),
+            'dist/preview/ktm-full.html must embed Markdown drop transcription functions');
+
+        const liteStat = fs.statSync(path.join(rootDir, 'dist', 'preview', 'ktm-lite.html'));
+        const stdStat = fs.statSync(path.join(rootDir, 'dist', 'preview', 'ktm-std.html'));
+        assert(liteStat.size <= 250 * 1024, `dist/preview/ktm-lite.html size (${liteStat.size} bytes) must not exceed 250 KB`);
+        assert(stdStat.size <= 300 * 1024, `dist/preview/ktm-std.html size (${stdStat.size} bytes) must not exceed 300 KB`);
     });
 
     console.log(`\nBuild Integrity Test Summary: ${passCount} passed, ${failCount} failed`);
