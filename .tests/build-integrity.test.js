@@ -6,8 +6,48 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { escapeRegExp, installOutputMask } = require('./run-tests');
+
+installOutputMask();
 
 const rootDir = path.resolve(__dirname, '..');
+
+function createPathLeakRegex() {
+    const patterns = [
+        'file:\\/\\/\\/',
+        '[a-z]:\\/users',
+        '[a-z]:\\\\users',
+        'onedrive\\s*-\\s*\\S+'
+    ];
+    const dynamicTokens = new Set();
+    const oneDriveVars = [
+        process.env.OneDriveCommercial,
+        process.env.OneDriveConsumer,
+        process.env.OneDrive
+    ];
+    for (const val of oneDriveVars) {
+        if (typeof val !== 'string' || !val.trim()) continue;
+        const trimmed = val.trim().replace(/[\\/]+$/, '');
+        if (trimmed.length >= 3) {
+            dynamicTokens.add(trimmed);
+            dynamicTokens.add(trimmed.replace(/\\/g, '/'));
+        }
+        const orgMatch = trimmed.match(/OneDrive\s*-\s*([^\\/]+)$/i);
+        if (orgMatch && orgMatch[1] && orgMatch[1].trim().length >= 3) {
+            dynamicTokens.add(orgMatch[1].trim());
+        }
+    }
+    if (typeof process.env.USERNAME === 'string' && process.env.USERNAME.trim().length >= 3) {
+        const username = process.env.USERNAME.trim();
+        if (!/^(?:user|admin|test|root|runner|owner|guest)$/i.test(username)) {
+            dynamicTokens.add(username);
+        }
+    }
+    for (const token of dynamicTokens) {
+        patterns.push(escapeRegExp(token));
+    }
+    return new RegExp(patterns.join('|'), 'i');
+}
 
 function runTests() {
     console.log('--- Running Build Integrity Tests ---');
@@ -385,7 +425,7 @@ function runTests() {
         assert(!ktmHtml.includes('href="#"'),
             'src/ktm.html must not contain relative href="#" links that resolve to local file:/// paths');
 
-        const leakRegex = /file:\/\/\/|c:\/users|c:\\users|h\.matsumoto|ctd\.co\.jp/i;
+        const leakRegex = createPathLeakRegex();
         const filesToCheckForLeaks = [
             'ktm-new.html',
             path.join('src', 'ktm.html'),
@@ -548,7 +588,7 @@ function runTests() {
         }
 
         // OWASP path-leak and raw script injection checks
-        const noticesLeakRegex = /file:\/\/\/|c:\/users|c:\\users|h\.matsumoto|ctd\.co\.jp/i;
+        const noticesLeakRegex = createPathLeakRegex();
         assert(!noticesLeakRegex.test(noticesContent),
             'THIRD_PARTY_NOTICES.md must not contain local file paths or user environment info');
         assert(!/<script\b/i.test(noticesContent),

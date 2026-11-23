@@ -7,6 +7,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { installOutputMask } = require('./run-tests');
+
+installOutputMask();
 
 const alertsScriptPath = path.resolve(__dirname, '..', 'src', 'js', 'github-alerts.js');
 const alertsCode = fs.readFileSync(alertsScriptPath, 'utf-8');

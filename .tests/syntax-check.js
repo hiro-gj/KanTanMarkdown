@@ -6,6 +6,9 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { installOutputMask } = require('./run-tests');
+
+installOutputMask();
 
 const rootDir = path.resolve(__dirname, '..');
 

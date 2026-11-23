@@ -7,6 +7,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { installOutputMask } = require('./run-tests');
+
+installOutputMask();
 
 const editorScriptPath = path.resolve(__dirname, '..', 'src', 'js', 'kantanEditor.js');
 const editorCode = fs.readFileSync(editorScriptPath, 'utf-8');
